@@ -14,18 +14,19 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- Serbian Translation Mapping ---
+# --- Serbian Translation Mapping (Updated) ---
 MARKET_TRANSLATIONS = {
-    "Player's shots on target": "ukupno suteva u okvir gola",
-    "Player's shots": "ukupno suteva",
-    "Player's fouls conceded": "ukupno nacinjenih faulova",
+    "Player's Shots On Target": "ukupno suteva u okvir gola",
+    "Player's Shots": "ukupno suteva",
+    "Player's Fouls Conceded": "ukupno nacinjenih faulova",
     "To Assist": "asistencija",
-    "To Get a Card": "dobija karton",
-    "To Get a Red Card": "dobija crveni karton",
+    "To Get A Card": "dobija karton",
+    "To Get A Red Card": "dobija crveni karton",
     "To Score": "daje gol",
     "To Score Or Assist": "gol ili asistencija",
-    "To score from a header": "daje gol glavom",
-    "To score from outside the penalty box": "daje gol izvan 16m",
+    "To Score From A Header": "daje gol glavom",
+    "To Score From Outside The Penalty Box": "daje gol izvan 16m",
+    "To score at least 2 goal": "daje golova"
 }
 
 # --- Custom CSS for Modern UI/UX ---
@@ -129,8 +130,17 @@ if 'offer_list' not in st.session_state:
     st.session_state.offer_list = []
 if 'preview_df' not in st.session_state:
     st.session_state.preview_df = None
+if 'selected_team' not in st.session_state:
+    st.session_state.selected_team = ""
 
 # --- Helper Functions ---
+def get_translation(market_name):
+    """Gets the Serbian translation for a market name, ignoring case."""
+    cleaned_name = market_name.replace('(Settled using Opta data)', '').strip()
+    # Convert to title case to match the dictionary keys
+    title_case_name = cleaned_name.title()
+    return MARKET_TRANSLATIONS.get(title_case_name, cleaned_name)
+
 def generate_formatted_df(offer_list):
     """
     Transforms the offer list into a formatted DataFrame ready for display or CSV export.
@@ -163,9 +173,7 @@ def generate_formatted_df(offer_list):
                     except ValueError:
                         pass
 
-                market_cleaned = row['market'].replace('(Settled using Opta data)', '').strip()
-                domacin = MARKET_TRANSLATIONS.get(market_cleaned, market_cleaned)
-
+                domacin = get_translation(row['market'])
                 gost = f"{math.ceil(row['line'])}+" if row['line'] > 0 else ''
                 
                 output_row = {h: '' for h in header}
@@ -206,13 +214,14 @@ if st.session_state.data_df is not None:
             teams_in_event = sorted([team for team in event_df['team'].unique() if team != 'N/A'])
             
             with col2:
-                selected_team = st.selectbox("Izaberite tim:", options=teams_in_event, key="team_selector")
+                # Store selected team in session state to fix the manual entry bug
+                st.session_state.selected_team = st.selectbox("Izaberite tim:", options=teams_in_event, key="team_selector")
             
             st.markdown("---")
             st.subheader("Dodaj Igrača u Ponudu")
 
-            if selected_team:
-                player_df = event_df[event_df['team'] == selected_team]
+            if st.session_state.selected_team:
+                player_df = event_df[event_df['team'] == st.session_state.selected_team]
                 available_players = sorted(player_df['player'].unique())
                 
                 player_col, add_btn_col = st.columns([3, 1])
@@ -237,9 +246,8 @@ if st.session_state.data_df is not None:
             for player_name, props in offer_df.groupby('player'):
                 with st.expander(f"Igre za: {player_name}", expanded=True):
                     for _, prop in props.iterrows():
-                        market_clean = prop['market'].replace('(Settled using Opta data)', '').strip()
                         prop_col1, prop_col2, btn_col = st.columns([5, 2, 1])
-                        prop_col1.markdown(f"**{MARKET_TRANSLATIONS.get(market_clean, market_clean)}** ({math.ceil(prop['line'])}+)")
+                        prop_col1.markdown(f"**{get_translation(prop['market'])}** ({math.ceil(prop['line'])}+)")
                         prop_col2.markdown(f"**Kvota:** `{prop['decimal_odds']}`")
                         if btn_col.button("Ukloni", key=prop['id'], use_container_width=True):
                             st.session_state.offer_list = [p for p in st.session_state.offer_list if p['id'] != prop['id']]
@@ -255,7 +263,8 @@ if st.session_state.data_df is not None:
                 st.write("Dodajte igru koja nije na listi.")
                 m_col1, m_col2 = st.columns(2)
                 manual_player = m_col1.text_input("Ime Igrača")
-                manual_team = m_col2.text_input("Ime Tima", value=selected_team if 'selected_team' in locals() else "")
+                # Use session state for a stable default value
+                manual_team = m_col2.text_input("Ime Tima", value=st.session_state.get("selected_team", ""))
                 
                 m_col3, m_col4, m_col5 = st.columns(3)
                 manual_market = m_col3.text_input("Tržište (npr. ukupno suteva)")
@@ -293,7 +302,7 @@ if st.session_state.data_df is not None:
                 st.rerun()
         
         with download_col:
-            if st.session_state.preview_df is not None:
+            if st.session_state.preview_df is not None and not st.session_state.preview_df.empty:
                 team_name = pd.DataFrame(st.session_state.offer_list)['team'].unique()[0] if len(pd.DataFrame(st.session_state.offer_list)['team'].unique()) == 1 else "ponuda"
                 file_name = f"{team_name}_kvote.csv"
                 csv_data = st.session_state.preview_df.to_csv(index=False, header=True).encode('utf-8')
