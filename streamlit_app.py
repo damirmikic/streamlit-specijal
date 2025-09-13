@@ -246,9 +246,35 @@ if st.session_state.data_df is not None:
             for player_name, props in offer_df.groupby('player'):
                 with st.expander(f"Igre za: {player_name}", expanded=True):
                     for _, prop in props.iterrows():
-                        prop_col1, prop_col2, btn_col = st.columns([5, 2, 1])
-                        prop_col1.markdown(f"**{get_translation(prop['market'])}** ({math.ceil(prop['line'])}+)")
-                        prop_col2.markdown(f"**Kvota:** `{prop['decimal_odds']}`")
+                        # FIX: Changed layout and elements to prevent text overlap and allow editing
+                        prop_col1, odds_label_col, odds_input_col, btn_col = st.columns([4, 1, 2, 1])
+                        
+                        # FIX: Use st.write instead of st.markdown to prevent rendering artifacts
+                        prop_col1.write(f"**{get_translation(prop['market'])}** ({math.ceil(prop['line'])}+)")
+                        
+                        odds_label_col.write("**Kvota:**")
+
+                        # Find the index of the current prop in the main list to update it
+                        prop_index = next((i for i, item in enumerate(st.session_state.offer_list) if item["id"] == prop['id']), None)
+
+                        if prop_index is not None:
+                            # ADD: Use number_input for editing odds
+                            new_odds = odds_input_col.number_input(
+                                "Kvota",
+                                value=float(st.session_state.offer_list[prop_index]['decimal_odds']),
+                                min_value=1.01,
+                                step=0.01,
+                                format="%.2f",
+                                key=f"odds_{prop['id']}", # Unique key is crucial
+                                label_visibility="collapsed"
+                            )
+
+                            # If the value in the UI is different from the state, update the state.
+                            if new_odds != st.session_state.offer_list[prop_index]['decimal_odds']:
+                                st.session_state.offer_list[prop_index]['decimal_odds'] = new_odds
+                                st.session_state.preview_df = None # Invalidate preview
+                                st.rerun()
+
                         if btn_col.button("Ukloni", key=prop['id'], use_container_width=True):
                             st.session_state.offer_list = [p for p in st.session_state.offer_list if p['id'] != prop['id']]
                             st.session_state.preview_df = None
