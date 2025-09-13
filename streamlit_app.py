@@ -1,26 +1,85 @@
 import streamlit as st
 import pandas as pd
 from player_props_scraper import get_all_props
+import io
+import csv
+from datetime import datetime
+import math
 
 # --- Page Configuration ---
 st.set_page_config(
     page_title="Player Props Offer Builder",
-    page_icon="",
+    page_icon="🏀",
     layout="wide"
 )
 
 # --- Session State Initialization ---
-# This ensures that our data persists across user interactions.
 if 'data_df' not in st.session_state:
     st.session_state.data_df = None
 if 'offer_df' not in st.session_state:
     st.session_state.offer_df = pd.DataFrame()
 
+# --- Serbian Translation Mapping ---
+MARKET_TRANSLATIONS = {
+    "Player's shots on target": "ukupno suteva u okvir gola",
+    "Player shots": "ukupno suteva",
+    "Player's fouls conceded": "ukupno nacinjenih faulova",
+    # Add other market translations here as you discover them
+}
+
 # --- Helper Functions ---
-@st.cache_data
-def convert_df_to_csv(df):
-    """Converts a DataFrame to a CSV string for downloading."""
-    return df.to_csv(index=False).encode('utf-8')
+def generate_custom_csv(df):
+    """
+    Transforms a DataFrame into a custom CSV format with Serbian translations,
+    MATCH_NAME, and LEAGUE_NAME headers, matching the user's specific format.
+    """
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header row
+    writer.writerow(['Datum', 'Vreme', 'Sifra', 'Domacin', 'Gost', 'Kvota'])
+
+    # Group the offer by the selected team, then by player
+    grouped_by_team = df.groupby('team')
+    
+    for team_name, team_df in grouped_by_team:
+        writer.writerow([f'MATCH_NAME:{team_name}', '', '', '', '', ''])
+        
+        grouped_by_player = team_df.groupby('player')
+        for player_name, player_df in grouped_by_player:
+            # Sort props by market and then by line for consistent ordering
+            player_df = player_df.sort_values(['market', 'line'])
+            writer.writerow([f'LEAGUE_NAME:{player_name}', '', '', '', '', ''])
+
+            for _, row in player_df.iterrows():
+                # 1. Parse and format date and time
+                datum, vreme = ('', '')
+                if row['closed'] and isinstance(row['closed'], str):
+                    try:
+                        dt = datetime.fromisoformat(row['closed'].replace('Z', '+00:00'))
+                        datum = dt.strftime('%d.%m.%Y')
+                        vreme = dt.strftime('%H:%M')
+                    except ValueError:
+                        pass # Keep them empty if parsing fails
+
+                # 2. Clean and translate the market name for the 'Domacin' column
+                market_cleaned = row['market'].replace('(Settled using Opta data)', '').strip()
+                domacin = MARKET_TRANSLATIONS.get(market_cleaned, market_cleaned)
+
+                # 3. Format the line value for the 'Gost' column (e.g., 1.5 -> 2+)
+                gost = ''
+                if row['line'] > 0:
+                    gost = f"{math.ceil(row['line'])}+"
+                
+                # 4. Sifra (empty as per example)
+                sifra = ''
+
+                # 5. Get the odds for 'Kvota'
+                kvota = row['decimal_odds']
+
+                writer.writerow([datum, vreme, sifra, domacin, gost, kvota])
+                
+    return output.getvalue().encode('utf-8')
 
 # --- UI Layout ---
 st.title("📊 Player Props Offer Builder")
@@ -34,7 +93,6 @@ with fetch_col:
         with st.spinner("Fetching data from API... please wait."):
             all_props = get_all_props()
             if all_props:
-                # Store the fetched data as a DataFrame in the session state
                 st.session_state.data_df = pd.DataFrame(all_props)
                 st.success("Data fetched successfully!")
             else:
@@ -45,11 +103,8 @@ if st.session_state.data_df is not None:
     st.header("1. Select Event and Players")
 
     df = st.session_state.data_df
-    
-    # Get a list of unique events that have player props
     events_with_props = df['event_name'].unique()
     
-    # Dropdown for selecting an event
     selected_event = st.selectbox(
         "Choose an event:",
         options=events_with_props,
@@ -57,38 +112,19 @@ if st.session_state.data_df is not None:
     )
 
     if selected_event:
-        # Filter the DataFrame to show only data from the selected event
         event_df = df[df['event_name'] == selected_event].copy()
-        
-        # --- NEW: Team selection dropdown ---
         teams_in_event = sorted(list(event_df['team'].unique()))
         team_options = ["All Teams"] + teams_in_event
-
-        selected_team = st.selectbox(
-            "Choose a team (optional):",
-            options=team_options
-        )
+        selected_team = st.selectbox("Choose a team (optional):", options=team_options)
         
-        # Filter by selected team if one is chosen
-        if selected_team and selected_team != "All Teams":
-            player_df = event_df[event_df['team'] == selected_team]
-        else:
-            player_df = event_df
-
-        # Get a list of unique players for the multiselect dropdown based on team filter
+        player_df = event_df[event_df['team'] == selected_team] if selected_team != "All Teams" else event_df
         available_players = sorted(player_df['player'].unique())
 
-        selected_players = st.multiselect(
-            "Select players to add to your offer:",
-            options=available_players
-        )
+        selected_players = st.multiselect("Select players to add to your offer:", options=available_players)
 
         if st.button("➕ Add Players to Offer", use_container_width=True):
             if selected_players:
-                # Get all props for the selected players from the original event_df
                 props_to_add = event_df[event_df['player'].isin(selected_players)]
-                
-                # Append to the existing offer DataFrame in the session state
                 st.session_state.offer_df = pd.concat(
                     [st.session_state.offer_df, props_to_add]
                 ).drop_duplicates().reset_index(drop=True)
@@ -99,17 +135,17 @@ if st.session_state.data_df is not None:
 # --- Offer Preview and Download Section ---
 if not st.session_state.offer_df.empty:
     st.markdown("---")
-    st.header("2. Current Offer (CSV Preview)")
+    st.header("2. Current Offer (Raw Data Preview)")
 
     st.dataframe(st.session_state.offer_df)
 
     col1, col2 = st.columns(2)
     
     with col1:
-        # Prepare the CSV data for download
-        csv_data = convert_df_to_csv(st.session_state.offer_df)
+        # Use the new function to generate the CSV for download
+        csv_data = generate_custom_csv(st.session_state.offer_df)
         st.download_button(
-            label="📥 Download as CSV",
+            label="📥 Download as Custom CSV",
             data=csv_data,
             file_name="player_props_offer.csv",
             mime="text/csv",
