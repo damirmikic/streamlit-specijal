@@ -5,7 +5,7 @@ from player_props_scraper import get_all_props
 # --- Page Configuration ---
 st.set_page_config(
     page_title="Player Props Offer Builder",
-    page_icon="🏀",
+    page_icon="",
     layout="wide"
 )
 
@@ -57,11 +57,26 @@ if st.session_state.data_df is not None:
     )
 
     if selected_event:
-        # Filter the DataFrame to show only players from the selected event
+        # Filter the DataFrame to show only data from the selected event
         event_df = df[df['event_name'] == selected_event].copy()
         
-        # Get a list of unique players for the multiselect dropdown
-        available_players = sorted(event_df['player'].unique())
+        # --- NEW: Team selection dropdown ---
+        teams_in_event = sorted(list(event_df['team'].unique()))
+        team_options = ["All Teams"] + teams_in_event
+
+        selected_team = st.selectbox(
+            "Choose a team (optional):",
+            options=team_options
+        )
+        
+        # Filter by selected team if one is chosen
+        if selected_team and selected_team != "All Teams":
+            player_df = event_df[event_df['team'] == selected_team]
+        else:
+            player_df = event_df
+
+        # Get a list of unique players for the multiselect dropdown based on team filter
+        available_players = sorted(player_df['player'].unique())
 
         selected_players = st.multiselect(
             "Select players to add to your offer:",
@@ -70,7 +85,7 @@ if st.session_state.data_df is not None:
 
         if st.button("➕ Add Players to Offer", use_container_width=True):
             if selected_players:
-                # Get all props for the selected players
+                # Get all props for the selected players from the original event_df
                 props_to_add = event_df[event_df['player'].isin(selected_players)]
                 
                 # Append to the existing offer DataFrame in the session state
@@ -107,3 +122,4 @@ if not st.session_state.offer_df.empty:
             st.rerun()
 
 st.sidebar.info("This app fetches live betting odds. Please use responsibly.")
+
