@@ -6,8 +6,8 @@ def get_all_props():
     Fetches all events from a general football group URL, then iterates through
     each event's specific API to find and process player prop bets.
     """
-    # UPDATED: Using a more general group ID for all football events
-    group_url = "https://eu-offering-api.kambicdn.com/offering/v2018/paf11lv/betoffer/group/1000093189.json?includeParticipants=true&onlyMain=false&type=2&market=PM&lang=en_GB&suppress_response_codes=true"
+    # REVERTED: Going back to the group ID that is proven to work.
+    group_url = "https://eu-offering-api.kambicdn.com/offering/v2018/paf11lv/betoffer/group/1000093190.json?includeParticipants=true&onlyMain=false&type=2&market=PM&lang=en_GB&suppress_response_codes=true"
     
     try:
         response = requests.get(group_url)
