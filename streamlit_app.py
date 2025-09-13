@@ -18,7 +18,7 @@ st.set_page_config(
 MARKET_TRANSLATIONS = {
     "Player's shots on target": "ukupno suteva u okvir gola",
     "Player's shots": "ukupno suteva",
-    "Player's Fouls Conceded": "ukupno nacinjenih faulova",
+    "Player's fouls conceded": "ukupno nacinjenih faulova",
     "To Assist": "asistencija",
     "To Get A Card": "dobija karton",
     "To Get A Red Card": "dobija crveni karton",
