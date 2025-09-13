@@ -6,11 +6,12 @@ def fetch_match_data_maps():
     """
     Fetches match odds data (type=2) to build two reliable maps:
     1. team_map: Maps team IDs to team names.
-    2. event_map: Maps event IDs to a formatted event name string (e.g., "Team A vs. Team B").
+    2. event_map: Maps event IDs to a dictionary containing the formatted event name 
+       and the event's closing time.
     """
     team_map = {}
     event_map = {}
-    events_by_id = defaultdict(list)
+    events_by_id = defaultdict(lambda: {'teams': [], 'closed': None})
     url = "https://eu-offering-api.kambicdn.com/offering/v2018/paf11lv/betoffer/group/1000093190.json?includeParticipants=true&onlyMain=false&type=2&market=PM&lang=en_GB&suppress_response_codes=true"
     
     try:
@@ -21,20 +22,25 @@ def fetch_match_data_maps():
         if 'betOffers' in data and isinstance(data['betOffers'], list):
             for offer in data['betOffers']:
                 event_id = offer.get('eventId')
-                for outcome in offer.get('outcomes', []):
-                    team_id = outcome.get('participantId')
-                    team_name = outcome.get('participant')
-                    if team_id and team_name:
-                        team_map[team_id] = team_name
-                        if event_id and team_name not in events_by_id[event_id]:
-                             events_by_id[event_id].append(team_name)
+                if event_id:
+                    # Store the closing time for the event
+                    events_by_id[event_id]['closed'] = offer.get('closed')
+                    for outcome in offer.get('outcomes', []):
+                        team_id = outcome.get('participantId')
+                        team_name = outcome.get('participant')
+                        if team_id and team_name:
+                            team_map[team_id] = team_name
+                            if team_name not in events_by_id[event_id]['teams']:
+                                 events_by_id[event_id]['teams'].append(team_name)
     
-        # Create formatted event name strings
-        for event_id, teams in events_by_id.items():
+        # Create formatted event name strings and store with the closed time
+        for event_id, event_data in events_by_id.items():
+            teams = event_data['teams']
             if len(teams) >= 2:
-                event_map[event_id] = f"{teams[0]} vs {teams[1]}"
+                event_name = f"{teams[0]} vs {teams[1]}"
             else:
-                event_map[event_id] = teams[0] if teams else "Unknown Event"
+                event_name = teams[0] if teams else "Unknown Event"
+            event_map[event_id] = {'name': event_name, 'closed': event_data['closed']}
 
     except requests.exceptions.RequestException as e:
         print(f"An error occurred while building the data maps: {e}")
@@ -60,7 +66,9 @@ def fetch_and_transform_player_props(team_map, event_map):
             for offer in data['betOffers']:
                 market_label = offer.get('criterion', {}).get('label', 'N/A')
                 event_id = offer.get('eventId')
-                event_name = event_map.get(event_id, "Unknown Event")
+                event_info = event_map.get(event_id, {})
+                event_name = event_info.get('name', "Unknown Event")
+                closed_time = event_info.get('closed', None)
 
                 for outcome in offer.get('outcomes', []):
                     player_name = outcome.get('participant', 'N/A')
@@ -71,6 +79,7 @@ def fetch_and_transform_player_props(team_map, event_map):
 
                     clean_offer = {
                         "event_name": event_name,
+                        "closed": closed_time, # Added event time
                         "player": player_name,
                         "team": team_name,
                         "market": market_label,
