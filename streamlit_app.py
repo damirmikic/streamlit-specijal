@@ -16,8 +16,8 @@ st.set_page_config(
 
 # --- Serbian Translation Mapping (Updated) ---
 MARKET_TRANSLATIONS = {
-    "Player's Shots On Target": "ukupno suteva u okvir gola",
-    "Player's Shots": "ukupno suteva",
+    "Player's shots on target": "ukupno suteva u okvir gola",
+    "Player's shots": "ukupno suteva",
     "Player's Fouls Conceded": "ukupno nacinjenih faulova",
     "To Assist": "asistencija",
     "To Get A Card": "dobija karton",
@@ -26,7 +26,7 @@ MARKET_TRANSLATIONS = {
     "To Score Or Assist": "gol ili asistencija",
     "To Score From A Header": "daje gol glavom",
     "To Score From Outside The Penalty Box": "daje gol izvan 16m",
-    "To score at least 2 goal": "daje golova"
+    "To score at least 2 goals": "daje golova"
 }
 
 # --- Custom CSS for Modern UI/UX ---
