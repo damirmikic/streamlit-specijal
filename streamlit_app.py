@@ -17,14 +17,14 @@ st.set_page_config(
 # --- Serbian Translation Mapping ---
 MARKET_TRANSLATIONS = {
     "Player's shots on target": "ukupno suteva u okvir gola",
-    "Player shots": "ukupno suteva",
+    "Player's shots": "ukupno suteva",
     "Player's fouls conceded": "ukupno nacinjenih faulova",
-    "to Assist": "asistencija",
-    "to get a card": "dobija karton",
-    "to get a red card": "dobija crveni karton",
-    "to score": "daje gol",
-    "to score or assist": "gol ili asistencija",
-    "to score from a header": "daje gol glavom",
+    "To Assist": "asistencija",
+    "To Get a Card": "dobija karton",
+    "To Get a Red Card": "dobija crveni karton",
+    "To Score": "daje gol",
+    "To Score Or Assist": "gol ili asistencija",
+    "To score from a header": "daje gol glavom",
     "To score from outside the penalty box": "daje gol izvan 16m",
 }
 
