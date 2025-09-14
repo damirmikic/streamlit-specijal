@@ -91,28 +91,32 @@ st.markdown("""
         color: #ffffff !important;
         font-weight: 600 !important;
     }
+    
+    /* ISPRAVLJENO: Poboljšanje vidljivosti za st.info (očekivana postava) */
     div[data-testid="stInfo"] {
         background-color: rgba(255, 235, 238, 0.9);
         border: 1px solid #ef9a9a;
         border-radius: 10px;
     }
-    div[data-testid="stInfo"] p {
-         color: #c62828 !important;
+    div[data-testid="stInfo"] div[data-testid="stMarkdownContainer"] {
+         color: #c62828 !important; /* Ciljamo unutrašnji kontejner za tekst */
     }
+
     div[data-testid="stWarning"] {
         background-color: rgba(255, 243, 224, 0.9);
         border: 1px solid #ffb74d;
         border-radius: 10px;
     }
-    div[data-testid="stWarning"] p {
+    div[data-testid="stWarning"] div[data-testid="stMarkdownContainer"] {
          color: #e65100 !important;
     }
+
     div[data-testid="stError"] {
         background-color: rgba(255, 235, 238, 0.9);
         border: 1px solid #ef9a9a;
         border-radius: 10px;
     }
-     div[data-testid="stError"] p {
+     div[data-testid="stError"] div[data-testid="stMarkdownContainer"] {
          color: #c62828 !important;
     }
 
@@ -200,7 +204,6 @@ if st.session_state.lineups is None and st.session_state.injuries is None:
 
 # --- SIDEBAR ---
 try:
-    # AŽURIRANO: Korišćenje 'use_container_width'
     st.sidebar.image("merkur.png", use_container_width=True)
 except FileNotFoundError:
     st.sidebar.warning("Logo fajl 'merkur.png' nije pronađen.")
