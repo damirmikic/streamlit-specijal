@@ -10,7 +10,7 @@ from calculations import recalculate_related_odds
 
 # --- Konfiguracija i stil ---
 
-st.set_page_config(layout="wide", page_title="Player Props App")
+st.set_page_config(layout="wide", page_title="Player Props App", page_icon="merkur.png")
 
 # CSS sa primenjenim izmenama za pristupačnost i vidljivost
 st.markdown("""
@@ -233,7 +233,7 @@ if 'lineups' not in st.session_state: st.session_state.lineups = None
 if 'injuries' not in st.session_state: st.session_state.injuries = None
 
 # --- UI Aplikacije ---
-st.title("Player Props CSV Generator")
+st.title("Merkur Specijali")
 
 # --- Automatsko preuzimanje i keširanje dodatnih podataka ---
 if st.session_state.lineups is None and st.session_state.injuries is None:
