@@ -200,7 +200,8 @@ if st.session_state.lineups is None and st.session_state.injuries is None:
 
 # --- SIDEBAR ---
 try:
-    st.sidebar.image("merkur.png", use_column_width=True)
+    # AŽURIRANO: Korišćenje 'use_container_width'
+    st.sidebar.image("merkur.png", use_container_width=True)
 except FileNotFoundError:
     st.sidebar.warning("Logo fajl 'merkur.png' nije pronađen.")
 
