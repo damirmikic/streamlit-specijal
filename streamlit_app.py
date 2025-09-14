@@ -94,12 +94,22 @@ MARKET_TRANSLATIONS = {
     "To Score Or Assist": "gol ili asistencija",
     "To score from a header": "daje gol glavom",
     "To score from outside the penalty box": "daje gol izvan 16m",
+    "To score at least 2 goals": "daje golova",
+    "To score at least 3 goals": "daje golova",
 }
 
 def format_line(line_val, market):
     base_market = market.lower()
     if "card" in base_market:
         return "" # Kartoni nemaju "+"
+    
+    # Eksplicitna provera za igre sa više golova
+    if "score at least" in base_market:
+        if line_val == 1.5:
+            return "2+"
+        if line_val == 2.5:
+            return "3+"
+
     if line_val in [0.5, 1.0]:
         return "1+"
     if line_val in [1.5, 2.0]:
