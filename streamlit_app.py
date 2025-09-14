@@ -108,6 +108,14 @@ def format_line(line_val, market):
         return "3+"
     if line_val in [3.5, 4.0]:
         return "4+"
+    if line_val == 4.5:
+        return "5+"
+    if line_val == 5.5:
+        return "6+"
+    if line_val == 6.5:
+        return "7+"
+    if line_val == 7.5:
+        return "8+"
     return f"{line_val}"
 
 def format_datetime_serbian(utc_str):
@@ -158,9 +166,6 @@ with st.container():
 if st.session_state.all_props:
     df = pd.DataFrame(st.session_state.all_props)
     
-    # NEW: Filter out props where event_name is 'N/A'
-    df = df[df['event_name'] != 'N/A']
-
     # 2. KORAK: Filtriranje i dodavanje igrača
     with st.container():
         st.markdown('<div class="glass-container">', unsafe_allow_html=True)
@@ -260,13 +265,13 @@ if st.session_state.all_props:
                     header = ['Datum', 'Vreme', 'Sifra', 'Domacin', 'Gost', '', '1', 'X', '2', 'GR', 'U', 'O', 'Yes', 'No']
                     output_rows.append(header)
                     
-                    # Red sa imenom tima - UPDATED
+                    # Red sa imenom tima - CORRECTED
                     output_rows.append([f'MATCH_NAME:{match_name}', '', '', '', '', '', '', '', '', '', '', '', '', ''])
 
                     for player_name, games in st.session_state.selected_players.items():
                         if not games: continue
                         
-                        # Red sa imenom igrača - UPDATED
+                        # Red sa imenom igrača - CORRECTED
                         output_rows.append([f"LEAGUE_NAME:{player_name.replace(' ', '_')}", '', '', '', '', '', '', '', '', '', '', '', '', ''])
                         
                         for game in games:
