@@ -102,7 +102,7 @@ MARKET_TRANSLATIONS = {
 def format_line(line_val, market):
     base_market = market.lower()
     # Ažurirano: Igre za poluvreme takođe nemaju liniju
-    if "card" in base_market or "poluvremenu" in base_market:
+    if "card" in base_market or "poluvremenu" in base_market or line_val is None:
         return "" 
     
     # Eksplicitna provera za igre sa više golova
@@ -239,10 +239,12 @@ if st.session_state.all_props:
                                             game_1st_half = to_score_game.copy()
                                             game_1st_half['market'] = 'daje gol u 1. poluvremenu'
                                             game_1st_half['decimal_odds'] = odds_1st_half
+                                            game_1st_half['line'] = None # Izračunate igre nemaju liniju
                                             
                                             game_2nd_half = to_score_game.copy()
                                             game_2nd_half['market'] = 'daje gol u 2. poluvremenu'
                                             game_2nd_half['decimal_odds'] = odds_2nd_half
+                                            game_2nd_half['line'] = None # Izračunate igre nemaju liniju
 
                                             player_games.extend([game_1st_half, game_2nd_half])
 
@@ -264,24 +266,39 @@ if st.session_state.all_props:
 
             for player_name, games in list(st.session_state.selected_players.items()):
                 with st.expander(f"Igre za: {player_name}", expanded=True):
+                    # --- NOVI, PREGLEDNIJI RASPORED ---
                     for i, game in enumerate(games):
-                        cols = st.columns([4, 2, 1])
-                        
-                        # Prilagođeno da radi i sa originalnim i sa izračunatim igrama
                         market_name_raw = game['market'].replace("(Settled using Opta data)", "").strip()
                         market_name = MARKET_TRANSLATIONS.get(market_name_raw, market_name_raw)
-                        line_formatted = format_line(game['line'], market_name_raw)
+                        line_formatted = format_line(game.get('line'), market_name_raw)
                         
-                        cols[0].write(f"**{market_name} {line_formatted}**")
-                        
-                        new_odds = cols[1].number_input("Kvota:", value=game['decimal_odds'], min_value=1.01, step=0.01, key=f"odds_{player_name}_{i}", format="%.2f")
+                        # Glavna kolona za naziv
+                        st.write(f"**{market_name} {line_formatted}**")
+
+                        # Kolone za unos kvote i dugme za brisanje
+                        cols = st.columns([3, 1])
+                        new_odds = cols[0].number_input(
+                            "Kvota:", 
+                            value=game['decimal_odds'], 
+                            min_value=1.01, 
+                            step=0.01, 
+                            key=f"odds_{player_name}_{i}", 
+                            format="%.2f",
+                            label_visibility="collapsed"
+                        )
                         st.session_state.selected_players[player_name][i]['decimal_odds'] = new_odds
 
-                        if cols[2].button("Ukloni", key=f"del_{player_name}_{i}"):
+                        if cols[1].button("Ukloni", key=f"del_{player_name}_{i}"):
                             st.session_state.selected_players[player_name].pop(i)
                             if not st.session_state.selected_players[player_name]:
                                 del st.session_state.selected_players[player_name]
                             st.rerun()
+                        
+                        # Separator između igara
+                        if i < len(games) - 1:
+                            st.markdown("<hr style='margin-top:10px; margin-bottom:10px; border-color: #4a4e69;'>", unsafe_allow_html=True)
+                    
+                    # --- KRAJ NOVOG RASPOREDA ---
 
                     # Forma za ručni unos
                     st.markdown("---")
@@ -321,27 +338,26 @@ if st.session_state.all_props:
                     header = ['Datum', 'Vreme', 'Sifra', 'Domacin', 'Gost', '', '1', 'X', '2', 'GR', 'U', 'O', 'Yes', 'No']
                     output_rows.append(header)
                     
-                    # Red sa imenom tima - CORRECTED
+                    # Red sa imenom tima
                     output_rows.append([f'MATCH_NAME:{match_name}', '', '', '', '', '', '', '', '', '', '', '', '', ''])
 
                     for player_name, games in st.session_state.selected_players.items():
                         if not games: continue
                         
-                        # Red sa imenom igrača - CORRECTED
-                        output_rows.append([f"LEAGUE_NAME:{player_name.replace(' ', '_')}", '', '', '', '', '', '', '', '', '', '', '', '', ''])
+                        # Red sa imenom igrača - ISPRAVLJENO
+                        output_rows.append([f"LEAGUE_NAME:{player_name}", '', '', '', '', '', '', '', '', '', '', '', '', ''])
                         
                         for game in games:
                             datum, vreme = format_datetime_serbian(game['closed'])
                             odds = game['decimal_odds']
                             
-                            if game['line'] == -1: # Ručno dodata igra
+                            if game.get('line') == -1: # Ručno dodata igra
                                 market_name = game['market']
                                 line_formatted = ""
                             else:
-                                # Prilagođeno da radi i sa originalnim i sa izračunatim igrama
                                 market_name_raw = game['market'].replace("(Settled using Opta data)", "").strip()
                                 market_name = MARKET_TRANSLATIONS.get(market_name_raw, market_name_raw)
-                                line_formatted = format_line(game['line'], market_name_raw)
+                                line_formatted = format_line(game.get('line'), market_name_raw)
                                 
                             row = [datum, vreme, '', '', market_name, f"{line_formatted}", odds]
                             output_rows.append(row)
