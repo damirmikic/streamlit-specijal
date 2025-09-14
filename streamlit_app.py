@@ -74,6 +74,17 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# --- Funkcije za keširanje ---
+
+@st.cache_data(ttl=14400) # Keširanje podataka na 4 sata (4 * 3600 sekundi)
+def cached_get_all_lineups():
+    return get_all_lineups()
+
+@st.cache_data(ttl=14400) # Keširanje podataka na 4 sata
+def cached_get_all_injuries():
+    return get_all_injuries()
+
+
 # --- Definicije i konstante ---
 
 LEAGUES = {
@@ -109,7 +120,6 @@ MARKET_TRANSLATIONS = {
     "To score at least 3 goals": "daje golova",
 }
 
-# Definisanje redosleda igara za sortiranje
 MARKET_ORDER = {
     "To Score": 1,
     "daje gol u 1. poluvremenu": 2,
@@ -128,14 +138,12 @@ MARKET_ORDER = {
 }
 
 def get_sort_key(game):
-    """Vraća prioritet za sortiranje na osnovu imena igre."""
     market_key = game['market'].replace("(Settled using Opta data)", "").strip()
-    return MARKET_ORDER.get(market_key, 99) # 99 za nepoznate/ručne igre
+    return MARKET_ORDER.get(market_key, 99) 
 
 def format_line(line_val, market):
     base_market = market.lower().replace("(settled using opta data)", "").strip()
     
-    # Igre koje nikada ne bi trebalo da imaju "1+"
     no_line_markets = {
         "to assist", "to score or assist", "to score from a header", 
         "to get a card", "to get a red card", "to score"
@@ -181,24 +189,12 @@ if 'injuries' not in st.session_state: st.session_state.injuries = None
 # --- UI Aplikacije ---
 st.title("Player Props CSV Generator")
 
-# --- Automatsko preuzimanje dodatnih podataka ---
+# --- Automatsko preuzimanje i keširanje dodatnih podataka ---
 if st.session_state.lineups is None and st.session_state.injuries is None:
-    with st.spinner("Preuzimanje dodatnih podataka (postave i povrede)..."):
-        st.session_state.lineups = get_all_lineups()
-        st.session_state.injuries = get_all_injuries()
-        
-        if st.session_state.lineups:
-            st.toast(f"Pronađene postave za {len(st.session_state.lineups)} timova.", icon="✅")
-        else:
-            st.session_state.lineups = {}
-            st.toast("Nije uspelo preuzimanje postava.", icon="❌")
-            
-        if st.session_state.injuries:
-            total_injured = sum(len(v) for v in st.session_state.injuries.values())
-            st.toast(f"Pronađeno {total_injured} povređenih igrača.", icon="🩹")
-        else:
-            st.session_state.injuries = {}
-            st.toast("Nije uspelo preuzimanje podataka o povredama.", icon="❌")
+    with st.spinner("Preuzimanje i keširanje dodatnih podataka (postave i povrede)..."):
+        st.session_state.lineups = cached_get_all_lineups()
+        st.session_state.injuries = cached_get_all_injuries()
+        st.toast("Podaci o postavama i povredama su keširani.", icon="💾")
 
 # 1. KORAK: Izbor lige i preuzimanje kvota
 with st.container():
@@ -284,7 +280,6 @@ if st.session_state.all_props:
                                 except (ValueError, ZeroDivisionError) as e:
                                     st.warning(f"Greška pri računanju kvota za poluvremena za {selected_player_for_add}: {e}")
                             
-                            # Sortiranje igara pre dodavanja u session state
                             player_games.sort(key=get_sort_key)
                             
                             st.session_state.selected_players[selected_player_for_add] = player_games
