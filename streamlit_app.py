@@ -6,10 +6,11 @@ import math
 from player_props_scraper import get_all_props
 from lineup_scraper import get_all_lineups
 from injury_scraper import get_all_injuries
+from calculations import recalculate_related_odds # <-- NOVA LINIJA
 
 # --- Konfiguracija i stil ---
 
-st.set_page_config(layout="wide", page_title="Player Props App", page_icon="merkur.png")
+st.set_page_config(layout="wide", page_title="Player Props App")
 
 # CSS za moderni izgled, tamnu temu i stakleni efekat
 st.markdown("""
@@ -137,28 +138,19 @@ MARKET_ORDER = {
     "To Get a Red Card": 14,
 }
 
+# --- Helper funkcije ---
+
 def get_sort_key(game):
     market_key = game['market'].replace("(Settled using Opta data)", "").strip()
     return MARKET_ORDER.get(market_key, 99) 
 
 def format_line(line_val, market):
     base_market = market.lower().replace("(settled using opta data)", "").strip()
-    
-    no_line_markets = {
-        "to assist", "to score or assist", "to score from a header", 
-        "to get a card", "to get a red card", "to score"
-    }
-    
-    if base_market in no_line_markets:
-        return ""
-        
-    if "poluvremenu" in base_market or line_val is None:
-        return "" 
-    
+    no_line_markets = {"to assist", "to score or assist", "to score from a header", "to get a card", "to get a red card", "to score"}
+    if base_market in no_line_markets or "poluvremenu" in base_market or line_val is None: return ""
     if "score at least" in base_market:
         if line_val == 1.5: return "2+"
         if line_val == 2.5: return "3+"
-
     if line_val in [0.5, 1.0]: return "1+"
     if line_val in [1.5, 2.0]: return "2+"
     if line_val in [2.5, 3.0]: return "3+"
@@ -178,6 +170,8 @@ def format_datetime_serbian(utc_str):
     except (ValueError, TypeError):
         return 'N/A', 'N/A'
 
+# --- FUNKCIJA ZA REKALKULACIJU JE UKLONJENA ODAVDE ---
+
 # --- Inicijalizacija Session State ---
 if 'all_props' not in st.session_state: st.session_state.all_props = None
 if 'selected_players' not in st.session_state: st.session_state.selected_players = {}
@@ -187,7 +181,7 @@ if 'lineups' not in st.session_state: st.session_state.lineups = None
 if 'injuries' not in st.session_state: st.session_state.injuries = None
 
 # --- UI Aplikacije ---
-st.title("Merkur Specijali")
+st.title("Player Props CSV Generator")
 
 # --- Automatsko preuzimanje i keširanje dodatnih podataka ---
 if st.session_state.lineups is None and st.session_state.injuries is None:
@@ -277,8 +271,8 @@ if st.session_state.all_props:
                                     game_2nd_half = {**to_score_game, 'market': 'daje gol u 2. poluvremenu', 'decimal_odds': odds_2nd_half, 'line': None}
                                     player_games.extend([game_1st_half, game_2nd_half])
 
-                                except (ValueError, ZeroDivisionError) as e:
-                                    st.warning(f"Greška pri računanju kvota za poluvremena za {selected_player_for_add}: {e}")
+                                except (ValueError, ZeroDivisionError):
+                                    pass # Ignorišemo greške
                             
                             player_games.sort(key=get_sort_key)
                             
@@ -308,9 +302,12 @@ if st.session_state.all_props:
                         st.write(f"**{market_name} {line_formatted}**")
 
                         sub_cols = st.columns([3, 1])
+                        
                         new_odds = sub_cols[0].number_input(
                             "Kvota:", value=game['decimal_odds'], min_value=1.01, step=0.01, 
-                            key=f"odds_{player}_{index}", format="%.2f", label_visibility="collapsed"
+                            key=f"odds_{player}_{index}", format="%.2f", label_visibility="collapsed",
+                            on_change=recalculate_related_odds,
+                            args=(player, index)
                         )
                         st.session_state.selected_players[player][index]['decimal_odds'] = new_odds
 
