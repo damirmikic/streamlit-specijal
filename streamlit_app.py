@@ -187,7 +187,7 @@ if 'lineups' not in st.session_state: st.session_state.lineups = None
 if 'injuries' not in st.session_state: st.session_state.injuries = None
 
 # --- UI Aplikacije ---
-st.title("Player Props CSV Generator")
+st.title("Merkur Specijali")
 
 # --- Automatsko preuzimanje i keširanje dodatnih podataka ---
 if st.session_state.lineups is None and st.session_state.injuries is None:
