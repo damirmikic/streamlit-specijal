@@ -6,11 +6,11 @@ import math
 from player_props_scraper import get_all_props
 from lineup_scraper import get_all_lineups
 from injury_scraper import get_all_injuries
-from calculations import recalculate_related_odds # <-- NOVA LINIJA
+from calculations import recalculate_related_odds
 
 # --- Konfiguracija i stil ---
 
-st.set_page_config(layout="wide", page_title="Player Props App", page_icon="merkur.png")
+st.set_page_config(layout="wide", page_title="Player Props App")
 
 # CSS za moderni izgled, tamnu temu i stakleni efekat
 st.markdown("""
@@ -170,8 +170,6 @@ def format_datetime_serbian(utc_str):
     except (ValueError, TypeError):
         return 'N/A', 'N/A'
 
-# --- FUNKCIJA ZA REKALKULACIJU JE UKLONJENA ODAVDE ---
-
 # --- Inicijalizacija Session State ---
 if 'all_props' not in st.session_state: st.session_state.all_props = None
 if 'selected_players' not in st.session_state: st.session_state.selected_players = {}
@@ -258,6 +256,10 @@ if st.session_state.all_props:
                         if selected_player_for_add not in st.session_state.selected_players:
                             player_games = team_df[team_df['player'] == selected_player_for_add].to_dict('records')
                             
+                            # AŽURIRANO: Čuvanje originalne kvote
+                            for game in player_games:
+                                game['original_odds'] = game['decimal_odds']
+                            
                             to_score_game = next((g for g in player_games if g['market'].replace("(Settled using Opta data)", "").strip() == "To Score"), None)
                             
                             if to_score_game:
@@ -267,12 +269,12 @@ if st.session_state.all_props:
                                     odds_1st_half = round(1 / (1 - math.exp(-(lambda_total * 0.44))), 2)
                                     odds_2nd_half = round(1 / (1 - math.exp(-(lambda_total * 0.56))), 2)
 
-                                    game_1st_half = {**to_score_game, 'market': 'daje gol u 1. poluvremenu', 'decimal_odds': odds_1st_half, 'line': None}
-                                    game_2nd_half = {**to_score_game, 'market': 'daje gol u 2. poluvremenu', 'decimal_odds': odds_2nd_half, 'line': None}
+                                    game_1st_half = {**to_score_game, 'market': 'daje gol u 1. poluvremenu', 'decimal_odds': odds_1st_half, 'line': None, 'original_odds': odds_1st_half}
+                                    game_2nd_half = {**to_score_game, 'market': 'daje gol u 2. poluvremenu', 'decimal_odds': odds_2nd_half, 'line': None, 'original_odds': odds_2nd_half}
                                     player_games.extend([game_1st_half, game_2nd_half])
 
                                 except (ValueError, ZeroDivisionError):
-                                    pass # Ignorišemo greške
+                                    pass 
                             
                             player_games.sort(key=get_sort_key)
                             
@@ -301,7 +303,8 @@ if st.session_state.all_props:
                         
                         st.write(f"**{market_name} {line_formatted}**")
 
-                        sub_cols = st.columns([3, 1])
+                        # AŽURIRANO: Dodato dugme za reset
+                        sub_cols = st.columns([5, 2, 2])
                         
                         new_odds = sub_cols[0].number_input(
                             "Kvota:", value=game['decimal_odds'], min_value=1.01, step=0.01, 
@@ -311,7 +314,15 @@ if st.session_state.all_props:
                         )
                         st.session_state.selected_players[player][index]['decimal_odds'] = new_odds
 
-                        if sub_cols[1].button("Ukloni", key=f"del_{player}_{index}"):
+                        if sub_cols[1].button("🔄", key=f"revert_{player}_{index}", help="Vrati originalnu kvotu"):
+                            original_odds = st.session_state.selected_players[player][index].get('original_odds')
+                            if original_odds:
+                                st.session_state[f"odds_{player}_{index}"] = original_odds
+                                # Pokreni ponovo rekalkulaciju sa originalnom kvotom
+                                recalculate_related_odds(player, index)
+                                st.rerun()
+
+                        if sub_cols[2].button("🗑️", key=f"del_{player}_{index}", help="Ukloni igru"):
                             st.session_state.selected_players[player].pop(index)
                             if not st.session_state.selected_players[player]:
                                 del st.session_state.selected_players[player]
