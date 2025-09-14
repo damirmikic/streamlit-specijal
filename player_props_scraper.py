@@ -9,8 +9,14 @@ def get_all_props():
     # REVERTED: Going back to the group ID that is proven to work.
     group_url = "https://eu-offering-api.kambicdn.com/offering/v2018/paf11lv/betoffer/group/1000093190.json?includeParticipants=true&onlyMain=false&type=2&market=PM&lang=en_GB&suppress_response_codes=true"
     
+    # ADDED: Headers to mimic a web browser and avoid 403 Forbidden errors.
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+
     try:
-        response = requests.get(group_url)
+        # Using headers in the request
+        response = requests.get(group_url, headers=headers)
         response.raise_for_status()
         data = response.json()
     except requests.exceptions.RequestException as e:
@@ -24,7 +30,8 @@ def get_all_props():
         event_url = f"https://eu1.offering-api.kambicdn.com/offering/v2018/kambi/betoffer/event/{event_id}.json?lang=en_GB&market=GB&client_id=2&channel_id=7&ncid=1757795583713&includeParticipants=true"
         
         try:
-            event_response = requests.get(event_url)
+            # Using headers in the request for each event
+            event_response = requests.get(event_url, headers=headers)
             if event_response.status_code != 200:
                 continue
             event_data = event_response.json()
