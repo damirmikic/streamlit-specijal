@@ -12,7 +12,7 @@ from calculations import recalculate_related_odds
 
 st.set_page_config(layout="wide", page_title="Player Props App")
 
-# CSS sa primenjenim izmenama za pristupačnost
+# CSS sa primenjenim izmenama za pristupačnost i vidljivost
 st.markdown("""
 <style>
     /* Generalni stilovi i preporučena tipografija */
@@ -84,6 +84,48 @@ st.markdown("""
         border: none;
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
+    
+    /* --- POBOLJŠANJE VIDLJIVOSTI ELEMENATA --- */
+
+    /* Poboljšanje vidljivosti za labele (npr. 'Izaberite Igrača') */
+    .stSelectbox label, .stTextInput label, .stNumberInput label {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+
+    /* Poboljšanje vidljivosti za st.info (očekivana postava) */
+    div[data-testid="stInfo"] {
+        background-color: rgba(224, 247, 250, 0.9); /* Svetla cijan pozadina */
+        color: #004d40; /* Veoma taman tekst za maksimalan kontrast */
+        border: 1px solid #4dd0e1; /* Cijan ivica */
+        border-radius: 10px;
+    }
+    div[data-testid="stInfo"] div {
+         color: #004d40 !important;
+    }
+    
+    /* Stil za st.warning */
+    div[data-testid="stWarning"] {
+        background-color: rgba(255, 243, 224, 0.9); /* Svetla narandžasta pozadina */
+        color: #e65100; /* Taman narandžasti tekst */
+        border: 1px solid #ffb74d;
+        border-radius: 10px;
+    }
+    div[data-testid="stWarning"] div {
+         color: #e65100 !important;
+    }
+
+    /* Stil za st.error (povrede) */
+    div[data-testid="stError"] {
+        background-color: rgba(255, 235, 238, 0.9); /* Svetla crvena pozadina */
+        color: #c62828; /* Taman crveni tekst */
+        border: 1px solid #ef9a9a;
+        border-radius: 10px;
+    }
+     div[data-testid="stError"] div {
+         color: #c62828 !important;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -312,16 +354,14 @@ if st.session_state.all_props:
                         market_name = MARKET_TRANSLATIONS.get(market_name_raw, market_name_raw)
                         line_formatted = format_line(game.get('line'), market_name_raw)
                         
-                        # Kreiranje jedinstvene labele
                         game_label = f"Kvota za {market_name} {line_formatted} ({player})"
 
                         st.write(f"**{market_name} {line_formatted}**")
 
                         sub_cols = st.columns([5, 2, 2])
                         
-                        # AŽURIRANO: Uklonjen label_visibility="collapsed"
                         new_odds = sub_cols[0].number_input(
-                            label=game_label, # Korišćenje deskriptivne labele
+                            label=game_label,
                             value=game['decimal_odds'], min_value=1.01, step=0.01, 
                             key=f"odds_{player}_{index}", format="%.2f",
                             on_change=recalculate_related_odds,
