@@ -86,7 +86,6 @@ LEAGUES = {
     "Europa League": "2000051195"
 }
 
-# Mapiranje imena liga na ključeve za skriptu o povredama
 LEAGUE_TO_INJURY_KEY = {
     "Premier League": "england-premier-league",
     "La Liga": "spain-la-liga",
@@ -94,7 +93,6 @@ LEAGUE_TO_INJURY_KEY = {
     "Bundesliga": "germany-bundesliga",
     "Ligue 1": "france-ligue-1",
 }
-
 
 MARKET_TRANSLATIONS = {
     "Player's shots on target": "ukupno suteva u okvir gola",
@@ -111,9 +109,42 @@ MARKET_TRANSLATIONS = {
     "To score at least 3 goals": "daje golova",
 }
 
+# Definisanje redosleda igara za sortiranje
+MARKET_ORDER = {
+    "To Score": 1,
+    "daje gol u 1. poluvremenu": 2,
+    "daje gol u 2. poluvremenu": 3,
+    "To score at least 2 goals": 4,
+    "To score at least 3 goals": 5,
+    "To score from a header": 6,
+    "To score from outside the penalty box": 7,
+    "Player's shots on target": 8,
+    "Player's shots": 9,
+    "To Assist": 10,
+    "To Score Or Assist": 11,
+    "Player's fouls conceded": 12,
+    "To Get a Card": 13,
+    "To Get a Red Card": 14,
+}
+
+def get_sort_key(game):
+    """Vraća prioritet za sortiranje na osnovu imena igre."""
+    market_key = game['market'].replace("(Settled using Opta data)", "").strip()
+    return MARKET_ORDER.get(market_key, 99) # 99 za nepoznate/ručne igre
+
 def format_line(line_val, market):
-    base_market = market.lower()
-    if "card" in base_market or "poluvremenu" in base_market or line_val is None:
+    base_market = market.lower().replace("(settled using opta data)", "").strip()
+    
+    # Igre koje nikada ne bi trebalo da imaju "1+"
+    no_line_markets = {
+        "to assist", "to score or assist", "to score from a header", 
+        "to get a card", "to get a red card", "to score"
+    }
+    
+    if base_market in no_line_markets:
+        return ""
+        
+    if "poluvremenu" in base_market or line_val is None:
         return "" 
     
     if "score at least" in base_market:
@@ -159,14 +190,14 @@ if st.session_state.lineups is None and st.session_state.injuries is None:
         if st.session_state.lineups:
             st.toast(f"Pronađene postave za {len(st.session_state.lineups)} timova.", icon="✅")
         else:
-            st.session_state.lineups = {} # Postavlja se na prazno da se ne bi ponovo pokretalo
+            st.session_state.lineups = {}
             st.toast("Nije uspelo preuzimanje postava.", icon="❌")
             
         if st.session_state.injuries:
             total_injured = sum(len(v) for v in st.session_state.injuries.values())
             st.toast(f"Pronađeno {total_injured} povređenih igrača.", icon="🩹")
         else:
-            st.session_state.injuries = {} # Postavlja se na prazno da se ne bi ponovo pokretalo
+            st.session_state.injuries = {}
             st.toast("Nije uspelo preuzimanje podataka o povredama.", icon="❌")
 
 # 1. KORAK: Izbor lige i preuzimanje kvota
@@ -179,7 +210,6 @@ with st.container():
         league_id = LEAGUES[selected_league_name]
         with st.spinner(f"Preuzimanje ponude za {selected_league_name}..."):
             st.session_state.all_props = get_all_props(league_id)
-            # Resetovanje
             st.session_state.selected_players = {}
             st.session_state.manual_games = {}
             st.session_state.selected_team = None
@@ -208,7 +238,6 @@ if st.session_state.all_props:
             if selected_team != st.session_state.selected_team:
                 st.session_state.selected_team = selected_team
             
-            # Prikaz očekivane postave i povreda
             if selected_team:
                 if st.session_state.lineups:
                     lineup = st.session_state.lineups.get(selected_team)
@@ -254,6 +283,9 @@ if st.session_state.all_props:
 
                                 except (ValueError, ZeroDivisionError) as e:
                                     st.warning(f"Greška pri računanju kvota za poluvremena za {selected_player_for_add}: {e}")
+                            
+                            # Sortiranje igara pre dodavanja u session state
+                            player_games.sort(key=get_sort_key)
                             
                             st.session_state.selected_players[selected_player_for_add] = player_games
                             st.success(f"Igrač {selected_player_for_add} dodat u ponudu.")
