@@ -10,16 +10,21 @@ from calculations import recalculate_related_odds
 
 # --- Konfiguracija i stil ---
 
-st.set_page_config(layout="wide", page_title="Player Props App", page_icon="merkur.png")
+st.set_page_config(layout="wide", page_title="Player Props App")
 
-# CSS za moderni izgled, tamnu temu i stakleni efekat
+# CSS sa primenjenim izmenama za pristupačnost
 st.markdown("""
 <style>
-    /* Generalni stilovi */
+    /* Generalni stilovi i preporučena tipografija */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     
+    html {
+        font-size: 100%;
+    }
     body {
         font-family: 'Inter', sans-serif;
+        font-size: 1rem;
+        line-height: 1.5;
     }
 
     /* Tamna tema */
@@ -28,9 +33,9 @@ st.markdown("""
         color: #e0e0e0;
     }
 
-    /* Stilizacija glavnih elemenata */
+    /* Stilizacija glavnih elemenata sa poboljšanim kontrastom */
     .stButton>button {
-        border: 2px solid #4a4e69;
+        border: 2px solid #8d99ae; /* Poboljšan kontrast */
         background-color: transparent;
         color: #e0e0e0;
         padding: 10px 20px;
@@ -39,13 +44,20 @@ st.markdown("""
         font-weight: 600;
     }
     .stButton>button:hover {
-        background-color: #4a4e69;
-        color: #ffffff;
-        box-shadow: 0 0 10px #4a4e69;
+        background-color: #8d99ae; /* Poboljšan kontrast */
+        color: #1a1a2e; /* Poboljšan kontrast teksta na hover */
+        box-shadow: 0 0 10px #8d99ae;
     }
     
     .stSelectbox, .stTextInput, .stNumberInput {
         border-radius: 10px;
+    }
+    
+    /* Poboljšana navigacija tastaturom */
+    :is(button, a, input, select):focus-visible {
+        outline: 3px solid #fca311; /* Jasan indikator fokusa */
+        outline-offset: 2px;
+        border-radius: 5px;
     }
 
     /* Glassmorphism efekat za kontejnere */
@@ -256,7 +268,6 @@ if st.session_state.all_props:
                         if selected_player_for_add not in st.session_state.selected_players:
                             player_games = team_df[team_df['player'] == selected_player_for_add].to_dict('records')
                             
-                            # AŽURIRANO: Čuvanje originalne kvote
                             for game in player_games:
                                 game['original_odds'] = game['decimal_odds']
                             
@@ -301,14 +312,18 @@ if st.session_state.all_props:
                         market_name = MARKET_TRANSLATIONS.get(market_name_raw, market_name_raw)
                         line_formatted = format_line(game.get('line'), market_name_raw)
                         
+                        # Kreiranje jedinstvene labele
+                        game_label = f"Kvota za {market_name} {line_formatted} ({player})"
+
                         st.write(f"**{market_name} {line_formatted}**")
 
-                        # AŽURIRANO: Dodato dugme za reset
                         sub_cols = st.columns([5, 2, 2])
                         
+                        # AŽURIRANO: Uklonjen label_visibility="collapsed"
                         new_odds = sub_cols[0].number_input(
-                            "Kvota:", value=game['decimal_odds'], min_value=1.01, step=0.01, 
-                            key=f"odds_{player}_{index}", format="%.2f", label_visibility="collapsed",
+                            label=game_label, # Korišćenje deskriptivne labele
+                            value=game['decimal_odds'], min_value=1.01, step=0.01, 
+                            key=f"odds_{player}_{index}", format="%.2f",
                             on_change=recalculate_related_odds,
                             args=(player, index)
                         )
@@ -318,7 +333,6 @@ if st.session_state.all_props:
                             original_odds = st.session_state.selected_players[player][index].get('original_odds')
                             if original_odds:
                                 st.session_state[f"odds_{player}_{index}"] = original_odds
-                                # Pokreni ponovo rekalkulaciju sa originalnom kvotom
                                 recalculate_related_odds(player, index)
                                 st.rerun()
 
