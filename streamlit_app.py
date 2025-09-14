@@ -1,344 +1,295 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime, timedelta
+import pytz
 from player_props_scraper import get_all_props
-import io
-import csv
-from datetime import datetime
-import math
-import uuid
 
-# --- Page Configuration ---
-st.set_page_config(
-    page_title="Player Props Offer Builder",
-    page_icon="⚽",
-    layout="wide"
-)
+# --- Konfiguracija i stil ---
 
-# --- Serbian Translation Mapping (Updated) ---
+st.set_page_config(layout="wide", page_title="Player Props App")
+
+# CSS za moderni izgled, tamnu temu i stakleni efekat
+st.markdown("""
+<style>
+    /* Generalni stilovi */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    
+    body {
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* Tamna tema */
+    .stApp {
+        background-color: #1a1a2e;
+        color: #e0e0e0;
+    }
+
+    /* Stilizacija glavnih elemenata */
+    .stButton>button {
+        border: 2px solid #4a4e69;
+        background-color: transparent;
+        color: #e0e0e0;
+        padding: 10px 20px;
+        border-radius: 10px;
+        transition: all 0.2s ease-in-out;
+        font-weight: 600;
+    }
+    .stButton>button:hover {
+        background-color: #4a4e69;
+        color: #ffffff;
+        box-shadow: 0 0 10px #4a4e69;
+    }
+    
+    .stSelectbox, .stTextInput, .stNumberInput {
+        border-radius: 10px;
+    }
+
+    /* Glassmorphism efekat za kontejnere */
+    .glass-container {
+        background: rgba(43, 45, 66, 0.6);
+        border-radius: 16px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(7.5px);
+        -webkit-backdrop-filter: blur(7.5px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 25px;
+        margin-bottom: 20px;
+    }
+
+    /* Naslovi */
+    h1, h2, h3 {
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+    /* Mikro-interakcije */
+    .stExpander {
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- Definicije i konstante ---
+
+LEAGUES = {
+    "Premier League": "1000094985",
+    "La Liga": "1000095049",
+    "Bundesliga": "1000094994",
+    "Serie A": "1000095001",
+    "Ligue 1": "1000094991",
+    "Champions League": "1000093381",
+    "Europa League": "2000051195"
+}
+
 MARKET_TRANSLATIONS = {
     "Player's shots on target": "ukupno suteva u okvir gola",
     "Player's shots": "ukupno suteva",
     "Player's fouls conceded": "ukupno nacinjenih faulova",
     "To Assist": "asistencija",
-    "To Get A Card": "dobija karton",
-    "To Get A Red Card": "dobija crveni karton",
+    "To Get a Card": "dobija karton",
+    "To Get a Red Card": "dobija crveni karton",
     "To Score": "daje gol",
     "To Score Or Assist": "gol ili asistencija",
-    "To Score From A Header": "daje gol glavom",
-    "To Score From Outside The Penalty Box": "daje gol izvan 16m",
-    "To score at least 2 goals": "daje golova"
+    "To score from a header": "daje gol glavom",
+    "To score from outside the penalty box": "daje gol izvan 16m",
 }
 
-# --- Custom CSS for Modern UI/UX ---
-def load_css():
-    """Injects custom CSS for a modern, accessible, and interactive UI."""
-    st.markdown("""
-        <style>
-            /* --- Global & Typography --- */
-            html, body, [class*="st-"] {
-                font-family: 'Inter', sans-serif;
-                color: #E5E7EB; /* Light gray text for readability */
-            }
-            h1, h2, h3 {
-                font-weight: 600;
-            }
-            .main {
-                background-color: #030712; /* Dark background */
-                background-image: radial-gradient(circle at top right, rgba(12,74,110,0.3), transparent 40%);
-                background-attachment: fixed;
-            }
+def format_line(line_val, market):
+    base_market = market.lower()
+    if "card" in base_market:
+        return "" # Kartoni nemaju "+"
+    if line_val in [0.5, 1.0]:
+        return "1+"
+    if line_val in [1.5, 2.0]:
+        return "2+"
+    if line_val in [2.5, 3.0]:
+        return "3+"
+    if line_val in [3.5, 4.0]:
+        return "4+"
+    return f"{line_val}"
 
-            /* --- Glassmorphism Containers --- */
-            .glass-container {
-                background: rgba(31, 41, 55, 0.5);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
-                border-radius: 16px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                padding: 2rem;
-                margin-bottom: 2rem;
-                transition: all 0.2s ease-in-out;
-            }
-            .glass-container:hover {
-                box-shadow: 0 0 20px rgba(0, 191, 255, 0.1); /* Subtle glow on hover */
-            }
-            
-            /* --- Button & Interactive Elements Styling --- */
-            div[data-testid="stButton"] > button, .stDownloadButton > button {
-                border: 1px solid #38BDF8; /* Light blue border */
-                border-radius: 12px;
-                background-color: transparent;
-                color: #38BDF8;
-                padding: 12px 24px; /* Larger tap area */
-                transition: all 0.2s ease-in-out;
-                font-weight: 600;
-            }
-            div[data-testid="stButton"] > button:hover, .stDownloadButton > button:hover {
-                background-color: #38BDF8;
-                color: #030712;
-                box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
-                transform: translateY(-2px); /* Subtle lift */
-            }
-            div[data-testid="stButton"] > button:active, .stDownloadButton > button:active {
-                transform: translateY(0);
-            }
-            
-            /* Style for 'Remove' button */
-            div[data-testid="stButton"] > button:contains("Ukloni") {
-                border-color: #F472B6;
-                color: #F472B6;
-            }
-             div[data-testid="stButton"] > button:contains("Ukloni"):hover {
-                background-color: #F472B6;
-                color: #FFFFFF;
-                box-shadow: 0 0 15px rgba(244, 114, 182, 0.5);
-            }
+def format_datetime_serbian(utc_str):
+    try:
+        utc_dt = datetime.fromisoformat(utc_str.replace('Z', '+00:00'))
+        cet = pytz.timezone('Europe/Belgrade')
+        local_dt = utc_dt.astimezone(cet)
+        return local_dt.strftime('%d.%m.%Y'), local_dt.strftime('%H:%M')
+    except (ValueError, TypeError):
+        return 'N/A', 'N/A'
 
-            /* --- Input Fields (Selectbox, Text Input) --- */
-            div[data-testid="stSelectbox"], div[data-testid="stTextInput"], div[data-testid="stNumberInput"] {
-                 background-color: rgba(17, 24, 39, 0.8);
-                 border-radius: 12px;
-                 padding: 8px;
-                 border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-
-            /* --- Expander for player cards --- */
-            .stExpander {
-                background: rgba(17, 24, 39, 0.8);
-                border-radius: 16px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-            .stExpander header {
-                font-size: 1.25rem;
-                font-weight: 600;
-                color: #F9FAFB;
-            }
-            
-            /* --- Dataframe styling --- */
-            .stDataFrame {
-                border-radius: 16px;
-                overflow: hidden;
-            }
-        </style>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
-    """, unsafe_allow_html=True)
-
-# --- Session State Initialization ---
-if 'data_df' not in st.session_state:
-    st.session_state.data_df = None
-if 'offer_list' not in st.session_state:
-    st.session_state.offer_list = []
-if 'preview_df' not in st.session_state:
-    st.session_state.preview_df = None
+# --- Inicijalizacija Session State ---
+if 'all_props' not in st.session_state:
+    st.session_state.all_props = None
+if 'selected_players' not in st.session_state:
+    st.session_state.selected_players = {}
+if 'manual_games' not in st.session_state:
+    st.session_state.manual_games = {}
 if 'selected_team' not in st.session_state:
-    st.session_state.selected_team = ""
+    st.session_state.selected_team = None
 
-# --- Helper Functions ---
-def get_translation(market_name):
-    """Gets the Serbian translation for a market name, ignoring case."""
-    cleaned_name = market_name.replace('(Settled using Opta data)', '').strip()
-    # Convert to title case to match the dictionary keys
-    title_case_name = cleaned_name.title()
-    return MARKET_TRANSLATIONS.get(title_case_name, cleaned_name)
+# --- UI Aplikacije ---
+st.title("Player Props CSV Generator")
 
-def generate_formatted_df(offer_list):
-    """
-    Transforms the offer list into a formatted DataFrame ready for display or CSV export.
-    """
-    if not offer_list:
-        return pd.DataFrame()
-
-    df = pd.DataFrame(offer_list)
-    output_rows = []
+# 1. KORAK: Izbor lige i preuzimanje podataka
+with st.container():
+    st.markdown('<div class="glass-container">', unsafe_allow_html=True)
+    st.header("1. Preuzimanje Ponude")
     
-    header = ['Datum', 'Vreme', 'Sifra', 'Domacin', 'Gost', '1', 'X', '2', 'GR', 'U', 'O', 'Yes', 'No']
+    selected_league_name = st.selectbox("Izaberite Ligu:", options=list(LEAGUES.keys()))
     
-    grouped_by_team = df.groupby('team')
+    if st.button("Prikaži Ponudu"):
+        league_id = LEAGUES[selected_league_name]
+        with st.spinner(f"Preuzimanje ponude za {selected_league_name}..."):
+            st.session_state.all_props = get_all_props(league_id)
+            # Resetovanje svega ostalog pri novom preuzimanju
+            st.session_state.selected_players = {}
+            st.session_state.manual_games = {}
+            st.session_state.selected_team = None
+            if not st.session_state.all_props:
+                st.error("Nije uspelo preuzimanje podataka za izabranu ligu.")
+            else:
+                st.success(f"Pronađeno {len(st.session_state.all_props)} ponuda!")
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# Ostatak UI se prikazuje samo ako su podaci preuzeti
+if st.session_state.all_props:
+    df = pd.DataFrame(st.session_state.all_props)
     
-    for team_name, team_df in grouped_by_team:
-        output_rows.append({header[0]: f'MATCH_NAME:{team_name}'})
-        
-        grouped_by_player = team_df.groupby('player')
-        for player_name, player_df in grouped_by_player:
-            player_df = player_df.sort_values(['market', 'line'])
-            output_rows.append({header[0]: f'LEAGUE_NAME:{player_name}'})
-
-            for _, row in player_df.iterrows():
-                datum, vreme = ('', '')
-                if row.get('closed') and isinstance(row['closed'], str):
-                    try:
-                        dt = datetime.fromisoformat(row['closed'].replace('Z', '+00:00'))
-                        datum = dt.strftime('%d.%m.%Y')
-                        vreme = dt.strftime('%H:%M')
-                    except ValueError:
-                        pass
-
-                domacin = get_translation(row['market'])
-                gost = f"{math.ceil(row['line'])}+" if row['line'] > 0 else ''
-                
-                output_row = {h: '' for h in header}
-                output_row.update({'Datum': datum, 'Vreme': vreme, 'Domacin': domacin, 'Gost': gost, 'O': row['decimal_odds']})
-                output_rows.append(output_row)
-                
-    return pd.DataFrame(output_rows)
-
-# --- UI Layout ---
-load_css()
-
-st.title("📊 Player Props Offer Builder")
-
-# --- 1. Fetching Data ---
-if st.button("🚀 Učitaj Najnovije Kvote"):
-    with st.spinner("Preuzimanje podataka sa API-ja..."):
-        all_props = get_all_props()
-        if all_props:
-            st.session_state.data_df = pd.DataFrame(all_props)
-            st.success("Podaci su uspešno učitani!")
-        else:
-            st.error("Neuspešno preuzimanje podataka.")
-
-# --- 2. Main Application UI ---
-if st.session_state.data_df is not None:
+    # 2. KORAK: Filtriranje i dodavanje igrača
     with st.container():
         st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-        st.header("1. Izbor Događaja i Tima")
-        df = st.session_state.data_df
-        events_with_props = df['event_name'].unique()
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            selected_event = st.selectbox("Izaberite događaj:", options=events_with_props, key="event_selector")
-        
-        if selected_event:
-            event_df = df[df['event_name'] == selected_event].copy()
-            teams_in_event = sorted([team for team in event_df['team'].unique() if team != 'N/A'])
-            
-            with col2:
-                # Store selected team in session state to fix the manual entry bug
-                st.session_state.selected_team = st.selectbox("Izaberite tim:", options=teams_in_event, key="team_selector")
-            
-            st.markdown("---")
-            st.subheader("Dodaj Igrača u Ponudu")
+        st.header("2. Izbor Igrača")
 
-            if st.session_state.selected_team:
-                player_df = event_df[event_df['team'] == st.session_state.selected_team]
-                available_players = sorted(player_df['player'].unique())
+        # Filtriranje po događaju
+        events = sorted(df['event_name'].unique())
+        selected_event = st.selectbox("Izaberite Događaj:", options=events, key="event_selector")
+
+        if selected_event:
+            event_df = df[df['event_name'] == selected_event]
+            teams = sorted(event_df['team'].unique())
+            if teams:
+                selected_team = st.selectbox("Izaberite Tim:", options=teams, key="team_selector")
                 
-                player_col, add_btn_col = st.columns([3, 1])
-                with player_col:
-                    player_to_add = st.selectbox("Izaberite igrača:", options=available_players, label_visibility="collapsed")
-                with add_btn_col:
-                    if st.button("➕ Dodaj Igrača", use_container_width=True):
-                        props_to_add = player_df[player_df['player'] == player_to_add].to_dict('records')
-                        for prop in props_to_add:
-                            prop['id'] = str(uuid.uuid4())
-                            st.session_state.offer_list.append(prop)
-                        st.session_state.preview_df = None
+                if selected_team != st.session_state.selected_team:
+                    st.session_state.selected_team = selected_team
+
+                if selected_team:
+                    team_df = event_df[event_df['team'] == selected_team]
+                    players = sorted(team_df['player'].unique())
+                    
+                    if players:
+                        selected_player_for_add = st.selectbox("Izaberite Igrača za dodavanje:", options=players)
+                        if st.button("➕ Dodaj Igrača", key=f"add_{selected_player_for_add}"):
+                            if selected_player_for_add not in st.session_state.selected_players:
+                                player_games = team_df[team_df['player'] == selected_player_for_add].to_dict('records')
+                                st.session_state.selected_players[selected_player_for_add] = player_games
+                                st.success(f"Igrač {selected_player_for_add} dodat u ponudu.")
+                    else:
+                        st.warning("Nema dostupnih igrača za izabrani tim.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- 3. Current Offer Display ---
-    if st.session_state.offer_list:
+    # 3. KORAK: Prikaz i modifikacija kreirane ponude
+    if st.session_state.selected_players:
         with st.container():
             st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-            st.header("2. Kreirana Ponuda")
-            
-            offer_df = pd.DataFrame(st.session_state.offer_list)
-            for player_name, props in offer_df.groupby('player'):
+            st.header("3. Kreirana Ponuda")
+
+            for player_name, games in list(st.session_state.selected_players.items()):
                 with st.expander(f"Igre za: {player_name}", expanded=True):
-                    for _, prop in props.iterrows():
-                        # FIX: Changed layout and elements to prevent text overlap and allow editing
-                        prop_col1, odds_label_col, odds_input_col, btn_col = st.columns([4, 1, 2, 1])
+                    for i, game in enumerate(games):
+                        cols = st.columns([4, 2, 1])
+                        market_name_raw = game['market'].replace("(Settled using Opta data)", "").strip()
+                        market_name = MARKET_TRANSLATIONS.get(market_name_raw, market_name_raw)
+                        line_formatted = format_line(game['line'], market_name_raw)
                         
-                        # FIX: Use st.write instead of st.markdown to prevent rendering artifacts
-                        prop_col1.write(f"**{get_translation(prop['market'])}** ({math.ceil(prop['line'])}+)")
+                        cols[0].write(f"**{market_name} {line_formatted}**")
                         
-                        odds_label_col.write("**Kvota:**")
+                        new_odds = cols[1].number_input("Kvota:", value=game['decimal_odds'], min_value=1.01, step=0.01, key=f"odds_{player_name}_{i}", format="%.2f")
+                        st.session_state.selected_players[player_name][i]['decimal_odds'] = new_odds
 
-                        # Find the index of the current prop in the main list to update it
-                        prop_index = next((i for i, item in enumerate(st.session_state.offer_list) if item["id"] == prop['id']), None)
-
-                        if prop_index is not None:
-                            # ADD: Use number_input for editing odds
-                            new_odds = odds_input_col.number_input(
-                                "Kvota",
-                                value=float(st.session_state.offer_list[prop_index]['decimal_odds']),
-                                min_value=1.01,
-                                step=0.01,
-                                format="%.2f",
-                                key=f"odds_{prop['id']}", # Unique key is crucial
-                                label_visibility="collapsed"
-                            )
-
-                            # If the value in the UI is different from the state, update the state.
-                            if new_odds != st.session_state.offer_list[prop_index]['decimal_odds']:
-                                st.session_state.offer_list[prop_index]['decimal_odds'] = new_odds
-                                st.session_state.preview_df = None # Invalidate preview
-                                st.rerun()
-
-                        if btn_col.button("Ukloni", key=prop['id'], use_container_width=True):
-                            st.session_state.offer_list = [p for p in st.session_state.offer_list if p['id'] != prop['id']]
-                            st.session_state.preview_df = None
+                        if cols[2].button("Ukloni", key=f"del_{player_name}_{i}"):
+                            st.session_state.selected_players[player_name].pop(i)
+                            if not st.session_state.selected_players[player_name]:
+                                del st.session_state.selected_players[player_name]
                             st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-    
-    # --- 4. Manual Entry & Actions ---
-    with st.container():
-        st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-        with st.expander("📝 Ručni Unos Igre"):
-            with st.form("manual_entry_form"):
-                st.write("Dodajte igru koja nije na listi.")
-                m_col1, m_col2 = st.columns(2)
-                manual_player = m_col1.text_input("Ime Igrača")
-                # Use session state for a stable default value
-                manual_team = m_col2.text_input("Ime Tima", value=st.session_state.get("selected_team", ""))
-                
-                m_col3, m_col4, m_col5 = st.columns(3)
-                manual_market = m_col3.text_input("Tržište (npr. ukupno suteva)")
-                manual_line = m_col4.number_input("Linija (npr. 1.5)", step=1.0, value=0.5)
-                manual_odds = m_col5.number_input("Kvota (npr. 1.85)", step=0.01)
 
-                if st.form_submit_button("Dodaj Ručno", use_container_width=True):
-                    if manual_player and manual_team and manual_market:
-                        manual_prop = {
-                            'id': str(uuid.uuid4()), 'event_name': selected_event,
-                            'closed': st.session_state.data_df[st.session_state.data_df['event_name']==selected_event]['closed'].iloc[0],
-                            'player': manual_player, 'team': manual_team, 'market': manual_market,
-                            'line': manual_line, 'selection': 'Over', 'decimal_odds': manual_odds
-                        }
-                        st.session_state.offer_list.append(manual_prop)
-                        st.session_state.preview_df = None
-                        st.success(f"Ručno dodata igra za {manual_player}.")
-                        st.rerun()
-                    else:
-                        st.warning("Molimo popunite sva polja.")
-        
-        st.markdown("---")
-        st.header("3. Generisanje Fajla")
-        
-        preview_col, clear_col, download_col = st.columns(3)
-        
-        with preview_col:
-            if st.button("📊 Generiši Pregled", use_container_width=True):
-                st.session_state.preview_df = generate_formatted_df(st.session_state.offer_list) if st.session_state.offer_list else None
+                    # Forma za ručni unos
+                    st.markdown("---")
+                    st.subheader("Ručno dodaj igru")
+                    manual_cols = st.columns([3,2])
+                    manual_game_name = manual_cols[0].text_input("Naziv igre (npr. 'specijal')", key=f"manual_name_{player_name}")
+                    manual_odds = manual_cols[1].number_input("Kvota", min_value=1.01, step=0.01, key=f"manual_odds_{player_name}", format="%.2f")
+                    if st.button("Dodaj ručnu igru", key=f"manual_add_{player_name}"):
+                        if manual_game_name:
+                             # Kreiramo 'fake' game objekat
+                            manual_game = {
+                                'player': player_name,
+                                'market': manual_game_name,
+                                'line': -1, # Indikator da je ručno
+                                'decimal_odds': manual_odds,
+                                'closed': games[0]['closed'] if games else datetime.now().isoformat()
+                            }
+                            st.session_state.selected_players[player_name].append(manual_game)
+                            st.rerun()
 
-        with clear_col:
-            if st.button("❌ Poništi Unos", use_container_width=True):
-                st.session_state.offer_list = []
-                st.session_state.preview_df = None
+
+            # Dugmad za finalne akcije
+            final_cols = st.columns(2)
+            if final_cols[0].button("Poništi Unos"):
+                st.session_state.selected_players = {}
                 st.rerun()
-        
-        with download_col:
-            if st.session_state.preview_df is not None and not st.session_state.preview_df.empty:
-                team_name = pd.DataFrame(st.session_state.offer_list)['team'].unique()[0] if len(pd.DataFrame(st.session_state.offer_list)['team'].unique()) == 1 else "ponuda"
-                file_name = f"{team_name}_kvote.csv"
-                csv_data = st.session_state.preview_df.to_csv(index=False, header=True).encode('utf-8')
-                st.download_button(
-                    label="📥 Preuzmi CSV", data=csv_data, file_name=file_name,
-                    mime="text/csv", use_container_width=True
-                )
+            
+            if final_cols[1].button("Generiši CSV Pregled"):
+                
+                # --- Logika za generisanje CSV-a ---
+                if st.session_state.selected_team and st.session_state.selected_players:
+                    match_name = st.session_state.selected_team
+                    
+                    output_rows = []
+                    
+                    # Glavno zaglavlje
+                    header = ['Datum', 'Vreme', 'Sifra', 'Domacin', 'Gost', '', '1', 'X', '2', 'GR', 'U', 'O', 'Yes', 'No']
+                    output_rows.append(header)
+                    
+                    # Red sa imenom tima
+                    output_rows.append(['', '', '', '', '', f'MATCH_NAME:{match_name}', '', '', '', '', '', '', '', ''])
 
-        if st.session_state.preview_df is not None:
-            st.info("Ovo je pregled kako će tabela izgledati u CSV fajlu.")
-            st.dataframe(st.session_state.preview_df.fillna(''))
+                    for player_name, games in st.session_state.selected_players.items():
+                        if not games: continue
+                        
+                        # Red sa imenom igrača
+                        output_rows.append(['', '', '', '', '', f"LEAGUE_NAME:{player_name.replace(' ', '_')}", '', '', '', '', '', '', '', ''])
+                        
+                        for game in games:
+                            datum, vreme = format_datetime_serbian(game['closed'])
+                            odds = game['decimal_odds']
+                            
+                            if game['line'] == -1: # Ručno dodata igra
+                                market_name = game['market']
+                                line_formatted = ""
+                            else:
+                                market_name_raw = game['market'].replace("(Settled using Opta data)", "").strip()
+                                market_name = MARKET_TRANSLATIONS.get(market_name_raw, market_name_raw)
+                                line_formatted = format_line(game['line'], market_name_raw)
+                                
+                            row = [datum, vreme, '', '', market_name, f"{line_formatted}", odds]
+                            output_rows.append(row)
+
+                    # Kreiranje DataFrame-a za prikaz i download
+                    final_df = pd.DataFrame(output_rows)
+                    st.dataframe(final_df)
+                    
+                    # Priprema za download
+                    csv_string = final_df.to_csv(index=False, header=False).encode('utf-8')
+                    st.download_button(
+                        label="Preuzmi CSV Fajl",
+                        data=csv_string,
+                        file_name=f"{match_name.replace(' ', '_')}_kvote.csv",
+                        mime='text/csv',
+                    )
+
         st.markdown('</div>', unsafe_allow_html=True)
 
