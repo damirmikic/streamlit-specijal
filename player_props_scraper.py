@@ -42,7 +42,12 @@ def get_all_props(league_id):
     all_player_props = []
     
     # Get event names from the participants list in the props response
-    event_name_map = {p['eventId']: p['event']['name'] for p in props_data.get('participants', []) if 'event' in p}
+    event_name_map = {}
+    if 'participants' in props_data:
+        for p in props_data.get('participants', []):
+            if p.get('event') and p.get('eventId'):
+                 event_name_map[p['eventId']] = p['event'].get('name', 'N/A')
+
 
     for offer in props_data.get('betOffers', []):
         event_id = offer.get('eventId')
