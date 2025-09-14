@@ -9,7 +9,7 @@ from injury_scraper import get_all_injuries
 
 # --- Konfiguracija i stil ---
 
-st.set_page_config(layout="wide", page_title="Player Props App")
+st.set_page_config(layout="wide", page_title="Player Props App", page_icon="merkur.png")
 
 # CSS za moderni izgled, tamnu temu i stakleni efekat
 st.markdown("""
