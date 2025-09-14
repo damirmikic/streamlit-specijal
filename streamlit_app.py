@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 import pytz
 import math 
 from player_props_scraper import get_all_props
-from lineup_scraper import get_all_lineups # <-- Nova skripta
+from lineup_scraper import get_all_lineups
 
 # --- Konfiguracija i stil ---
 
@@ -133,39 +133,42 @@ if 'all_props' not in st.session_state: st.session_state.all_props = None
 if 'selected_players' not in st.session_state: st.session_state.selected_players = {}
 if 'manual_games' not in st.session_state: st.session_state.manual_games = {}
 if 'selected_team' not in st.session_state: st.session_state.selected_team = None
-if 'lineups' not in st.session_state: st.session_state.lineups = None # <-- Novo
+if 'lineups' not in st.session_state: st.session_state.lineups = None
 
 # --- UI Aplikacije ---
 st.title("Player Props CSV Generator")
 
+# --- Automatsko preuzimanje postava pri pokretanju ---
+if st.session_state.lineups is None:
+    with st.spinner("Preuzimanje očekivanih postava sa Sports Mole..."):
+        st.session_state.lineups = get_all_lineups()
+        if st.session_state.lineups:
+            st.toast(f"Pronađene postave za {len(st.session_state.lineups)} timova.", icon="✅")
+        else:
+            # Postavljamo prazan rečnik da se ne bi ponovo pokretalo
+            st.session_state.lineups = {}
+            st.toast("Nije uspelo preuzimanje postava.", icon="❌")
+
+
 # 1. KORAK: Izbor lige i preuzimanje podataka
 with st.container():
     st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-    st.header("1. Preuzimanje Podataka")
+    st.header("1. Preuzimanje Ponude")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        selected_league_name = st.selectbox("Izaberite Ligu:", options=list(LEAGUES.keys()))
-        if st.button("Prikaži Ponudu Kvote"):
-            league_id = LEAGUES[selected_league_name]
-            with st.spinner(f"Preuzimanje ponude za {selected_league_name}..."):
-                st.session_state.all_props = get_all_props(league_id)
-                st.session_state.selected_players = {}
-                st.session_state.manual_games = {}
-                st.session_state.selected_team = None
-                if not st.session_state.all_props: st.error("Nije uspelo preuzimanje kvota.")
-                else: st.success(f"Pronađeno {len(st.session_state.all_props)} ponuda!")
+    selected_league_name = st.selectbox("Izaberite Ligu:", options=list(LEAGUES.keys()))
     
-    with col2:
-        st.write("Očekivane postave (opciono)")
-        if st.button("Dovuci Postave sa Sports Mole"):
-            with st.spinner("Preuzimanje postava..."):
-                st.session_state.lineups = get_all_lineups()
-                if st.session_state.lineups:
-                    st.success(f"Pronađene postave za {len(st.session_state.lineups)} timova.")
-                else:
-                    st.error("Greška pri preuzimanju postava.")
-
+    if st.button("Prikaži Ponudu Kvote"):
+        league_id = LEAGUES[selected_league_name]
+        with st.spinner(f"Preuzimanje ponude za {selected_league_name}..."):
+            st.session_state.all_props = get_all_props(league_id)
+            # Resetovanje svega ostalog pri novom preuzimanju
+            st.session_state.selected_players = {}
+            st.session_state.manual_games = {}
+            st.session_state.selected_team = None
+            if not st.session_state.all_props:
+                st.error("Nije uspelo preuzimanje podataka za izabranu ligu.")
+            else:
+                st.success(f"Pronađeno {len(st.session_state.all_props)} ponuda!")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
