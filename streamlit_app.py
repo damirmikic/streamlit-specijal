@@ -5,6 +5,7 @@ import pytz
 import math 
 from player_props_scraper import get_all_props
 from lineup_scraper import get_all_lineups
+from injury_scraper import get_all_injuries # <-- Nova skripta
 
 # --- Konfiguracija i stil ---
 
@@ -85,6 +86,16 @@ LEAGUES = {
     "Europa League": "2000051195"
 }
 
+# Mapiranje imena liga na ključeve za skriptu o povredama
+LEAGUE_TO_INJURY_KEY = {
+    "Premier League": "england-premier-league",
+    "La Liga": "spain-la-liga",
+    "Serie A": "italy-serie-a",
+    "Bundesliga": "germany-bundesliga",
+    "Ligue 1": "france-ligue-1",
+}
+
+
 MARKET_TRANSLATIONS = {
     "Player's shots on target": "ukupno suteva u okvir gola",
     "Player's shots": "ukupno suteva",
@@ -134,41 +145,50 @@ if 'selected_players' not in st.session_state: st.session_state.selected_players
 if 'manual_games' not in st.session_state: st.session_state.manual_games = {}
 if 'selected_team' not in st.session_state: st.session_state.selected_team = None
 if 'lineups' not in st.session_state: st.session_state.lineups = None
+if 'injuries' not in st.session_state: st.session_state.injuries = None # <-- Novo
 
 # --- UI Aplikacije ---
 st.title("Player Props CSV Generator")
 
-# --- Automatsko preuzimanje postava pri pokretanju ---
-if st.session_state.lineups is None:
-    with st.spinner("Preuzimanje očekivanih postava sa Sports Mole..."):
-        st.session_state.lineups = get_all_lineups()
-        if st.session_state.lineups:
-            st.toast(f"Pronađene postave za {len(st.session_state.lineups)} timova.", icon="✅")
-        else:
-            # Postavljamo prazan rečnik da se ne bi ponovo pokretalo
-            st.session_state.lineups = {}
-            st.toast("Nije uspelo preuzimanje postava.", icon="❌")
-
-
 # 1. KORAK: Izbor lige i preuzimanje podataka
 with st.container():
     st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-    st.header("1. Preuzimanje Ponude")
+    st.header("1. Preuzimanje Podataka")
     
-    selected_league_name = st.selectbox("Izaberite Ligu:", options=list(LEAGUES.keys()))
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_league_name = st.selectbox("Izaberite Ligu:", options=list(LEAGUES.keys()))
+        if st.button("Prikaži Ponudu Kvote"):
+            league_id = LEAGUES[selected_league_name]
+            with st.spinner(f"Preuzimanje ponude za {selected_league_name}..."):
+                st.session_state.all_props = get_all_props(league_id)
+                st.session_state.selected_players = {}
+                st.session_state.manual_games = {}
+                st.session_state.selected_team = None
+                if not st.session_state.all_props:
+                    st.error("Nije uspelo preuzimanje kvota.")
+                else:
+                    st.success(f"Pronađeno {len(st.session_state.all_props)} ponuda!")
     
-    if st.button("Prikaži Ponudu Kvote"):
-        league_id = LEAGUES[selected_league_name]
-        with st.spinner(f"Preuzimanje ponude za {selected_league_name}..."):
-            st.session_state.all_props = get_all_props(league_id)
-            # Resetovanje svega ostalog pri novom preuzimanju
-            st.session_state.selected_players = {}
-            st.session_state.manual_games = {}
-            st.session_state.selected_team = None
-            if not st.session_state.all_props:
-                st.error("Nije uspelo preuzimanje podataka za izabranu ligu.")
-            else:
-                st.success(f"Pronađeno {len(st.session_state.all_props)} ponuda!")
+    with col2:
+        st.write("Dodatni podaci (opciono)")
+        if st.button("Dovuci Postave i Povrede"):
+            with st.spinner("Preuzimanje očekivanih postava..."):
+                st.session_state.lineups = get_all_lineups()
+                if st.session_state.lineups:
+                    st.toast(f"Pronađene postave za {len(st.session_state.lineups)} timova.", icon="✅")
+                else:
+                    st.session_state.lineups = {}
+                    st.toast("Nije uspelo preuzimanje postava.", icon="❌")
+            
+            with st.spinner("Preuzimanje podataka o povredama..."):
+                st.session_state.injuries = get_all_injuries()
+                if st.session_state.injuries:
+                    total_injured = sum(len(v) for v in st.session_state.injuries.values())
+                    st.toast(f"Pronađeno {total_injured} povređenih igrača.", icon="🩹")
+                else:
+                    st.session_state.injuries = {}
+                    st.toast("Nije uspelo preuzimanje podataka o povredama.", icon="❌")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -190,14 +210,26 @@ if st.session_state.all_props:
             if selected_team != st.session_state.selected_team:
                 st.session_state.selected_team = selected_team
             
-            # Prikaz očekivane postave ako postoji
-            if st.session_state.lineups and selected_team:
-                lineup = st.session_state.lineups.get(selected_team)
-                if lineup:
-                    with st.expander(f"Očekivana postava za {selected_team}"):
-                        st.info(", ".join(lineup))
-                else:
-                    st.warning(f"Nije pronađena očekivana postava za {selected_team}.")
+            # Prikaz očekivane postave i povreda
+            if selected_team:
+                if st.session_state.lineups:
+                    lineup = st.session_state.lineups.get(selected_team)
+                    if lineup:
+                        with st.expander(f"Očekivana postava za {selected_team}"):
+                            st.info(", ".join(lineup))
+                    else:
+                        st.warning(f"Nije pronađena očekivana postava za {selected_team}.")
+                
+                if st.session_state.injuries:
+                    league_key = LEAGUE_TO_INJURY_KEY.get(selected_league_name)
+                    if league_key and league_key in st.session_state.injuries:
+                        team_injuries = [p for p in st.session_state.injuries[league_key] if p['team'] == selected_team]
+                        if team_injuries:
+                            with st.expander(f"Povređeni igrači ({len(team_injuries)})"):
+                                for player in team_injuries:
+                                    st.error(f"**{player['player_name']}**: {player['info']} (Povratak: {player['expected_return']})")
+                        else:
+                            st.success(f"Nema prijavljenih povreda za tim {selected_team}.")
 
             if selected_team:
                 team_df = df[df['team'] == selected_team]
