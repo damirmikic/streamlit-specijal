@@ -2,8 +2,9 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import pytz
-import math # Dodato za matematičke operacije
+import math 
 from player_props_scraper import get_all_props
+from lineup_scraper import get_all_lineups # <-- Nova skripta
 
 # --- Konfiguracija i stil ---
 
@@ -101,33 +102,21 @@ MARKET_TRANSLATIONS = {
 
 def format_line(line_val, market):
     base_market = market.lower()
-    # Ažurirano: Igre za poluvreme takođe nemaju liniju
     if "card" in base_market or "poluvremenu" in base_market or line_val is None:
         return "" 
     
-    # Eksplicitna provera za igre sa više golova
     if "score at least" in base_market:
-        if line_val == 1.5:
-            return "2+"
-        if line_val == 2.5:
-            return "3+"
+        if line_val == 1.5: return "2+"
+        if line_val == 2.5: return "3+"
 
-    if line_val in [0.5, 1.0]:
-        return "1+"
-    if line_val in [1.5, 2.0]:
-        return "2+"
-    if line_val in [2.5, 3.0]:
-        return "3+"
-    if line_val in [3.5, 4.0]:
-        return "4+"
-    if line_val == 4.5:
-        return "5+"
-    if line_val == 5.5:
-        return "6+"
-    if line_val == 6.5:
-        return "7+"
-    if line_val == 7.5:
-        return "8+"
+    if line_val in [0.5, 1.0]: return "1+"
+    if line_val in [1.5, 2.0]: return "2+"
+    if line_val in [2.5, 3.0]: return "3+"
+    if line_val in [3.5, 4.0]: return "4+"
+    if line_val == 4.5: return "5+"
+    if line_val == 5.5: return "6+"
+    if line_val == 6.5: return "7+"
+    if line_val == 7.5: return "8+"
     return f"{line_val}"
 
 def format_datetime_serbian(utc_str):
@@ -140,14 +129,11 @@ def format_datetime_serbian(utc_str):
         return 'N/A', 'N/A'
 
 # --- Inicijalizacija Session State ---
-if 'all_props' not in st.session_state:
-    st.session_state.all_props = None
-if 'selected_players' not in st.session_state:
-    st.session_state.selected_players = {}
-if 'manual_games' not in st.session_state:
-    st.session_state.manual_games = {}
-if 'selected_team' not in st.session_state:
-    st.session_state.selected_team = None
+if 'all_props' not in st.session_state: st.session_state.all_props = None
+if 'selected_players' not in st.session_state: st.session_state.selected_players = {}
+if 'manual_games' not in st.session_state: st.session_state.manual_games = {}
+if 'selected_team' not in st.session_state: st.session_state.selected_team = None
+if 'lineups' not in st.session_state: st.session_state.lineups = None # <-- Novo
 
 # --- UI Aplikacije ---
 st.title("Player Props CSV Generator")
@@ -155,22 +141,31 @@ st.title("Player Props CSV Generator")
 # 1. KORAK: Izbor lige i preuzimanje podataka
 with st.container():
     st.markdown('<div class="glass-container">', unsafe_allow_html=True)
-    st.header("1. Preuzimanje Ponude")
+    st.header("1. Preuzimanje Podataka")
     
-    selected_league_name = st.selectbox("Izaberite Ligu:", options=list(LEAGUES.keys()))
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_league_name = st.selectbox("Izaberite Ligu:", options=list(LEAGUES.keys()))
+        if st.button("Prikaži Ponudu Kvote"):
+            league_id = LEAGUES[selected_league_name]
+            with st.spinner(f"Preuzimanje ponude za {selected_league_name}..."):
+                st.session_state.all_props = get_all_props(league_id)
+                st.session_state.selected_players = {}
+                st.session_state.manual_games = {}
+                st.session_state.selected_team = None
+                if not st.session_state.all_props: st.error("Nije uspelo preuzimanje kvota.")
+                else: st.success(f"Pronađeno {len(st.session_state.all_props)} ponuda!")
     
-    if st.button("Prikaži Ponudu"):
-        league_id = LEAGUES[selected_league_name]
-        with st.spinner(f"Preuzimanje ponude za {selected_league_name}..."):
-            st.session_state.all_props = get_all_props(league_id)
-            # Resetovanje svega ostalog pri novom preuzimanju
-            st.session_state.selected_players = {}
-            st.session_state.manual_games = {}
-            st.session_state.selected_team = None
-            if not st.session_state.all_props:
-                st.error("Nije uspelo preuzimanje podataka za izabranu ligu.")
-            else:
-                st.success(f"Pronađeno {len(st.session_state.all_props)} ponuda!")
+    with col2:
+        st.write("Očekivane postave (opciono)")
+        if st.button("Dovuci Postave sa Sports Mole"):
+            with st.spinner("Preuzimanje postava..."):
+                st.session_state.lineups = get_all_lineups()
+                if st.session_state.lineups:
+                    st.success(f"Pronađene postave za {len(st.session_state.lineups)} timova.")
+                else:
+                    st.error("Greška pri preuzimanju postava.")
+
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -183,7 +178,6 @@ if st.session_state.all_props:
         st.markdown('<div class="glass-container">', unsafe_allow_html=True)
         st.header("2. Izbor Igrača")
 
-        # --- IZMENJENA LOGIKA: Uklonjen izbor događaja ---
         teams = sorted(df['team'].unique())
         if not teams:
             st.warning("Nema dostupnih timova sa ponudom za igrače u izabranoj ligi.")
@@ -192,6 +186,15 @@ if st.session_state.all_props:
             
             if selected_team != st.session_state.selected_team:
                 st.session_state.selected_team = selected_team
+            
+            # Prikaz očekivane postave ako postoji
+            if st.session_state.lineups and selected_team:
+                lineup = st.session_state.lineups.get(selected_team)
+                if lineup:
+                    with st.expander(f"Očekivana postava za {selected_team}"):
+                        st.info(", ".join(lineup))
+                else:
+                    st.warning(f"Nije pronađena očekivana postava za {selected_team}.")
 
             if selected_team:
                 team_df = df[df['team'] == selected_team]
@@ -203,39 +206,21 @@ if st.session_state.all_props:
                         if selected_player_for_add not in st.session_state.selected_players:
                             player_games = team_df[team_df['player'] == selected_player_for_add].to_dict('records')
                             
-                            # Logika za kalkulaciju kvota za poluvremena
-                            to_score_game = None
-                            for game in player_games:
-                                market_name_raw = game['market'].replace("(Settled using Opta data)", "").strip()
-                                if market_name_raw == "To Score":
-                                    to_score_game = game
-                                    break
+                            to_score_game = next((g for g in player_games if g['market'].replace("(Settled using Opta data)", "").strip() == "To Score"), None)
                             
                             if to_score_game:
                                 try:
                                     p_at_least_one = 1 / to_score_game['decimal_odds']
                                     lambda_total = -math.log(1 - p_at_least_one)
-                                    lambda_1st = lambda_total * 0.44
-                                    lambda_2nd = lambda_total * 0.56
-                                    p_1st_half = 1 - math.exp(-lambda_1st)
-                                    p_2nd_half = 1 - math.exp(-lambda_2nd)
-                                    odds_1st_half = round(1 / p_1st_half, 2)
-                                    odds_2nd_half = round(1 / p_2nd_half, 2)
+                                    odds_1st_half = round(1 / (1 - math.exp(-(lambda_total * 0.44))), 2)
+                                    odds_2nd_half = round(1 / (1 - math.exp(-(lambda_total * 0.56))), 2)
 
-                                    game_1st_half = to_score_game.copy()
-                                    game_1st_half['market'] = 'daje gol u 1. poluvremenu'
-                                    game_1st_half['decimal_odds'] = odds_1st_half
-                                    game_1st_half['line'] = None
-                                    
-                                    game_2nd_half = to_score_game.copy()
-                                    game_2nd_half['market'] = 'daje gol u 2. poluvremenu'
-                                    game_2nd_half['decimal_odds'] = odds_2nd_half
-                                    game_2nd_half['line'] = None
-
+                                    game_1st_half = {**to_score_game, 'market': 'daje gol u 1. poluvremenu', 'decimal_odds': odds_1st_half, 'line': None}
+                                    game_2nd_half = {**to_score_game, 'market': 'daje gol u 2. poluvremenu', 'decimal_odds': odds_2nd_half, 'line': None}
                                     player_games.extend([game_1st_half, game_2nd_half])
 
                                 except (ValueError, ZeroDivisionError) as e:
-                                    st.warning(f"Nije moguće izračunati kvote za poluvremena za igrača {selected_player_for_add}. Greška: {e}")
+                                    st.warning(f"Greška pri računanju kvota za poluvremena za {selected_player_for_add}: {e}")
                             
                             st.session_state.selected_players[selected_player_for_add] = player_games
                             st.success(f"Igrač {selected_player_for_add} dodat u ponudu.")
@@ -252,11 +237,9 @@ if st.session_state.all_props:
             for player_name, games in list(st.session_state.selected_players.items()):
                 with st.expander(f"Igre za: {player_name}", expanded=True):
                     
-                    # --- NOVI RASPORED U DVE KOLONE ---
                     col1, col2 = st.columns(2)
                     midpoint = math.ceil(len(games) / 2)
                     
-                    # Funkcija za prikaz jedne igre, da se izbegne ponavljanje koda
                     def display_game(game, index, player):
                         market_name_raw = game['market'].replace("(Settled using Opta data)", "").strip()
                         market_name = MARKET_TRANSLATIONS.get(market_name_raw, market_name_raw)
@@ -277,21 +260,15 @@ if st.session_state.all_props:
                                 del st.session_state.selected_players[player]
                             st.rerun()
 
-                    # Prikaz igara u levoj koloni
                     with col1:
                         for i in range(midpoint):
                             display_game(games[i], i, player_name)
-                            if i < midpoint -1 :
-                                st.markdown("<hr style='margin-top:10px; margin-bottom:10px; border-color: #4a4e69;'>", unsafe_allow_html=True)
-
-                    # Prikaz igara u desnoj koloni
+                            if i < midpoint -1 : st.markdown("<hr style='margin-top:10px; margin-bottom:10px; border-color: #4a4e69;'>", unsafe_allow_html=True)
                     with col2:
                         for i in range(midpoint, len(games)):
                             display_game(games[i], i, player_name)
-                            if i < len(games) -1:
-                                st.markdown("<hr style='margin-top:10px; margin-bottom:10px; border-color: #4a4e69;'>", unsafe_allow_html=True)
+                            if i < len(games) -1: st.markdown("<hr style='margin-top:10px; margin-bottom:10px; border-color: #4a4e69;'>", unsafe_allow_html=True)
 
-                    # Forma za ručni unos
                     st.markdown("---")
                     st.subheader("Ručno dodaj igru")
                     manual_cols = st.columns([3,2])
@@ -306,7 +283,6 @@ if st.session_state.all_props:
                             st.session_state.selected_players[player_name].append(manual_game)
                             st.rerun()
 
-            # Dugmad za finalne akcije
             final_cols = st.columns(2)
             if final_cols[0].button("Poništi Unos"):
                 st.session_state.selected_players = {}
@@ -330,8 +306,7 @@ if st.session_state.all_props:
                             odds = game['decimal_odds']
                             
                             if game.get('line') == -1:
-                                market_name = game['market']
-                                line_formatted = ""
+                                market_name, line_formatted = game['market'], ""
                             else:
                                 market_name_raw = game['market'].replace("(Settled using Opta data)", "").strip()
                                 market_name = MARKET_TRANSLATIONS.get(market_name_raw, market_name_raw)
