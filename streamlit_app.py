@@ -158,6 +158,9 @@ with st.container():
 if st.session_state.all_props:
     df = pd.DataFrame(st.session_state.all_props)
     
+    # NEW: Filter out props where event_name is 'N/A'
+    df = df[df['event_name'] != 'N/A']
+
     # 2. KORAK: Filtriranje i dodavanje igrača
     with st.container():
         st.markdown('<div class="glass-container">', unsafe_allow_html=True)
@@ -165,30 +168,33 @@ if st.session_state.all_props:
 
         # Filtriranje po događaju
         events = sorted(df['event_name'].unique())
-        selected_event = st.selectbox("Izaberite Događaj:", options=events, key="event_selector")
+        if not events:
+            st.warning("Nema dostupnih događaja sa ponudom za igrače u izabranoj ligi.")
+        else:
+            selected_event = st.selectbox("Izaberite Događaj:", options=events, key="event_selector")
 
-        if selected_event:
-            event_df = df[df['event_name'] == selected_event]
-            teams = sorted(event_df['team'].unique())
-            if teams:
-                selected_team = st.selectbox("Izaberite Tim:", options=teams, key="team_selector")
-                
-                if selected_team != st.session_state.selected_team:
-                    st.session_state.selected_team = selected_team
-
-                if selected_team:
-                    team_df = event_df[event_df['team'] == selected_team]
-                    players = sorted(team_df['player'].unique())
+            if selected_event:
+                event_df = df[df['event_name'] == selected_event]
+                teams = sorted(event_df['team'].unique())
+                if teams:
+                    selected_team = st.selectbox("Izaberite Tim:", options=teams, key="team_selector")
                     
-                    if players:
-                        selected_player_for_add = st.selectbox("Izaberite Igrača za dodavanje:", options=players)
-                        if st.button("➕ Dodaj Igrača", key=f"add_{selected_player_for_add}"):
-                            if selected_player_for_add not in st.session_state.selected_players:
-                                player_games = team_df[team_df['player'] == selected_player_for_add].to_dict('records')
-                                st.session_state.selected_players[selected_player_for_add] = player_games
-                                st.success(f"Igrač {selected_player_for_add} dodat u ponudu.")
-                    else:
-                        st.warning("Nema dostupnih igrača za izabrani tim.")
+                    if selected_team != st.session_state.selected_team:
+                        st.session_state.selected_team = selected_team
+
+                    if selected_team:
+                        team_df = event_df[event_df['team'] == selected_team]
+                        players = sorted(team_df['player'].unique())
+                        
+                        if players:
+                            selected_player_for_add = st.selectbox("Izaberite Igrača za dodavanje:", options=players)
+                            if st.button("➕ Dodaj Igrača", key=f"add_{selected_player_for_add}"):
+                                if selected_player_for_add not in st.session_state.selected_players:
+                                    player_games = team_df[team_df['player'] == selected_player_for_add].to_dict('records')
+                                    st.session_state.selected_players[selected_player_for_add] = player_games
+                                    st.success(f"Igrač {selected_player_for_add} dodat u ponudu.")
+                        else:
+                            st.warning("Nema dostupnih igrača za izabrani tim.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     # 3. KORAK: Prikaz i modifikacija kreirane ponude
@@ -254,14 +260,14 @@ if st.session_state.all_props:
                     header = ['Datum', 'Vreme', 'Sifra', 'Domacin', 'Gost', '', '1', 'X', '2', 'GR', 'U', 'O', 'Yes', 'No']
                     output_rows.append(header)
                     
-                    # Red sa imenom tima
-                    output_rows.append(['', '', '', '', '', f'MATCH_NAME:{match_name}', '', '', '', '', '', '', '', ''])
+                    # Red sa imenom tima - UPDATED
+                    output_rows.append([f'MATCH_NAME:{match_name}', '', '', '', '', '', '', '', '', '', '', '', '', ''])
 
                     for player_name, games in st.session_state.selected_players.items():
                         if not games: continue
                         
-                        # Red sa imenom igrača
-                        output_rows.append(['', '', '', '', '', f"LEAGUE_NAME:{player_name.replace(' ', '_')}", '', '', '', '', '', '', '', ''])
+                        # Red sa imenom igrača - UPDATED
+                        output_rows.append([f"LEAGUE_NAME:{player_name.replace(' ', '_')}", '', '', '', '', '', '', '', '', '', '', '', '', ''])
                         
                         for game in games:
                             datum, vreme = format_datetime_serbian(game['closed'])
