@@ -93,15 +93,15 @@ st.markdown("""
         font-weight: 600 !important;
     }
 
-    /* Poboljšanje vidljivosti za st.info (očekivana postava) */
+    /* AŽURIRANO: Poboljšanje vidljivosti za st.info (očekivana postava) - SADA CRVENA BOJA */
     div[data-testid="stInfo"] {
-        background-color: rgba(224, 247, 250, 0.9); /* Svetla cijan pozadina */
-        color: #004d40; /* Veoma taman tekst za maksimalan kontrast */
-        border: 1px solid #4dd0e1; /* Cijan ivica */
+        background-color: rgba(255, 235, 238, 0.9); /* Svetla crvena/roze pozadina */
+        color: #c62828; /* Taman crveni tekst za kontrast */
+        border: 1px solid #ef9a9a; /* Crvena ivica */
         border-radius: 10px;
     }
     div[data-testid="stInfo"] div {
-         color: #004d40 !important;
+         color: #c62828 !important; /* Osigurava da se boja primeni */
     }
     
     /* Stil za st.warning */
