@@ -183,79 +183,64 @@ if st.session_state.all_props:
         st.markdown('<div class="glass-container">', unsafe_allow_html=True)
         st.header("2. Izbor Igrača")
 
-        # Filtriranje po događaju
-        events = sorted(df['event_name'].unique())
-        if not events:
-            st.warning("Nema dostupnih događaja sa ponudom za igrače u izabranoj ligi.")
+        # --- IZMENJENA LOGIKA: Uklonjen izbor događaja ---
+        teams = sorted(df['team'].unique())
+        if not teams:
+            st.warning("Nema dostupnih timova sa ponudom za igrače u izabranoj ligi.")
         else:
-            selected_event = st.selectbox("Izaberite Događaj:", options=events, key="event_selector")
+            selected_team = st.selectbox("Izaberite Tim:", options=teams, key="team_selector")
+            
+            if selected_team != st.session_state.selected_team:
+                st.session_state.selected_team = selected_team
 
-            if selected_event:
-                event_df = df[df['event_name'] == selected_event]
-                teams = sorted(event_df['team'].unique())
-                if teams:
-                    selected_team = st.selectbox("Izaberite Tim:", options=teams, key="team_selector")
-                    
-                    if selected_team != st.session_state.selected_team:
-                        st.session_state.selected_team = selected_team
+            if selected_team:
+                team_df = df[df['team'] == selected_team]
+                players = sorted(team_df['player'].unique())
+                
+                if players:
+                    selected_player_for_add = st.selectbox("Izaberite Igrača za dodavanje:", options=players)
+                    if st.button("➕ Dodaj Igrača", key=f"add_{selected_player_for_add}"):
+                        if selected_player_for_add not in st.session_state.selected_players:
+                            player_games = team_df[team_df['player'] == selected_player_for_add].to_dict('records')
+                            
+                            # Logika za kalkulaciju kvota za poluvremena
+                            to_score_game = None
+                            for game in player_games:
+                                market_name_raw = game['market'].replace("(Settled using Opta data)", "").strip()
+                                if market_name_raw == "To Score":
+                                    to_score_game = game
+                                    break
+                            
+                            if to_score_game:
+                                try:
+                                    p_at_least_one = 1 / to_score_game['decimal_odds']
+                                    lambda_total = -math.log(1 - p_at_least_one)
+                                    lambda_1st = lambda_total * 0.44
+                                    lambda_2nd = lambda_total * 0.56
+                                    p_1st_half = 1 - math.exp(-lambda_1st)
+                                    p_2nd_half = 1 - math.exp(-lambda_2nd)
+                                    odds_1st_half = round(1 / p_1st_half, 2)
+                                    odds_2nd_half = round(1 / p_2nd_half, 2)
 
-                    if selected_team:
-                        team_df = event_df[event_df['team'] == selected_team]
-                        players = sorted(team_df['player'].unique())
-                        
-                        if players:
-                            selected_player_for_add = st.selectbox("Izaberite Igrača za dodavanje:", options=players)
-                            if st.button("➕ Dodaj Igrača", key=f"add_{selected_player_for_add}"):
-                                if selected_player_for_add not in st.session_state.selected_players:
-                                    player_games = team_df[team_df['player'] == selected_player_for_add].to_dict('records')
+                                    game_1st_half = to_score_game.copy()
+                                    game_1st_half['market'] = 'daje gol u 1. poluvremenu'
+                                    game_1st_half['decimal_odds'] = odds_1st_half
+                                    game_1st_half['line'] = None
                                     
-                                    # --- NOVA LOGIKA ZA KALKULACIJU ---
-                                    to_score_game = None
-                                    for game in player_games:
-                                        market_name_raw = game['market'].replace("(Settled using Opta data)", "").strip()
-                                        if market_name_raw == "To Score":
-                                            to_score_game = game
-                                            break
-                                    
-                                    if to_score_game:
-                                        try:
-                                            # Korak 1 & 2: Iz kvote u verovatnoću, pa u lambdu
-                                            p_at_least_one = 1 / to_score_game['decimal_odds']
-                                            lambda_total = -math.log(1 - p_at_least_one)
-                                            
-                                            # Korak 3: Podela lambde
-                                            lambda_1st = lambda_total * 0.44
-                                            lambda_2nd = lambda_total * 0.56
+                                    game_2nd_half = to_score_game.copy()
+                                    game_2nd_half['market'] = 'daje gol u 2. poluvremenu'
+                                    game_2nd_half['decimal_odds'] = odds_2nd_half
+                                    game_2nd_half['line'] = None
 
-                                            # Korak 4: Iz lambde u verovatnoću za svako poluvreme
-                                            p_1st_half = 1 - math.exp(-lambda_1st)
-                                            p_2nd_half = 1 - math.exp(-lambda_2nd)
+                                    player_games.extend([game_1st_half, game_2nd_half])
 
-                                            # Korak 5: Iz verovatnoće u kvotu
-                                            odds_1st_half = round(1 / p_1st_half, 2)
-                                            odds_2nd_half = round(1 / p_2nd_half, 2)
-
-                                            # Kreiranje novih objekata za igre
-                                            game_1st_half = to_score_game.copy()
-                                            game_1st_half['market'] = 'daje gol u 1. poluvremenu'
-                                            game_1st_half['decimal_odds'] = odds_1st_half
-                                            game_1st_half['line'] = None # Izračunate igre nemaju liniju
-                                            
-                                            game_2nd_half = to_score_game.copy()
-                                            game_2nd_half['market'] = 'daje gol u 2. poluvremenu'
-                                            game_2nd_half['decimal_odds'] = odds_2nd_half
-                                            game_2nd_half['line'] = None # Izračunate igre nemaju liniju
-
-                                            player_games.extend([game_1st_half, game_2nd_half])
-
-                                        except (ValueError, ZeroDivisionError) as e:
-                                            st.warning(f"Nije moguće izračunati kvote za poluvremena za igrača {selected_player_for_add}. Greška: {e}")
-                                    # --- KRAJ NOVE LOGIKE ---
-
-                                    st.session_state.selected_players[selected_player_for_add] = player_games
-                                    st.success(f"Igrač {selected_player_for_add} dodat u ponudu.")
-                        else:
-                            st.warning("Nema dostupnih igrača za izabrani tim.")
+                                except (ValueError, ZeroDivisionError) as e:
+                                    st.warning(f"Nije moguće izračunati kvote za poluvremena za igrača {selected_player_for_add}. Greška: {e}")
+                            
+                            st.session_state.selected_players[selected_player_for_add] = player_games
+                            st.success(f"Igrač {selected_player_for_add} dodat u ponudu.")
+                else:
+                    st.warning("Nema dostupnih igrača za izabrani tim.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     # 3. KORAK: Prikaz i modifikacija kreirane ponude
@@ -266,39 +251,45 @@ if st.session_state.all_props:
 
             for player_name, games in list(st.session_state.selected_players.items()):
                 with st.expander(f"Igre za: {player_name}", expanded=True):
-                    # --- NOVI, PREGLEDNIJI RASPORED ---
-                    for i, game in enumerate(games):
+                    
+                    # --- NOVI RASPORED U DVE KOLONE ---
+                    col1, col2 = st.columns(2)
+                    midpoint = math.ceil(len(games) / 2)
+                    
+                    # Funkcija za prikaz jedne igre, da se izbegne ponavljanje koda
+                    def display_game(game, index, player):
                         market_name_raw = game['market'].replace("(Settled using Opta data)", "").strip()
                         market_name = MARKET_TRANSLATIONS.get(market_name_raw, market_name_raw)
                         line_formatted = format_line(game.get('line'), market_name_raw)
                         
-                        # Glavna kolona za naziv
                         st.write(f"**{market_name} {line_formatted}**")
 
-                        # Kolone za unos kvote i dugme za brisanje
-                        cols = st.columns([3, 1])
-                        new_odds = cols[0].number_input(
-                            "Kvota:", 
-                            value=game['decimal_odds'], 
-                            min_value=1.01, 
-                            step=0.01, 
-                            key=f"odds_{player_name}_{i}", 
-                            format="%.2f",
-                            label_visibility="collapsed"
+                        sub_cols = st.columns([3, 1])
+                        new_odds = sub_cols[0].number_input(
+                            "Kvota:", value=game['decimal_odds'], min_value=1.01, step=0.01, 
+                            key=f"odds_{player}_{index}", format="%.2f", label_visibility="collapsed"
                         )
-                        st.session_state.selected_players[player_name][i]['decimal_odds'] = new_odds
+                        st.session_state.selected_players[player][index]['decimal_odds'] = new_odds
 
-                        if cols[1].button("Ukloni", key=f"del_{player_name}_{i}"):
-                            st.session_state.selected_players[player_name].pop(i)
-                            if not st.session_state.selected_players[player_name]:
-                                del st.session_state.selected_players[player_name]
+                        if sub_cols[1].button("Ukloni", key=f"del_{player}_{index}"):
+                            st.session_state.selected_players[player].pop(index)
+                            if not st.session_state.selected_players[player]:
+                                del st.session_state.selected_players[player]
                             st.rerun()
-                        
-                        # Separator između igara
-                        if i < len(games) - 1:
-                            st.markdown("<hr style='margin-top:10px; margin-bottom:10px; border-color: #4a4e69;'>", unsafe_allow_html=True)
-                    
-                    # --- KRAJ NOVOG RASPOREDA ---
+
+                    # Prikaz igara u levoj koloni
+                    with col1:
+                        for i in range(midpoint):
+                            display_game(games[i], i, player_name)
+                            if i < midpoint -1 :
+                                st.markdown("<hr style='margin-top:10px; margin-bottom:10px; border-color: #4a4e69;'>", unsafe_allow_html=True)
+
+                    # Prikaz igara u desnoj koloni
+                    with col2:
+                        for i in range(midpoint, len(games)):
+                            display_game(games[i], i, player_name)
+                            if i < len(games) -1:
+                                st.markdown("<hr style='margin-top:10px; margin-bottom:10px; border-color: #4a4e69;'>", unsafe_allow_html=True)
 
                     # Forma za ručni unos
                     st.markdown("---")
@@ -308,17 +299,12 @@ if st.session_state.all_props:
                     manual_odds = manual_cols[1].number_input("Kvota", min_value=1.01, step=0.01, key=f"manual_odds_{player_name}", format="%.2f")
                     if st.button("Dodaj ručnu igru", key=f"manual_add_{player_name}"):
                         if manual_game_name:
-                             # Kreiramo 'fake' game objekat
                             manual_game = {
-                                'player': player_name,
-                                'market': manual_game_name,
-                                'line': -1, # Indikator da je ručno
-                                'decimal_odds': manual_odds,
-                                'closed': games[0]['closed'] if games else datetime.now().isoformat()
+                                'player': player_name, 'market': manual_game_name, 'line': -1, 
+                                'decimal_odds': manual_odds, 'closed': games[0]['closed'] if games else datetime.now().isoformat()
                             }
                             st.session_state.selected_players[player_name].append(manual_game)
                             st.rerun()
-
 
             # Dugmad za finalne akcije
             final_cols = st.columns(2)
@@ -327,31 +313,23 @@ if st.session_state.all_props:
                 st.rerun()
             
             if final_cols[1].button("Generiši CSV Pregled"):
-                
-                # --- Logika za generisanje CSV-a ---
                 if st.session_state.selected_team and st.session_state.selected_players:
                     match_name = st.session_state.selected_team
                     
                     output_rows = []
-                    
-                    # Glavno zaglavlje
                     header = ['Datum', 'Vreme', 'Sifra', 'Domacin', 'Gost', '', '1', 'X', '2', 'GR', 'U', 'O', 'Yes', 'No']
                     output_rows.append(header)
-                    
-                    # Red sa imenom tima
                     output_rows.append([f'MATCH_NAME:{match_name}', '', '', '', '', '', '', '', '', '', '', '', '', ''])
 
                     for player_name, games in st.session_state.selected_players.items():
                         if not games: continue
-                        
-                        # Red sa imenom igrača - ISPRAVLJENO
                         output_rows.append([f"LEAGUE_NAME:{player_name}", '', '', '', '', '', '', '', '', '', '', '', '', ''])
                         
                         for game in games:
                             datum, vreme = format_datetime_serbian(game['closed'])
                             odds = game['decimal_odds']
                             
-                            if game.get('line') == -1: # Ručno dodata igra
+                            if game.get('line') == -1:
                                 market_name = game['market']
                                 line_formatted = ""
                             else:
@@ -362,17 +340,13 @@ if st.session_state.all_props:
                             row = [datum, vreme, '', '', market_name, f"{line_formatted}", odds]
                             output_rows.append(row)
 
-                    # Kreiranje DataFrame-a za prikaz i download
                     final_df = pd.DataFrame(output_rows)
                     st.dataframe(final_df)
                     
-                    # Priprema za download
                     csv_string = final_df.to_csv(index=False, header=False).encode('utf-8')
                     st.download_button(
-                        label="Preuzmi CSV Fajl",
-                        data=csv_string,
-                        file_name=f"{match_name.replace(' ', '_')}_kvote.csv",
-                        mime='text/csv',
+                        label="Preuzmi CSV Fajl", data=csv_string,
+                        file_name=f"{match_name.replace(' ', '_')}_kvote.csv", mime='text/csv'
                     )
 
         st.markdown('</div>', unsafe_allow_html=True)
