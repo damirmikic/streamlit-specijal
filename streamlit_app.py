@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import pytz
+import math # Dodato za matematičke operacije
 from player_props_scraper import get_all_props
 
 # --- Konfiguracija i stil ---
@@ -100,8 +101,9 @@ MARKET_TRANSLATIONS = {
 
 def format_line(line_val, market):
     base_market = market.lower()
-    if "card" in base_market:
-        return "" # Kartoni nemaju "+"
+    # Ažurirano: Igre za poluvreme takođe nemaju liniju
+    if "card" in base_market or "poluvremenu" in base_market:
+        return "" 
     
     # Eksplicitna provera za igre sa više golova
     if "score at least" in base_market:
@@ -206,6 +208,48 @@ if st.session_state.all_props:
                             if st.button("➕ Dodaj Igrača", key=f"add_{selected_player_for_add}"):
                                 if selected_player_for_add not in st.session_state.selected_players:
                                     player_games = team_df[team_df['player'] == selected_player_for_add].to_dict('records')
+                                    
+                                    # --- NOVA LOGIKA ZA KALKULACIJU ---
+                                    to_score_game = None
+                                    for game in player_games:
+                                        market_name_raw = game['market'].replace("(Settled using Opta data)", "").strip()
+                                        if market_name_raw == "To Score":
+                                            to_score_game = game
+                                            break
+                                    
+                                    if to_score_game:
+                                        try:
+                                            # Korak 1 & 2: Iz kvote u verovatnoću, pa u lambdu
+                                            p_at_least_one = 1 / to_score_game['decimal_odds']
+                                            lambda_total = -math.log(1 - p_at_least_one)
+                                            
+                                            # Korak 3: Podela lambde
+                                            lambda_1st = lambda_total * 0.44
+                                            lambda_2nd = lambda_total * 0.56
+
+                                            # Korak 4: Iz lambde u verovatnoću za svako poluvreme
+                                            p_1st_half = 1 - math.exp(-lambda_1st)
+                                            p_2nd_half = 1 - math.exp(-lambda_2nd)
+
+                                            # Korak 5: Iz verovatnoće u kvotu
+                                            odds_1st_half = round(1 / p_1st_half, 2)
+                                            odds_2nd_half = round(1 / p_2nd_half, 2)
+
+                                            # Kreiranje novih objekata za igre
+                                            game_1st_half = to_score_game.copy()
+                                            game_1st_half['market'] = 'daje gol u 1. poluvremenu'
+                                            game_1st_half['decimal_odds'] = odds_1st_half
+                                            
+                                            game_2nd_half = to_score_game.copy()
+                                            game_2nd_half['market'] = 'daje gol u 2. poluvremenu'
+                                            game_2nd_half['decimal_odds'] = odds_2nd_half
+
+                                            player_games.extend([game_1st_half, game_2nd_half])
+
+                                        except (ValueError, ZeroDivisionError) as e:
+                                            st.warning(f"Nije moguće izračunati kvote za poluvremena za igrača {selected_player_for_add}. Greška: {e}")
+                                    # --- KRAJ NOVE LOGIKE ---
+
                                     st.session_state.selected_players[selected_player_for_add] = player_games
                                     st.success(f"Igrač {selected_player_for_add} dodat u ponudu.")
                         else:
@@ -222,6 +266,8 @@ if st.session_state.all_props:
                 with st.expander(f"Igre za: {player_name}", expanded=True):
                     for i, game in enumerate(games):
                         cols = st.columns([4, 2, 1])
+                        
+                        # Prilagođeno da radi i sa originalnim i sa izračunatim igrama
                         market_name_raw = game['market'].replace("(Settled using Opta data)", "").strip()
                         market_name = MARKET_TRANSLATIONS.get(market_name_raw, market_name_raw)
                         line_formatted = format_line(game['line'], market_name_raw)
@@ -292,6 +338,7 @@ if st.session_state.all_props:
                                 market_name = game['market']
                                 line_formatted = ""
                             else:
+                                # Prilagođeno da radi i sa originalnim i sa izračunatim igrama
                                 market_name_raw = game['market'].replace("(Settled using Opta data)", "").strip()
                                 market_name = MARKET_TRANSLATIONS.get(market_name_raw, market_name_raw)
                                 line_formatted = format_line(game['line'], market_name_raw)
