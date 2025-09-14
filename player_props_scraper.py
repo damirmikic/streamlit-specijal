@@ -14,6 +14,7 @@ def get_all_props(league_id):
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
 
+    # 1. Fetch team data for mapping
     try:
         team_response = requests.get(team_url, headers=headers)
         team_response.raise_for_status()
@@ -24,11 +25,11 @@ def get_all_props(league_id):
             for outcome in offer.get('outcomes', []):
                 if 'participantId' in outcome and 'participant' in outcome:
                     team_map[outcome['participantId']] = outcome['participant']
-
     except requests.exceptions.RequestException as e:
         print(f"Error fetching team data: {e}")
         return []
 
+    # 2. Fetch all player props for the league
     try:
         props_response = requests.get(props_url, headers=headers)
         props_response.raise_for_status()
@@ -37,32 +38,23 @@ def get_all_props(league_id):
         print(f"Error fetching props for league {league_id}: {e}")
         return []
 
-    # --- NOVA LOGIKA ---
-    
-    # 1. Kreiraj mapu svih događaja sa vremenom početka
-    event_map = {}
-    for p in props_data.get('participants', []):
-        if 'event' in p and 'id' in p['event'] and 'start' in p['event']:
-            event_map[p['event']['id']] = {
-                'name': p['event']['name'],
-                'start': p['event']['start']
-            }
+    # --- REVISED LOGIC ---
 
-    # 2. Pronađi prvi sledeći meč za svakog igrača
+    # 3. Find the single next upcoming event for each player
     player_next_event = {}
     now = datetime.now(timezone.utc)
 
     for offer in props_data.get('betOffers', []):
         event_id = offer.get('eventId')
-        event_info = event_map.get(event_id)
-        
-        if not event_info:
+        closed_str = offer.get('closed')
+        if not closed_str:
             continue
-            
+
         try:
-            start_time = datetime.fromisoformat(event_info['start'].replace('Z', '+00:00'))
+            # The 'closed' time is the event start time
+            start_time = datetime.fromisoformat(closed_str.replace('Z', '+00:00'))
             if start_time < now:
-                continue # Preskoči mečeve koji su već počeli
+                continue # Skip matches that have already started
         except (ValueError, TypeError):
             continue
 
@@ -71,25 +63,35 @@ def get_all_props(league_id):
             if not player_name:
                 continue
 
-            # Ako igrač nije u listi ili ako je ovaj meč pre onog koji je već sačuvan
+            # If we haven't seen this player, or if this match is earlier than the one we have stored
             if player_name not in player_next_event or start_time < player_next_event[player_name]['start_time']:
                 player_next_event[player_name] = {
                     'eventId': event_id,
                     'start_time': start_time
                 }
 
-    # 3. Filtriraj ponudu i sastavi finalnu listu
+    # 4. Create a map for event names from the 'participants' list for cleaner output
+    event_name_map = {}
+    for p in props_data.get('participants', []):
+        if 'event' in p and 'id' in p['event'] and 'name' in p['event']:
+            event_name_map[p['event']['id']] = p['event']['name']
+
+
+    # 5. Filter the offers and build the final list of props
     all_player_props = []
     for offer in props_data.get('betOffers', []):
         event_id = offer.get('eventId')
         for outcome in offer.get('outcomes', []):
             player_name = outcome.get('participant')
+            if not player_name:
+                continue
             
-            # Proveri da li ovaj offer pripada prvom sledećem meču igrača
+            # Check if this offer belongs to the player's next upcoming match
             if player_name in player_next_event and player_next_event[player_name]['eventId'] == event_id:
+                
                 team_id = outcome.get('eventParticipantId')
                 team_name = team_map.get(team_id, 'N/A')
-                event_name = event_map.get(event_id, {}).get('name', 'N/A')
+                event_name = event_name_map.get(event_id, 'N/A')
 
                 prop_data = {
                     'event_name': event_name,
@@ -112,7 +114,7 @@ if __name__ == '__main__':
     if props:
         print(f"Successfully fetched {len(props)} player props.")
         
-        # Provera da li jedan igrač ima samo jedan event_name
+        # Verification: Check if each player has only one event_name associated
         player_events = {}
         for p in props:
             if p['player'] not in player_events:
