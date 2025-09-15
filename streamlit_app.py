@@ -105,7 +105,8 @@ if st.sidebar.button("Prikaži Mečeve"):
             st.session_state.selected_players = {}
             
             if not st.session_state.all_props:
-                status.update(label="Preuzimanje završeno, ali nema podataka!", state="warning", expanded=True)
+                # ISPRAVKA: Promenjeno stanje iz 'warning' u 'error'
+                status.update(label="Preuzimanje završeno, ali nema podataka!", state="error", expanded=True)
                 st.warning("Nije pronađena nijedna kvota. API možda trenutno nema ponudu za ovu ligu.")
             else:
                 status.update(label=f"Pronađeno {len(st.session_state.all_props)} ponuda! Uspeh!", state="complete", expanded=False)
