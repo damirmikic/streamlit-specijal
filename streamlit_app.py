@@ -25,6 +25,8 @@ HEADERS = {
     "Accept": "*/*",
     "Accept-Encoding": "gzip, deflate, br, zstd",
     "Accept-Language": "en-US,en;q=0.9,hr;q=0.8,sr-Latn-RS;q=0.7,sr;q=0.6,cs;q=0.5",
+    "Cache-Control": "max-age=0",
+    "DNT": "1",
     "Origin": "https://retail.kambicdn.com",
     "Priority": "u=1, i",
     "Referer": "https://retail.kambicdn.com/",
@@ -33,7 +35,8 @@ HEADERS = {
     "Sec-Ch-Ua-Platform": "\"Windows\"",
     "Sec-Fetch-Dest": "empty",
     "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "same-site"
+    "Sec-Fetch-Site": "same-site",
+    "Upgrade-Insecure-Requests": "1"
 }
 
 TEAM_NAME_MAP = {
