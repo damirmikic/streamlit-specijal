@@ -37,13 +37,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- Definicije i konstante (iste kao pre) ---
+# --- Definicije i konstante ---
 LEAGUES = { "Premier League": "1000094985", "La Liga": "1000095049", "Bundesliga": "1000094994", "Serie A": "1000095001", "Ligue 1": "1000094991", "Champions League": "1000093381", "Europa League": "2000051195" }
 LEAGUE_TO_INJURY_KEY = { "Premier League": "england-premier-league", "La Liga": "spain-la-liga", "Serie A": "italy-serie-a", "Bundesliga": "germany-bundesliga", "Ligue 1": "france-ligue-1" }
 MARKET_TRANSLATIONS = { "Player's shots on target": "ukupno suteva u okvir gola", "Player's shots": "ukupno suteva", "Player's fouls conceded": "ukupno nacinjenih faulova", "To Assist": "asistencija", "To Get a Card": "dobija karton", "To Get a Red Card": "dobija crveni karton", "To Score": "daje gol", "To Score Or Assist": "gol ili asistencija", "To score from a header": "daje gol glavom", "To score from outside the penalty box": "daje gol izvan 16m", "To score at least 2 goals": "daje golova", "To score at least 3 goals": "daje golova" }
 MARKET_ORDER = { "To Score": 1, "daje gol u 1. poluvremenu": 2, "daje gol u 2. poluvremenu": 3, "To score at least 2 goals": 4, "To score at least 3 goals": 5, "To score from a header": 6, "To score from outside the penalty box": 7, "Player's shots on target": 8, "Player's shots": 9, "To Assist": 10, "To Score Or Assist": 11, "Player's fouls conceded": 12, "To Get a Card": 13, "To Get a Red Card": 14 }
 
-# --- Helper funkcije (iste kao pre) ---
+# --- Helper funkcije ---
 def get_sort_key(game):
     market_key = game['market'].replace("(Settled using Opta data)", "").strip()
     return MARKET_ORDER.get(market_key, 99)
@@ -94,41 +94,45 @@ selected_league_name = st.sidebar.selectbox("Izaberite Ligu:", options=list(LEAG
 if st.sidebar.button("Prikaži Mečeve"):
     league_id = LEAGUES[selected_league_name]
     
-    # Koristimo st.status da prikažemo ceo proces preuzimanja
     with st.status(f"Preuzimanje za {selected_league_name}...", expanded=True) as status:
-        # Svi print() pozivi iz get_all_props će biti prikazani unutar ovog bloka
-        st.session_state.all_props = get_all_props(league_id)
-        
-        # Resetovanje izbora
-        st.session_state.selected_event = None
-        st.session_state.selected_team = None
-        st.session_state.selected_players = {}
-        
-        if not st.session_state.all_props:
-            status.update(label="Greška prilikom preuzimanja!", state="error", expanded=True)
-        else:
-            status.update(label=f"Pronađeno {len(st.session_state.all_props)} ponuda! Preuzimanje uspešno!", state="complete", expanded=False)
-            time.sleep(2) # Pauza da korisnik vidi poruku
-            st.rerun() # Rerun da bi se popunili padajući meniji
+        try:
+            st.write("Pokrećem `get_all_props` funkciju...")
+            st.session_state.all_props = get_all_props(league_id)
+            st.write(f"Funkcija `get_all_props` je završila. Vraćenih stavki: {len(st.session_state.all_props) if st.session_state.all_props is not None else 0}")
+            
+            st.session_state.selected_event = None
+            st.session_state.selected_team = None
+            st.session_state.selected_players = {}
+            
+            if not st.session_state.all_props:
+                status.update(label="Preuzimanje završeno, ali nema podataka!", state="warning", expanded=True)
+                st.warning("Nije pronađena nijedna kvota. API možda trenutno nema ponudu za ovu ligu.")
+            else:
+                status.update(label=f"Pronađeno {len(st.session_state.all_props)} ponuda! Uspeh!", state="complete", expanded=False)
+                st.success("Podaci su uspešno učitani!")
+                time.sleep(1)
+                st.rerun()
+
+        except Exception as e:
+            status.update(label="Došlo je do kritične greške!", state="error", expanded=True)
+            st.error(f"Dogodila se greška tokom preuzimanja podataka:")
+            st.exception(e) # Ispisuje kompletan trag greške
 
 # --- NOVI MENI ZA IZBOR ---
 if st.session_state.all_props:
     st.sidebar.header("2. Izbor Igrača")
     df = pd.DataFrame(st.session_state.all_props)
 
-    # 1. Izbor meča
     event_names = sorted(df['event_name'].unique())
     selected_event = st.sidebar.selectbox("Izaberite Meč:", options=event_names, index=None, placeholder="Izaberite meč...")
     st.session_state.selected_event = selected_event
 
-    # 2. Izbor tima
     if selected_event:
         event_df = df[df['event_name'] == selected_event]
         teams_in_event = sorted([team for team in event_df['team'].unique() if team and team != 'Tim N/A'])
         selected_team = st.sidebar.selectbox("Izaberite Tim:", options=teams_in_event, index=None, placeholder="Izaberite tim...")
         st.session_state.selected_team = selected_team
 
-        # 3. Izbor igrača
         if selected_team:
             team_df = event_df[event_df['team'] == selected_team]
             players = sorted(team_df['player'].unique())
