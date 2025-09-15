@@ -14,10 +14,15 @@ LEAGUE_URL_MAP = {
     "2000051195": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/europe/europa_league/all/matches.json?lang=en_GB&market=GB&useCombined=true",
 }
 
+# Ažurirani, "jači" headersi koji imitiraju pravi browser
 HEADERS = {
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Origin': 'https://www.unibet.com',
+    'Referer': 'https://www.unibet.com/',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
-    'Accept': 'application/json',
 }
+
 
 def get_events_for_league(league_id):
     """
@@ -32,9 +37,11 @@ def get_events_for_league(league_id):
     try:
         response = requests.get(events_url, headers=HEADERS, timeout=15)
         print(f"2. Statusni kod odgovora: {response.status_code}")
+        
+        # Ispisujemo početak odgovora da vidimo da li je validan JSON ili HTML sa greškom
         print(f"3. Početak odgovora (prvih 200 karaktera): {response.text[:200]}")
         
-        response.raise_for_status()
+        response.raise_for_status() # Ako status nije 200, ovo će izazvati grešku
         data = response.json()
         print("4. JSON uspešno dekodiran.")
         
@@ -73,6 +80,7 @@ def get_events_for_league(league_id):
 
     except requests.exceptions.HTTPError as e:
         print(f"[GREŠKA - HTTP] Server je vratio grešku: {e}")
+        print(f"Kompletan odgovor servera: {e.response.text}")
         return []
     except requests.exceptions.RequestException as e:
         print(f"[GREŠKA - Konekcija] Nije uspelo preuzimanje liste mečeva: {e}")
@@ -89,7 +97,6 @@ def get_props_for_event(event_id, team_map):
         return []
 
     props_url = f"https://eu-offering-api.kambicdn.com/offering/v2018/kambi/betoffer/event/{event_id}.json?lang=en_GB&market=GB&includeParticipants=true"
-    print(f"Preuzimanje kvota za meč ID: {event_id}")
     
     player_props = []
     try:
@@ -121,6 +128,5 @@ def get_props_for_event(event_id, team_map):
     except requests.exceptions.RequestException as e:
         print(f"    [GREŠKA] Problem sa konekcijom za meč {event_id}: {e}")
 
-    print(f"Pronađeno {len(player_props)} kvota za igrače za meč {event_id}.")
     return player_props
 
