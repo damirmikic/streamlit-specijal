@@ -3,15 +3,16 @@ import json
 import time
 from datetime import datetime, timezone
 
-# Rečnik koji mapira ID lige (iz streamlit_app) na putanju za Kambi API
+# Hardkodovani URL-ovi za svaku ligu da bi se osigurala stabilnost
+# Ključ je ID lige koji se koristi u streamlit_app.py
 LEAGUE_URL_MAP = {
-    "1000094985": "football/england/premier_league",  # Premier League
-    "1000095049": "football/spain/la_liga",           # La Liga
-    "1000094994": "football/germany/bundesliga",      # Bundesliga
-    "1000095001": "football/italy/serie_a",           # Serie A
-    "1000094991": "football/france/ligue_1",          # Ligue 1
-    "1000093381": "football/europe/champions_league", # Champions League
-    "2000051195": "football/europe/europa_league",    # Europa League
+    "1000094985": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/england/premier_league/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+    "1000095049": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/spain/la_liga/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+    "1000095001": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/italy/serie_a/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+    "1000094994": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/germany/bundesliga/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+    "1000094991": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/france/ligue_1/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+    "1000093381": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/europe/champions_league/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+    "2000051195": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/europe/europa_league/all/matches.json?lang=en_GB&market=GB&useCombined=true",
 }
 
 HEADERS = {
@@ -29,12 +30,11 @@ def get_all_props(league_id):
 
     # --- KORAK 1: Preuzimanje detalja o mečevima ---
     
-    league_path = LEAGUE_URL_MAP.get(str(league_id))
-    if not league_path:
+    events_url = LEAGUE_URL_MAP.get(str(league_id))
+    if not events_url:
         print(f"[GREŠKA] Nije pronađen URL za ligu sa ID-jem: {league_id}")
         return []
 
-    events_url = f"https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/{league_path}/all/matches.json?lang=en_GB&market=GB&useCombined=true"
     print(f"Korak 1: Preuzimanje liste mečeva sa {events_url}")
     
     try:
@@ -60,13 +60,14 @@ def get_all_props(league_id):
                             if 'participantId' in outcome and 'participant' in outcome:
                                 team_map[str(outcome['participantId'])] = outcome['participant']
                     
-                    event_details = {
-                        "event_id": event.get('id'),
-                        "event_name": event.get('name'),
-                        "kickoff_time": event.get('start'),
-                        "team_map": team_map
-                    }
-                    events_to_process.append(event_details)
+                    if team_map:
+                        event_details = {
+                            "event_id": event.get('id'),
+                            "event_name": event.get('name'),
+                            "kickoff_time": event.get('start'),
+                            "team_map": team_map
+                        }
+                        events_to_process.append(event_details)
 
         if not events_to_process:
             print("[INFO] Nema nadolazećih mečeva za izabranu ligu.")
@@ -88,6 +89,7 @@ def get_all_props(league_id):
         team_map = event_info.get("team_map", {})
         
         if not event_id or not team_map:
+            print(f"  Preskačem meč {event_info.get('event_name')} jer nema mapu timova.")
             continue
 
         props_url = f"https://eu-offering-api.kambicdn.com/offering/v2018/kambi/betoffer/event/{event_id}.json?lang=en_GB&market=GB&includeParticipants=true"
@@ -96,6 +98,7 @@ def get_all_props(league_id):
         try:
             response = requests.get(props_url, headers=HEADERS, timeout=15)
             if response.status_code != 200:
+                print(f"    [UPOZORENJE] Dobijen status kod {response.status_code}. Preskačem.")
                 continue
             
             event_data = response.json()
@@ -121,7 +124,7 @@ def get_all_props(league_id):
                         }
                         all_player_props.append(prop_data)
             
-            time.sleep(0.5) # Pauza da se ne preoptereti server
+            time.sleep(0.5)
 
         except requests.exceptions.RequestException as e:
             print(f"    [GREŠKA] Problem sa konekcijom za meč {event_id}: {e}")
@@ -132,9 +135,8 @@ def get_all_props(league_id):
     return all_player_props
 
 if __name__ == '__main__':
-    # Primer pokretanja za testiranje
-    test_league_id = "1000094985" # Premier League
-    print(f"--- Pokretanje testa za {test_league_id} ---")
+    test_league_id = "1000094985"
+    print(f"--- Pokretanje testa za ligu {test_league_id} ---")
     props = get_all_props(test_league_id)
     if props:
         print("\n--- Primer pronađenih podataka (prvih 5) ---")
