@@ -3,7 +3,7 @@ import json
 import time
 from datetime import datetime, timezone
 
-# NOVI REČNIK KOJI MAPIRA ID LIGE NA NOVI, ISPRAVAN URL
+# Rečnik koji mapira ID lige na Kambi URL putanju
 LEAGUE_URL_MAP = {
     "1000094985": "football/england/premier_league", # Premier League
     "1000095049": "football/spain/la_liga",          # La Liga
@@ -16,16 +16,16 @@ LEAGUE_URL_MAP = {
 
 def get_all_props(league_id):
     """
-    Final version using the direct Kambi listView URLs to get event IDs,
-    then fetching individual events and filtering for betOfferType ID 127.
+    Finalna verzija koja objedinjuje oba koraka:
+    1. Preuzima sve ID-jeve mečeva za datu ligu.
+    2. Za svaki ID meča, preuzima kvote i filtrira samo one za igrače (tip 127).
     """
-    # Provera da li imamo URL za traženu ligu
     league_path = LEAGUE_URL_MAP.get(str(league_id))
     if not league_path:
         print(f"[GREŠKA] Nije pronađen URL za ligu sa ID-jem: {league_id}")
         return []
 
-    # KORAK 1: Sastavi URL i dobavi sve event ID-jeve za ligu
+    # --- KORAK 1: Preuzimanje ID-jeva svih budućih mečeva ---
     events_url = f"https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/{league_path}/all/matches.json?lang=en_GB&market=GB&useCombined=true"
     
     headers = {
@@ -33,7 +33,7 @@ def get_all_props(league_id):
         'Accept': 'application/json',
     }
 
-    print(f"--- KORAK 1: Preuzimanje Event ID-jeva sa novog URL-a ---")
+    print(f"--- KORAK 1: Preuzimanje liste mečeva za {league_path} ---")
     print(f"URL: {events_url}")
 
     try:
@@ -60,7 +60,7 @@ def get_all_props(league_id):
         print(f"[GREŠKA] Nije uspelo preuzimanje liste mečeva: {e}")
         return []
 
-    # KORAK 2: Za svaki event ID, preuzmi kvote i filtriraj
+    # --- KORAK 2: Preuzimanje i filtriranje kvota za svaki meč ---
     all_player_props = []
     print(f"\n--- KORAK 2: Preuzimanje kvota za {len(future_event_ids)} mečeva ---")
 
@@ -76,6 +76,14 @@ def get_all_props(league_id):
                 continue
                 
             event_data = event_response.json()
+            
+            # ISPRAVKA: Bezbedan pristup detaljima meča
+            event_list = event_data.get('events', [])
+            if not event_list:
+                print(f"  [UPOZORENJE] Nedostaju detalji o meču ('events' lista) za ID {event_id}. Preskačem.")
+                continue
+            event_details = event_list[0]
+
             team_map = {p['id']: p['participantName'] for p in event_data.get('participants', []) if p.get('type') == 'TEAM'}
 
             for offer in event_data.get('betOffers', []):
@@ -83,10 +91,11 @@ def get_all_props(league_id):
                     for outcome in offer.get('outcomes', []):
                         player_name = outcome.get('participant')
                         if not player_name: continue
+                        
                         team_id = outcome.get('participantId')
                         prop_data = {
-                            'event_name': event_data['event'].get('name', 'N/A'),
-                            'closed': event_data['event'].get('start', 'N/A'),
+                            'event_name': event_details.get('name', 'N/A'),
+                            'closed': event_details.get('start', 'N/A'),
                             'player': player_name,
                             'team': team_map.get(team_id, 'N/A'),
                             'market': offer['criterion']['label'],
@@ -95,9 +104,13 @@ def get_all_props(league_id):
                             'decimal_odds': outcome.get('odds', 0) / 1000.0
                         }
                         all_player_props.append(prop_data)
-            time.sleep(0.3)
+            
+            time.sleep(0.5) # Pauza da ne opteretimo server
+
         except requests.exceptions.RequestException as e:
             print(f"[GREŠKA] Problem pri preuzimanju za event {event_id}: {e}")
+        except json.JSONDecodeError:
+            print(f"[GREŠKA] Nije uspelo dekodiranje JSON-a za event {event_id}")
 
     print(f"\n--- PREUZIMANJE ZAVRŠENO: Ukupno pronađeno {len(all_player_props)} ponuda za igrače. ---")
     return all_player_props
@@ -105,9 +118,13 @@ def get_all_props(league_id):
 if __name__ == '__main__':
     # Test sa Premier League ID-jem
     premier_league_id = "1000094985"
-    print("--- Testiranje skripte sa Premier League ---")
+    print("--- Testiranje kompletne skripte sa Premier League ---")
     props = get_all_props(premier_league_id)
+
     if props:
         print(f"\nUspešno preuzeto {len(props)} kvota.")
+        print("Primer prvih 5 preuzetih kvota:")
+        for prop in props[:5]:
+            print(prop)
     else:
         print("\nNisu pronađene kvote ili je došlo do greške.")
