@@ -89,14 +89,19 @@ selected_league_name = st.sidebar.selectbox("Izaberite Ligu:", options=list(LEAG
 if st.sidebar.button("Prikaži Mečeve"):
     league_id = LEAGUES[selected_league_name]
     with st.status(f"Preuzimanje mečeva za {selected_league_name}...", expanded=True) as status:
-        st.session_state.events_list = get_events_for_league(league_id)
-        # Resetovanje ostalih izbora
-        st.session_state.event_props = None
-        st.session_state.selected_players = {}
-        if not st.session_state.events_list:
-            status.update(label="Nije pronađen nijedan meč!", state="error")
-        else:
-            status.update(label=f"Pronađeno {len(st.session_state.events_list)} mečeva.", state="complete", expanded=False)
+        try:
+            st.write("Korak 1: Preuzimanje liste mečeva...")
+            st.session_state.events_list = get_events_for_league(league_id)
+            st.session_state.event_props = None
+            st.session_state.selected_players = {}
+            
+            if not st.session_state.events_list:
+                status.update(label="Nije pronađen nijedan meč!", state="error")
+            else:
+                status.update(label=f"Pronađeno {len(st.session_state.events_list)} mečeva.", state="complete", expanded=False)
+        except Exception as e:
+            status.update(label="Greška pri preuzimanju mečeva!", state="error", expanded=True)
+            st.exception(e)
 
 if st.session_state.events_list:
     event_options = {e['event_name']: e for e in st.session_state.events_list}
