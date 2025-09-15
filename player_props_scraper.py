@@ -11,7 +11,7 @@ LEAGUE_URL_MAP = {
     "1000095001": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/italy/serie_a/all/matches.json?lang=en_GB&market=GB&useCombined=true",
     "1000094994": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/germany/bundesliga/all/matches.json?lang=en_GB&market=GB&useCombined=true",
     "1000094991": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/france/ligue_1/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-    "1000093381": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/europe/champions_league/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+    "1000093381": "https://eu1.offering-api.kambicdn.com/offering/v2018/kambi/listView/football/champions_league/all/all/matches.json?channel_id=7&channel_id=7&client_id=2&client_id=2&competitionId=undefined&lang=en_GB&lang=en_GB&market=GB&market=GB&useCombined=true&useCombinedLive=true",
     "2000051195": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/europe/europa_league/all/matches.json?lang=en_GB&market=GB&useCombined=true",
 }
 
