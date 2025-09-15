@@ -217,26 +217,53 @@ def get_all_injuries():
 # -----------------------------
 @st.cache_data(ttl=300)
 def fetch_league_events(league_name: str):
-    r = requests.get(LEAGUE_URLS[league_name], headers=HEADERS, timeout=15)
-    r.raise_for_status()
-    data = r.json()
-    now = datetime.now(timezone.utc)
-    events = []
-    for w in data.get("events", []):
-        event = w.get("event", {})
-        start = event.get("start")
-        if not start or datetime.fromisoformat(start.replace("Z", "+00:00")) <= now: continue
-        team_map = {str(o["participantId"]): o["participant"] for o in (w.get("betOffers") or [{}])[0].get("outcomes", []) if "participantId" in o and "participant" in o}
-        events.append({"event_id": event.get("id"), "event_name": event.get("name"), "kickoff_time": start, "team_map": team_map})
-    events.sort(key=lambda e: e["kickoff_time"])
-    return events
+    try:
+        r = requests.get(LEAGUE_URLS[league_name], headers=HEADERS, timeout=15)
+        r.raise_for_status()
+        data = r.json()
+        now = datetime.now(timezone.utc)
+        events = []
+        for w in data.get("events", []):
+            event = w.get("event", {})
+            start = event.get("start")
+            if not start or datetime.fromisoformat(start.replace("Z", "+00:00")) <= now: continue
+            team_map = {str(o["participantId"]): o["participant"] for o in (w.get("betOffers") or [{}])[0].get("outcomes", []) if "participantId" in o and "participant" in o}
+            events.append({"event_id": event.get("id"), "event_name": event.get("name"), "kickoff_time": start, "team_map": team_map})
+        events.sort(key=lambda e: e["kickoff_time"])
+        return events
+    except requests.exceptions.HTTPError as e:
+        st.error(f"HTTP Error fetching events for {league_name}: {e}")
+        st.info("Possible issues: URL outdated, API down, rate limiting, or invalid headers. Check the API documentation.")
+        return []
+    except requests.exceptions.RequestException as e:
+        st.error(f"Request Error fetching events for {league_name}: {e}")
+        return []
+    except ValueError as e:
+        st.error(f"JSON parsing error for {league_name}: {e}")
+        return []
+    except Exception as e:
+        st.error(f"Unexpected error fetching events for {league_name}: {e}")
+        return []
 
 @st.cache_data(ttl=300)
 def fetch_event_betoffers(event_id: int):
-    url = f"https://eu-offering-api.kambicdn.com/offering/v2018/kambi/betoffer/event/{event_id}.json?lang=en_GB&market=GB&includeParticipants=true"
-    r = requests.get(url, headers=HEADERS, timeout=20)
-    r.raise_for_status()
-    return r.json()
+    try:
+        url = f"https://eu-offering-api.kambicdn.com/offering/v2018/kambi/betoffer/event/{event_id}.json?lang=en_GB&market=GB&includeParticipants=true"
+        r = requests.get(url, headers=HEADERS, timeout=20)
+        r.raise_for_status()
+        return r.json()
+    except requests.exceptions.HTTPError as e:
+        st.error(f"HTTP Error fetching betoffers for event {event_id}: {e}")
+        return {}
+    except requests.exceptions.RequestException as e:
+        st.error(f"Request Error fetching betoffers for event {event_id}: {e}")
+        return {}
+    except ValueError as e:
+        st.error(f"JSON parsing error for betoffers: {e}")
+        return {}
+    except Exception as e:
+        st.error(f"Unexpected error fetching betoffers: {e}")
+        return {}
 
 def build_players_maps(betoffers: dict, team_map: dict):
     players_by_team = {team: set() for team in team_map.values()}
