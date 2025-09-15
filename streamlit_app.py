@@ -91,6 +91,8 @@ st.sidebar.header("1. Preuzimanje Ponude")
 
 selected_league_name = st.sidebar.selectbox("Izaberite Ligu:", options=list(LEAGUES.keys()))
 if st.sidebar.button("Prikaži Mečeve"):
+    # DODATO: Toast notifikacija koja potvrđuje početak preuzimanja
+    st.toast(f"Započinjem preuzimanje za ligu: {selected_league_name}...")
     league_id = LEAGUES[selected_league_name]
     with st.spinner(f"Preuzimanje ponude za {selected_league_name}..."):
         st.session_state.all_props = get_all_props(league_id)
@@ -268,4 +270,5 @@ with tab2:
         st.dataframe(raw_df, use_container_width=True)
     else:
         st.warning("Nema preuzetih podataka. Molimo Vas da prvo izaberete ligu i kliknete na 'Prikaži Mečeve' u meniju sa leve strane.")
+
 
