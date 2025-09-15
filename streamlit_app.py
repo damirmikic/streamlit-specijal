@@ -11,13 +11,13 @@ import re
 # Konstante
 # -----------------------------
 LEAGUE_URLS = {
-    "Premier League": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/england/premier_league/all/matches.json?category=12579&channel_id=7&channel_id=7&client_id=2&client_id=2&competitionId=undefined&lang=en_GB&lang=en_GB&market=GB&market=GB&useCombined=true&useCombinedLive=true",
-    "La Liga":        "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/spain/la_liga/all/matches.json?category=12579&channel_id=7&channel_id=7&client_id=2&client_id=2&competitionId=undefined&lang=en_GB&lang=en_GB&market=GB&market=GB&useCombined=true&useCombinedLive=true",
-    "Serie A":        "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/italy/serie_a/all/matches.json?category=12579&channel_id=7&channel_id=7&client_id=2&client_id=2&competitionId=undefined&lang=en_GB&lang=en_GB&market=GB&market=GB&useCombined=true&useCombinedLive=true",
-    "Bundesliga":     "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/germany/bundesliga/all/matches.json?category=12579&channel_id=7&channel_id=7&client_id=2&client_id=2&competitionId=undefined&lang=en_GB&lang=en_GB&market=GB&market=GB&useCombined=true&useCombinedLive=true",
-    "Ligue 1":        "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/france/ligue_1/all/matches.json?category=12579&channel_id=7&channel_id=7&client_id=2&client_id=2&competitionId=undefined&lang=en_GB&lang=en_GB&market=GB&market=GB&useCombined=true&useCombinedLive=true",
-    "Champions League": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/champions_league/all/all/matches.json?category=12579&channel_id=7&channel_id=7&client_id=2&client_id=2&competitionId=undefined&lang=en_GB&lang=en_GB&market=GB&market=GB&useCombined=true&useCombinedLive=true",
-    "Europa League": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/europa_league/all/all/matches.json?category=12579&channel_id=7&channel_id=7&client_id=2&client_id=2&competitionId=undefined&lang=en_GB&lang=en_GB&market=GB&market=GB&useCombined=true&useCombinedLive=true"
+    "Premier League": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/england/premier_league/all/matches.json?category=12579&channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true&useCombinedLive=true",
+    "La Liga":        "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/spain/la_liga/all/matches.json?category=12579&channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true&useCombinedLive=true",
+    "Serie A":        "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/italy/serie_a/all/matches.json?category=12579&channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true&useCombinedLive=true",
+    "Bundesliga":     "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/germany/bundesliga/all/matches.json?category=12579&channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true&useCombinedLive=true",
+    "Ligue 1":        "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/france/ligue_1/all/matches.json?category=12579&channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true&useCombinedLive=true",
+    "Champions League": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/champions_league/all/all/matches.json?category=12579&channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true&useCombinedLive=true",
+    "Europa League": "https://eu-offering-api.kambicdn.com/offering/v2018/kambi/listView/football/europa_league/all/all/matches.json?category=12579&channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true&useCombinedLive=true"
 }
 
 HEADERS = {
