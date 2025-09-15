@@ -21,23 +21,30 @@ HEADERS = {
 
 def get_events_for_league(league_id):
     """
-    Korak 1: Preuzima samo listu mečeva i njihove osnovne podatke za datu ligu.
+    Korak 1: Preuzima listu mečeva sa detaljnim ispisom procesa.
     """
     events_url = LEAGUE_URL_MAP.get(str(league_id))
     if not events_url:
         print(f"[GREŠKA] Nije pronađen URL za ligu: {league_id}")
         return []
 
-    print(f"Preuzimanje liste mečeva sa: {events_url}")
+    print(f"1. Preuzimanje liste mečeva sa: {events_url}")
     try:
         response = requests.get(events_url, headers=HEADERS, timeout=15)
+        print(f"2. Statusni kod odgovora: {response.status_code}")
+        print(f"3. Početak odgovora (prvih 200 karaktera): {response.text[:200]}")
+        
         response.raise_for_status()
         data = response.json()
+        print("4. JSON uspešno dekodiran.")
         
         now = datetime.now(timezone.utc)
         events_to_process = []
         
-        for event_wrapper in data.get('events', []):
+        events_list_from_json = data.get('events', [])
+        print(f"5. Pronađeno {len(events_list_from_json)} događaja u JSON-u.")
+
+        for event_wrapper in events_list_from_json:
             event = event_wrapper.get('event', {})
             if not event: continue
             
@@ -47,7 +54,6 @@ def get_events_for_league(league_id):
                 if start_time > now:
                     team_map = {}
                     bet_offers = event_wrapper.get('betOffers', [])
-                    # Uzimamo prvu ponudu (obično 1X2) da izvučemo ID-jeve timova
                     if bet_offers and bet_offers[0].get('outcomes'):
                         for outcome in bet_offers[0]['outcomes']:
                             if 'participantId' in outcome and 'participant' in outcome:
@@ -62,11 +68,17 @@ def get_events_for_league(league_id):
                         }
                         events_to_process.append(event_details)
 
-        print(f"Pronađeno {len(events_to_process)} nadolazećih mečeva.")
+        print(f"6. Pronađeno {len(events_to_process)} nadolazećih mečeva za obradu.")
         return events_to_process
 
+    except requests.exceptions.HTTPError as e:
+        print(f"[GREŠKA - HTTP] Server je vratio grešku: {e}")
+        return []
     except requests.exceptions.RequestException as e:
-        print(f"[GREŠKA] Nije uspelo preuzimanje liste mečeva: {e}")
+        print(f"[GREŠKA - Konekcija] Nije uspelo preuzimanje liste mečeva: {e}")
+        return []
+    except json.JSONDecodeError as e:
+        print(f"[GREŠKA - JSON] Nije moguće dekodirati odgovor sa servera: {e}")
         return []
 
 def get_props_for_event(event_id, team_map):
