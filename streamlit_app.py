@@ -21,10 +21,19 @@ LEAGUE_URLS = {
 }
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-    "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.9,sr;q=0.8",
-    "Referer": "https://retail.kambicdn.com/bring-your-own-device/latest/"  # Primer, stavite sajt sa kog ste preuzeli link
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0",
+    "Accept": "*/*",
+    "Accept-Encoding": "gzip, deflate, br, zstd",
+    "Accept-Language": "en-US,en;q=0.9,hr;q=0.8,sr-Latn-RS;q=0.7,sr;q=0.6,cs;q=0.5",
+    "Origin": "https://retail.kambicdn.com",
+    "Priority": "u=1, i",
+    "Referer": "https://retail.kambicdn.com/",
+    "Sec-Ch-Ua": "\"Not;A=Brand\";v=\"99\", \"Microsoft Edge\";v=\"139\", \"Chromium\";v=\"139\"",
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": "\"Windows\"",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site"
 }
 
 TEAM_NAME_MAP = {
@@ -247,6 +256,23 @@ def fetch_league_events(league_name: str):
 
 @st.cache_data(ttl=300)
 def fetch_event_betoffers(event_id: int):
+    try:
+        url = f"https://eu1.offering-api.kambicdn.com/offering/v2018/kambi/betoffer/event/{event_id}.json?lang=en_GB&market=GB&includeParticipants=true"
+        r = requests.get(url, headers=HEADERS, timeout=20)
+        r.raise_for_status()
+        return r.json()
+    except requests.exceptions.HTTPError as e:
+        st.error(f"HTTP Error fetching betoffers for event {event_id}: {e}")
+        return {}
+    except requests.exceptions.RequestException as e:
+        st.error(f"Request Error fetching betoffers for event {event_id}: {e}")
+        return {}
+    except ValueError as e:
+        st.error(f"JSON parsing error for betoffers: {e}")
+        return {}
+    except Exception as e:
+        st.error(f"Unexpected error fetching betoffers: {e}")
+        return {}
     try:
         url = f"https://eu-offering-api.kambicdn.com/offering/v2018/kambi/betoffer/event/{event_id}.json?lang=en_GB&market=GB&includeParticipants=true"
         r = requests.get(url, headers=HEADERS, timeout=20)
