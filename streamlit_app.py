@@ -4,7 +4,6 @@ from datetime import datetime
 import pytz
 import math 
 import time
-# Ažurirani importi
 from player_props_scraper import get_events_for_league, get_props_for_event
 from lineup_scraper import get_all_lineups
 from injury_scraper import get_all_injuries
@@ -12,7 +11,6 @@ from calculations import recalculate_related_odds
 
 # --- Konfiguracija i stil ---
 st.set_page_config(layout="wide", page_title="Merkur Specijali")
-# CSS ostaje isti...
 st.markdown("""
 <style>
     /* Generalni stilovi i preporučena tipografija */
@@ -90,13 +88,15 @@ selected_league_name = st.sidebar.selectbox("Izaberite Ligu:", options=list(LEAG
 
 if st.sidebar.button("Prikaži Mečeve"):
     league_id = LEAGUES[selected_league_name]
-    with st.spinner(f"Preuzimanje liste mečeva za {selected_league_name}..."):
+    with st.status(f"Preuzimanje mečeva za {selected_league_name}...", expanded=True) as status:
         st.session_state.events_list = get_events_for_league(league_id)
         # Resetovanje ostalih izbora
         st.session_state.event_props = None
         st.session_state.selected_players = {}
         if not st.session_state.events_list:
-            st.sidebar.error("Nije pronađen nijedan meč.")
+            status.update(label="Nije pronađen nijedan meč!", state="error")
+        else:
+            status.update(label=f"Pronađeno {len(st.session_state.events_list)} mečeva.", state="complete", expanded=False)
 
 if st.session_state.events_list:
     event_options = {e['event_name']: e for e in st.session_state.events_list}
@@ -110,45 +110,41 @@ if st.session_state.events_list:
     if selected_event_name:
         selected_event_details = event_options[selected_event_name]
         
-        # Preuzimanje kvota samo za izabrani meč
         if 'current_event_id' not in st.session_state or st.session_state.current_event_id != selected_event_details['event_id']:
              with st.spinner(f"Preuzimanje kvota za {selected_event_name}..."):
                 props = get_props_for_event(selected_event_details['event_id'], selected_event_details['team_map'])
-                # Dodajemo ime meča i vreme početka u svaki red
                 for prop in props:
                     prop['event_name'] = selected_event_details['event_name']
                     prop['closed'] = selected_event_details['kickoff_time']
                 st.session_state.event_props = props
                 st.session_state.current_event_id = selected_event_details['event_id']
 
-        if st.session_state.event_props:
+        if st.session_state.event_props is not None:
             st.sidebar.header("2. Izbor Igrača")
-            df = pd.DataFrame(st.session_state.event_props)
-            teams_in_event = sorted([team for team in df['team'].unique() if team and team != 'Tim N/A'])
-            selected_team = st.sidebar.selectbox("Izaberite Tim:", options=teams_in_event, index=None)
+            if not st.session_state.event_props:
+                st.sidebar.warning("Za izabrani meč nisu pronađene kvote za igrače.")
+            else:
+                df = pd.DataFrame(st.session_state.event_props)
+                teams_in_event = sorted([team for team in df['team'].unique() if team and team != 'Tim N/A'])
+                selected_team = st.sidebar.selectbox("Izaberite Tim:", options=teams_in_event, index=None)
 
-            if selected_team:
-                team_df = df[df['team'] == selected_team]
-                players = sorted(team_df['player'].unique())
-                
-                selected_player_for_add = st.sidebar.selectbox("Izaberite Igrača:", options=players)
-                if st.sidebar.button("➕ Dodaj Igrača"):
-                    if selected_player_for_add not in st.session_state.selected_players:
-                        player_games = team_df[team_df['player'] == selected_player_for_add].to_dict('records')
-                        # Dodatna logika (isto kao pre)
-                        st.session_state.selected_players[selected_player_for_add] = player_games
-                        st.success(f"Igrač {selected_player_for_add} dodat.")
+                if selected_team:
+                    team_df = df[df['team'] == selected_team]
+                    players = sorted(team_df['player'].unique())
+                    
+                    selected_player_for_add = st.sidebar.selectbox("Izaberite Igrača:", options=players)
+                    if st.sidebar.button("➕ Dodaj Igrača"):
+                        if selected_player_for_add not in st.session_state.selected_players:
+                            player_games = team_df[team_df['player'] == selected_player_for_add].to_dict('records')
+                            st.session_state.selected_players[selected_player_for_add] = player_games
+                            st.success(f"Igrač {selected_player_for_add} dodat.")
 
 # --- GLAVNI DEO APLIKACIJE ---
-# Ostatak koda za prikazivanje tabova i generisanje CSV-a ostaje skoro identičan,
-# samo se prilagođava novoj logici.
 st.header("Merkur Specijal App")
 if st.session_state.selected_players:
-    # (Ovaj deo koda za prikaz ponude i generisanje CSV-a ostaje isti kao u prethodnoj verziji)
     with st.container(border=False):
         st.markdown('<div class="glass-container">', unsafe_allow_html=True)
         st.header("Kreirana Ponuda")
-        # ... (kompletan kod za prikaz, modifikaciju i brisanje igara) ...
         for player_name, games in list(st.session_state.selected_players.items()):
              with st.expander(f"Igre za: {player_name}", expanded=True):
                 for i, game in enumerate(games):
@@ -169,7 +165,6 @@ if st.session_state.selected_players:
                         st.session_state.selected_players[player_name].pop(i)
                         if not st.session_state.selected_players[player_name]: del st.session_state.selected_players[player_name]
                         st.rerun()
-
         st.markdown('</div>', unsafe_allow_html=True)
 else:
     st.info("Izaberite ligu i meč iz menija sa leve strane da biste započeli.")
