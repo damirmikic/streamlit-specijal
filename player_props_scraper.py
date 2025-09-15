@@ -7,8 +7,9 @@ def get_all_props(league_id):
     Fetches player props for a specific league, ensuring that for each player,
     only props for their single, next upcoming match are included.
     """
-    team_url = "https://eu-offering-api.kambicdn.com/offering/v2018/paf11lv/betoffer/group/1000093190.json?includeParticipants=true&onlyMain=false&type=2&market=PM&lang=en_GB&suppress_response_codes=true"
-    props_url = f"https://eu-offering-api.kambicdn.com/offering/v2018/paf11lv/betoffer/group/{league_id}.json?includeParticipants=true&onlyMain=false&type=127&market=LV&lang=en_GB&suppress_response_codes=true"
+    # PROMENA: Zamenjen 'paf11lv' sa 'ilaniuswarl' u URL-ovima
+    team_url = "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/betoffer/group/1000093190.json?includeParticipants=true&onlyMain=false&type=2&market=PM&lang=en_GB&suppress_response_codes=true"
+    props_url = f"https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/betoffer/group/{league_id}.json?includeParticipants=true&onlyMain=false&type=127&market=LV&lang=en_GB&suppress_response_codes=true"
     
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -16,9 +17,11 @@ def get_all_props(league_id):
 
     # 1. Fetch team data for mapping
     try:
-        team_response = requests.get(team_url, headers=headers)
+        print("Fetching team data...")
+        team_response = requests.get(team_url, headers=headers, timeout=10)
         team_response.raise_for_status()
         team_data = team_response.json()
+        print(f"Team data response status: {team_response.status_code}")
         
         team_map = {}
         for offer in team_data.get('betOffers', []):
@@ -26,17 +29,38 @@ def get_all_props(league_id):
                 if 'participantId' in outcome and 'participant' in outcome:
                     team_map[outcome['participantId']] = outcome['participant']
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching team data: {e}")
+        # POBOLJŠANO: Detaljniji ispis greške
+        print(f"Error fetching team data from {team_url}: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            print(f"Response status: {e.response.status_code}")
+            print(f"Response text: {e.response.text}")
         return []
 
     # 2. Fetch all player props for the league
     try:
-        props_response = requests.get(props_url, headers=headers)
+        print(f"Fetching props for league {league_id}...")
+        props_response = requests.get(props_url, headers=headers, timeout=10)
         props_response.raise_for_status()
         props_data = props_response.json()
+        print(f"Props data response status: {props_response.status_code}")
+        
+        # Provera da li su podaci dobijeni
+        if not props_data.get('betOffers'):
+            print("Warning: Props data fetched, but 'betOffers' list is empty.")
+            return []
+
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching props for league {league_id}: {e}")
+        # POBOLJŠANO: Detaljniji ispis greške
+        print(f"Error fetching props for league {league_id} from {props_url}: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            print(f"Response status: {e.response.status_code}")
+            print(f"Response text: {e.response.text}")
         return []
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON from props response: {e}")
+        print(f"Response text that failed to parse: {props_response.text}")
+        return []
+
 
     # --- REVISED LOGIC ---
 
@@ -127,4 +151,3 @@ if __name__ == '__main__':
 
     else:
         print("No player props found or an error occurred.")
-
