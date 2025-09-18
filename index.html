@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Merkur Specijali</title>
+    <title>Football Odds Exporter</title>
     <!-- FAVICON - Ovde unesite link do vaše ikonice na GitHub-u -->
-    <link rel="icon" type="image/png" href="merkur.png">
+    <link rel="icon" type="image/png" href="https://vaš-link-do-slike-na-githubu/merkur.png">
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -40,7 +40,7 @@
 
     <div class="container mx-auto p-4 md:p-8 max-w-6xl">
         <header class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">Merkur Specijali</h1>
+            <h1 class="text-3xl font-bold text-gray-800">Football Odds Exporter</h1>
             <p class="text-gray-600 mt-2">Select a league and match to fetch available markets and download them as a CSV file.</p>
         </header>
 
@@ -430,6 +430,9 @@
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
                 fetchedMarketData = data; // Store the data
+                sessionStorage.setItem(`event_${eventId}`, JSON.stringify(data)); // Save to session storage
+                openMatchSpecialsButton.disabled = false;
+
 
                 // Display raw data
                 rawDataOutput.textContent = JSON.stringify(data, null, 2);
@@ -1047,9 +1050,11 @@
             generateFinalCsvButton.addEventListener('click', generateFinalPlayerPropsCSV);
             clearPlayersButton.addEventListener('click', handleClearPlayers);
 
-            openMatchSpecialsButton.addEventListener('click', () => {
+             openMatchSpecialsButton.addEventListener('click', () => {
                 const eventId = matchSelect.value;
                 if(eventId) {
+                    // Save data to sessionStorage to pass to the next page
+                    sessionStorage.setItem(`event_${eventId}`, JSON.stringify(fetchedMarketData));
                     window.open(`match-specials.html?eventId=${eventId}`, '_blank');
                 }
             });
