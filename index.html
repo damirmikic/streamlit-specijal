@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Merkur Automatika</title>
+    <title>Merkur Specijal Feed</title>
     <!-- FAVICON - Ovde unesite link do vaše ikonice na GitHub-u -->
     <link rel="icon" type="image/png" href="merkur.png">
     <!-- Tailwind CSS for styling -->
@@ -40,7 +40,7 @@
 
     <div class="container mx-auto p-4 md:p-8 max-w-6xl">
         <header class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">Merkur Specijal</h1>
+            <h1 class="text-3xl font-bold text-gray-800">Merkur Specijali</h1>
             <p class="text-gray-600 mt-2">Select a league and match to fetch available markets and download them as a CSV file.</p>
         </header>
 
@@ -116,18 +116,18 @@
                  </div>
             </div>
 
-
-             <!-- Download Button Area (for all markets) -->
-            <div id="downloadContainer" class="mt-4 text-right hidden">
-                 <button id="downloadCsvButton" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
-                    Download All Markets as CSV
-                </button>
-            </div>
-
             <!-- Status/Log Area -->
             <div id="status" class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 h-32 overflow-y-auto">
                 Please select a league to begin.
             </div>
+
+             <!-- Match Specials Button Container -->
+            <div id="matchSpecialsButtonContainer" class="mt-6 text-center hidden">
+                 <button id="openMatchSpecialsButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300 text-lg">
+                    Otvori Specijale za Meč
+                </button>
+            </div>
+
 
             <!-- Raw Data Display -->
             <div class="mt-4">
@@ -146,7 +146,6 @@
                     <button id="main-tab" class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">Main Markets</button>
                     <button id="stats-tab" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700">Stat Markets</button>
                     <button id="player-tab" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700">Player Props</button>
-                    <button id="match-specials-tab" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700">Meč Specijal</button>
                 </nav>
             </div>
 
@@ -223,15 +222,6 @@
                         </div>
                     </div>
                 </div>
-                 <!-- Match Specials Tab -->
-                <div id="match-specials-content" class="tab-panel hidden">
-                    <div class="text-center">
-                        <p class="text-gray-700 mb-4">Otvorite stranicu sa specijalima za izabrani meč.</p>
-                        <button id="openMatchSpecialsButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300" disabled>
-                            Otvori Specijale za Meč
-                        </button>
-                    </div>
-                </div>
             </div>
         </main>
     </div>
@@ -256,8 +246,6 @@
         const leagueSelect = document.getElementById('leagueSelect');
         const matchSelect = document.getElementById('matchSelect');
         const fetchMarketsButton = document.getElementById('fetchMarketsButton');
-        const downloadContainer = document.getElementById('downloadContainer');
-        const downloadCsvButton = document.getElementById('downloadCsvButton');
         const statusDiv = document.getElementById('status');
         const loader = document.getElementById('loader');
         const toggleRawDataButton = document.getElementById('toggleRawDataButton');
@@ -284,6 +272,7 @@
         const generateFinalCsvButton = document.getElementById('generateFinalCsvButton');
         
         const openMatchSpecialsButton = document.getElementById('openMatchSpecialsButton');
+        const matchSpecialsButtonContainer = document.getElementById('matchSpecialsButtonContainer');
 
         const tabs = document.querySelectorAll('.tab-button');
         const tabPanels = document.querySelectorAll('.tab-panel');
@@ -360,14 +349,13 @@
             matchSelect.disabled = true;
             fetchMarketsButton.disabled = true;
             resetTables();
-            downloadContainer.classList.add('hidden');
             playerCsvGeneratorSection.classList.add('hidden');
             allMarketDataForCSV = [];
             fetchedMarketData = null;
             toggleRawDataButton.classList.add('hidden');
             rawDataContainer.classList.add('hidden');
             rawDataOutput.textContent = '';
-            openMatchSpecialsButton.disabled = true;
+            matchSpecialsButtonContainer.classList.add('hidden');
 
             if (!leagueName) {
                 matchSelect.innerHTML = '<option value="">-- Waiting for League --</option>';
@@ -417,11 +405,11 @@
             statsTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Fetching markets...</td></tr>';
             homePlayerTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Fetching markets...</td></tr>';
             awayPlayerTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Fetching markets...</td></tr>';
-            downloadContainer.classList.add('hidden');
             playerCsvGeneratorSection.classList.add('hidden');
             csvPreviewSection.classList.add('hidden');
             toggleRawDataButton.classList.add('hidden');
             rawDataContainer.classList.add('hidden');
+            matchSpecialsButtonContainer.classList.add('hidden');
             
             const oddsUrl = `https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/betoffer/event/${eventId}.json?lang=en_GB&market=GB&client_id=2&channel_id=7&includeParticipants=true`;
 
@@ -431,7 +419,7 @@
                 const data = await response.json();
                 fetchedMarketData = data; // Store the data
                 sessionStorage.setItem(`event_${eventId}`, JSON.stringify(data)); // Save to session storage
-                openMatchSpecialsButton.disabled = false;
+                matchSpecialsButtonContainer.classList.remove('hidden');
 
 
                 // Display raw data
@@ -565,9 +553,6 @@
                 setupPlayerCsvGenerator();
 
                 logStatus(`Successfully categorized markets. Main: ${mainMarkets.length}, Stats: ${statMarkets.length}, Player: ${playerMarkets.length}.`);
-                if (allMarketDataForCSV.length > 0) {
-                     downloadContainer.classList.remove('hidden');
-                }
 
             } catch (error) {
                 logStatus(`Error fetching markets: ${error.message}`, true);
@@ -615,25 +600,6 @@
             link.click();
             document.body.removeChild(link);
         }
-
-        function handleAllMarketsDownload() {
-            if (allMarketDataForCSV.length === 0) {
-                logStatus('No data available to download.', true);
-                return;
-            }
-            logStatus('Generating CSV file for all markets...');
-            const columns = ["Category", "Market", "Selection", "Odds"];
-            const csv = arrayToCsv(allMarketDataForCSV, columns);
-            
-            const leagueName = leagueSelect.value.replace(/ /g, '_');
-            const matchName = matchSelect.options[matchSelect.selectedIndex].text.replace(/ /g, '_');
-            const date = new Date().toISOString().slice(0, 10);
-            const fileName = `markets_${leagueName}_${matchName}_${date}.csv`;
-
-            downloadCSV(csv, fileName);
-            logStatus('CSV download for all markets initiated!');
-        }
-
         
         // 6. Handle Tab switching
         function handleTabClick(e) {
@@ -1028,14 +994,12 @@
             leagueSelect.addEventListener('change', (e) => fetchMatchesForLeague(e.target.value));
             matchSelect.addEventListener('change', () => {
                 fetchMarketsButton.disabled = !matchSelect.value;
-                openMatchSpecialsButton.disabled = !matchSelect.value;
+                matchSpecialsButtonContainer.classList.add('hidden');
                 resetTables();
                 mainTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Click "Fetch Markets" to see data.</td></tr>';
-                downloadContainer.classList.add('hidden');
                 playerCsvGeneratorSection.classList.add('hidden');
             });
             fetchMarketsButton.addEventListener('click', fetchAndDisplayMarkets);
-            downloadCsvButton.addEventListener('click', handleAllMarketsDownload);
             toggleRawDataButton.addEventListener('click', () => {
                 rawDataContainer.classList.toggle('hidden');
             });
@@ -1052,10 +1016,12 @@
 
              openMatchSpecialsButton.addEventListener('click', () => {
                 const eventId = matchSelect.value;
-                if(eventId) {
+                if(eventId && fetchedMarketData) {
                     // Save data to sessionStorage to pass to the next page
                     sessionStorage.setItem(`event_${eventId}`, JSON.stringify(fetchedMarketData));
                     window.open(`match-specials.html?eventId=${eventId}`, '_blank');
+                } else if (eventId) {
+                    logStatus("Molimo prvo kliknite na 'Fetch Markets' da učitate podatke za meč.", true);
                 }
             });
         });
