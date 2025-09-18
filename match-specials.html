@@ -171,7 +171,7 @@
                     { name: "9+ kornera i 3+ kartona i GG", components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Cards", 2.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
                     { name: "9+ kornera i 4+ kartona i GG", components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Cards", 3.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
                     { name: "8+ kornera i GG", components: [() => getOdd("Total Corners", 7.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
-                    { name: "Penal i crveni karton", components: [() => getOdd("Penalty Kick awarded", null, "yes"), () => getOdd("A Red Card to be shown", null, "yes")], multiplier: 0.8 },
+                    { name: "Penal i crveni karton", components: [() => getOdd("Penalty Kick awarded", null, "yes"), () => getOdd("Red Card given", null, "yes")], multiplier: 0.8 },
                     // Calculated based on probabilities
                     { name: "Penal ili crveni karton", calculation: () => {
                         const pPen = 1 / getOdd("Penalty Kick awarded", null, "yes");
