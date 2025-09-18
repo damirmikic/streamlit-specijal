@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Specials</title>
+    <link rel="icon" type="image/png" href="https://vaš-link-do-slike-na-githubu/merkur.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s ease infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <header class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">Meč Specijal Generator</h1>
+            <p id="matchNameHeader" class="text-gray-600 mt-2">Loading match details...</p>
+        </header>
+
+        <main class="bg-white rounded-lg shadow-md p-6">
+            <div id="loader" class="flex justify-center items-center h-48">
+                <div class="spinner"></div>
+            </div>
+
+            <div id="specialsContent" class="hidden">
+                <div id="specialsList" class="space-y-3">
+                    <!-- Calculated specials will be inserted here -->
+                </div>
+                
+                <div class="mt-8 pt-6 border-t border-gray-200">
+                    <h2 class="text-2xl font-bold text-indigo-800 mb-4">Pregled Specijala za CSV</h2>
+                     <div id="csvPreviewContent" class="space-y-6">
+                         <!-- Preview content will be generated here -->
+                     </div>
+                     <div class="mt-6 text-right">
+                         <button id="generateCsvButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
+                             Generiši CSV za Meč Specijal
+                         </button>
+                     </div>
+                </div>
+            </div>
+             <div id="errorContainer" class="hidden text-center text-red-500 p-4 bg-red-50 rounded-lg">
+                <!-- Error messages will be shown here -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const loader = document.getElementById('loader');
+            const specialsContent = document.getElementById('specialsContent');
+            const errorContainer = document.getElementById('errorContainer');
+            const matchNameHeader = document.getElementById('matchNameHeader');
+            const specialsList = document.getElementById('specialsList');
+            const csvPreviewContent = document.getElementById('csvPreviewContent');
+            const generateCsvButton = document.getElementById('generateCsvButton');
+            
+            let allMarkets = [];
+            let fetchedData = null;
+            let specialsForPreview = [];
+
+            function logError(message) {
+                loader.style.display = 'none';
+                errorContainer.textContent = message;
+                errorContainer.classList.remove('hidden');
+            }
+
+            // 1. Get Event ID and Fetch Data
+            const params = new URLSearchParams(window.location.search);
+            const eventId = params.get('eventId');
+
+            if (!eventId) {
+                logError("Event ID nije pronađen. Molimo vas vratite se na prethodnu stranicu i izaberite meč.");
+                return;
+            }
+
+            const oddsUrl = `https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/betoffer/event/${eventId}.json?lang=en_GB&market=GB&client_id=2&channel_id=7&includeParticipants=true`;
+
+            try {
+                const response = await fetch(oddsUrl);
+                if (!response.ok) throw new Error(`HTTP greška! Status: ${response.status}`);
+                fetchedData = await response.json();
+                
+                const eventName = fetchedData.events[0]?.name || "Nepoznat meč";
+                matchNameHeader.textContent = `Specijali za meč: ${eventName}`;
+                
+                // Flatten all outcomes into a simple array for easier lookup
+                fetchedData.betOffers.forEach(offer => {
+                    offer.outcomes.forEach(outcome => {
+                        allMarkets.push({
+                            marketName: offer.criterion.label,
+                            line: (outcome.line !== undefined && outcome.line !== null) ? (outcome.line / 1000) : null,
+                            label: outcome.label,
+                            odds: (outcome.odds / 1000)
+                        });
+                    });
+                });
+                
+                calculateAndDisplaySpecials();
+
+            } catch (error) {
+                logError(`Greška pri preuzimanju podataka: ${error.message}`);
+                return;
+            }
+
+            // 2. Helper function to find a specific odd
+            function getOdd(marketNameIdentifier, line, labelIdentifier) {
+                const market = allMarkets.find(m => 
+                    m.marketName.toLowerCase().includes(marketNameIdentifier.toLowerCase()) &&
+                    m.line === line &&
+                    m.label.toLowerCase().includes(labelIdentifier.toLowerCase())
+                );
+                return market ? market.odds : null;
+            }
+            
+            // 3. Define and Calculate Specials
+            function calculateAndDisplaySpecials() {
+                 const specialsToCalculate = [
+                    { name: "10+ kornera i GG", components: [() => getOdd("Total Corners", 9.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
+                    { name: "10+ suteva u okvir i 3+ golova", components: [() => getOdd("Total Shots on Target", 9.5, "Over"), () => getOdd("Total Goals", 2.5, "Over")] },
+                    { name: "11+ suteva u okvir i GG", components: [() => getOdd("Total Shots on Target", 10.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
+                    { name: "15+ kornera i 3+ golova", components: [() => getOdd("Total Corners", 14.5, "Over"), () => getOdd("Total Goals", 2.5, "Over")] },
+                    { name: "15+ kornera i GG", components: [() => getOdd("Total Corners", 14.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
+                    { name: "10+ kornera i 3+ golova", components: [() => getOdd("Total Corners", 9.5, "Over"), () => getOdd("Total Goals", 2.5, "Over")] },
+                    { name: "9+ kornera i 3+ golova i 4+ kartona", components: [() => getOdd("Total Corners", 8.5, "Over"), () => getOdd("Total Goals", 2.5, "Over"), () => getOdd("Total Cards", 3.5, "Over")] },
+                    { name: "3+ golova i 4+ kartona", components: [() => getOdd("Total Goals", 2.5, "Over"), () => getOdd("Total Cards", 3.5, "Over")] },
+                    { name: "3+ golova i 8+ kornera", components: [() => getOdd("Total Goals", 2.5, "Over"), () => getOdd("Total Corners", 7.5, "Over")] },
+                    { name: "9+ suteva u okvir i GG", components: [() => getOdd("Total Shots on Target", 8.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
+                    { name: "12+ kornera i GG", components: [() => getOdd("Total Corners", 11.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
+                    { name: "9+ kornera i 3+ kartona i GG", components: [() => getOdd("Total Corners", 8.5, "Over"), () => getOdd("Total Cards", 2.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
+                    { name: "9+ kornera i 4+ kartona i GG", components: [() => getOdd("Total Corners", 8.5, "Over"), () => getOdd("Total Cards", 3.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
+                    { name: "8+ kornera i GG", components: [() => getOdd("Total Corners", 7.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
+                    { name: "Penal i crveni karton", components: [() => getOdd("Penalty Kick awarded", null, "Yes"), () => getOdd("Red Card awarded", null, "Yes")], multiplier: 0.8 },
+                ];
+                
+                specialsList.innerHTML = '';
+                specialsToCalculate.forEach(special => {
+                    const odds = special.components.map(fn => fn());
+                    const finalOdd = odds.every(o => o !== null) 
+                        ? odds.reduce((acc, val) => acc * val, 1) * (special.multiplier || 1)
+                        : null;
+
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center p-3 border rounded-lg';
+                    div.innerHTML = `
+                        <span class="text-gray-800">${special.name}</span>
+                        ${finalOdd !== null ? `
+                        <div class="flex items-center">
+                            <span class="font-bold text-lg mr-4">${finalOdd.toFixed(2)}</span>
+                            <button data-name="${special.name}" data-odds="${finalOdd.toFixed(2)}" class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">+</button>
+                        </div>
+                        ` : '<span class="text-sm text-gray-400">Nije dostupno</span>'}
+                    `;
+                    specialsList.appendChild(div);
+                });
+                
+                loader.style.display = 'none';
+                specialsContent.classList.remove('hidden');
+            }
+
+            function renderPreview() {
+                if (specialsForPreview.length > 0) {
+                    csvPreviewContent.parentElement.classList.remove('hidden');
+                } else {
+                    csvPreviewContent.parentElement.classList.add('hidden');
+                }
+
+                csvPreviewContent.innerHTML = '';
+                specialsForPreview.forEach((special, index) => {
+                     const div = document.createElement('div');
+                     div.className = 'flex justify-between items-center p-2 border-b';
+                     div.innerHTML = `
+                        <span>${special.name}</span>
+                        <div class="flex items-center">
+                            <input type="text" value="${special.odds}" class="w-20 p-1 border rounded" data-index="${index}">
+                            <button class="remove-special-btn ml-4 text-red-500 font-bold" data-index="${index}">&times;</button>
+                        </div>
+                     `;
+                     csvPreviewContent.appendChild(div);
+                });
+            }
+
+            // Event Listeners
+            specialsList.addEventListener('click', e => {
+                if (e.target.classList.contains('add-special-btn')) {
+                    const { name, odds } = e.target.dataset;
+                    if (!specialsForPreview.some(s => s.name === name)) {
+                        specialsForPreview.push({ name, odds });
+                        renderPreview();
+                    }
+                }
+            });
+
+            csvPreviewContent.addEventListener('click', e => {
+                if (e.target.classList.contains('remove-special-btn')) {
+                    const index = parseInt(e.target.dataset.index, 10);
+                    specialsForPreview.splice(index, 1);
+                    renderPreview();
+                }
+            });
+            
+             csvPreviewContent.addEventListener('input', e => {
+                if (e.target.tagName === 'INPUT') {
+                    const index = parseInt(e.target.dataset.index, 10);
+                    specialsForPreview[index].odds = e.target.value;
+                }
+            });
+            
+            generateCsvButton.addEventListener('click', () => {
+                 if (specialsForPreview.length === 0) return;
+
+                const header = "Datum,Vreme,Sifra,,Domacin,Gost,,1,X,2,GR,U,O,Yes,No";
+                let csvRows = [header];
+
+                const eventInfo = fetchedData.events[0];
+                const matchDate = new Date(eventInfo.start);
+                const datum = `${matchDate.getDate().toString().padStart(2, '0')}.${(matchDate.getMonth() + 1).toString().padStart(2, '0')}.${matchDate.getFullYear()}`;
+                const vreme = `${matchDate.getHours().toString().padStart(2, '0')}:${matchDate.getMinutes().toString().padStart(2, '0')}`;
+                
+                csvRows.push('MATCH_NAME:Xtip Specijal');
+                csvRows.push(`LEAGUE_NAME:${eventInfo.name}`);
+                
+                specialsForPreview.forEach(special => {
+                    const row = [datum, vreme, '', '', special.name, 'DA', '', special.odds, '', '', '', '', '', '', ''];
+                    csvRows.push(row.join(','));
+                });
+
+                const csvContent = csvRows.join('\n');
+                const matchName = removeDiacritics(eventInfo.name).replace(/ /g, '_').replace(/vs/, '');
+                const fileName = `mec_specijal_${matchName}.csv`;
+                
+                const BOM = "\uFEFF";
+                const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                
+                link.setAttribute('href', url);
+                link.setAttribute('download', fileName);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+
+        });
+    </script>
+</body>
+</html>
