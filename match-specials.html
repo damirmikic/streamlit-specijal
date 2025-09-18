@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Match Specials</title>
+    <title>XTip Specijali</title>
     <link rel="icon" type="image/png" href="merkur.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -36,7 +36,7 @@
                     <!-- Calculated specials will be inserted here -->
                 </div>
                 
-                <div class="mt-8 pt-6 border-t border-gray-200">
+                 <div class="mt-8 pt-6 border-t border-gray-200">
                     <h2 class="text-2xl font-bold text-indigo-800 mb-4">Pregled Specijala za CSV</h2>
                      <div id="csvPreviewContent" class="space-y-6">
                          <!-- Preview content will be generated here -->
@@ -115,9 +115,9 @@
             // 2. Helper function to find a specific odd
             function getOdd(marketNameIdentifier, line, labelIdentifier) {
                 const market = allMarkets.find(m => 
-                    m.marketName.toLowerCase().includes(marketNameIdentifier.toLowerCase()) &&
+                    m.marketName.toLowerCase() === marketNameIdentifier.toLowerCase() &&
                     m.line === line &&
-                    m.label.toLowerCase().includes(labelIdentifier.toLowerCase())
+                    m.label.toLowerCase() === labelIdentifier.toLowerCase()
                 );
                 return market ? market.odds : null;
             }
@@ -125,21 +125,21 @@
             // 3. Define and Calculate Specials
             function calculateAndDisplaySpecials() {
                  const specialsToCalculate = [
-                    { name: "10+ kornera i GG", components: [() => getOdd("Total Corners", 9.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
-                    { name: "10+ suteva u okvir i 3+ golova", components: [() => getOdd("Total Shots on Target", 9.5, "Over"), () => getOdd("Total Goals", 2.5, "Over")] },
-                    { name: "11+ suteva u okvir i GG", components: [() => getOdd("Total Shots on Target", 10.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
-                    { name: "15+ kornera i 3+ golova", components: [() => getOdd("Total Corners", 14.5, "Over"), () => getOdd("Total Goals", 2.5, "Over")] },
-                    { name: "15+ kornera i GG", components: [() => getOdd("Total Corners", 14.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
-                    { name: "10+ kornera i 3+ golova", components: [() => getOdd("Total Corners", 9.5, "Over"), () => getOdd("Total Goals", 2.5, "Over")] },
-                    { name: "9+ kornera i 3+ golova i 4+ kartona", components: [() => getOdd("Total Corners", 8.5, "Over"), () => getOdd("Total Goals", 2.5, "Over"), () => getOdd("Total Cards", 3.5, "Over")] },
-                    { name: "3+ golova i 4+ kartona", components: [() => getOdd("Total Goals", 2.5, "Over"), () => getOdd("Total Cards", 3.5, "Over")] },
-                    { name: "3+ golova i 8+ kornera", components: [() => getOdd("Total Goals", 2.5, "Over"), () => getOdd("Total Corners", 7.5, "Over")] },
-                    { name: "9+ suteva u okvir i GG", components: [() => getOdd("Total Shots on Target", 8.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
-                    { name: "12+ kornera i GG", components: [() => getOdd("Total Corners", 11.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
-                    { name: "9+ kornera i 3+ kartona i GG", components: [() => getOdd("Total Corners", 8.5, "Over"), () => getOdd("Total Cards", 2.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
-                    { name: "9+ kornera i 4+ kartona i GG", components: [() => getOdd("Total Corners", 8.5, "Over"), () => getOdd("Total Cards", 3.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
-                    { name: "8+ kornera i GG", components: [() => getOdd("Total Corners", 7.5, "Over"), () => getOdd("Both Teams To Score", null, "Yes")] },
-                    { name: "Penal i crveni karton", components: [() => getOdd("Penalty Kick awarded", null, "Yes"), () => getOdd("Red Card awarded", null, "Yes")], multiplier: 0.8 },
+                    { name: "10+ kornera i GG", components: [() => getOdd("Total Corners", 9.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { name: "10+ suteva u okvir i 3+ golova", components: [() => getOdd("Total Shots on Target (Settled using Opta data)", 9.5, "over"), () => getOdd("Total Goals", 2.5, "over")] },
+                    { name: "11+ suteva u okvir i GG", components: [() => getOdd("Total Shots on Target (Settled using Opta data)", 10.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { name: "15+ kornera i 3+ golova", components: [() => getOdd("Total Corners", 14.5, "over"), () => getOdd("Total Goals", 2.5, "over")] },
+                    { name: "15+ kornera i GG", components: [() => getOdd("Total Corners", 14.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { name: "10+ kornera i 3+ golova", components: [() => getOdd("Total Corners", 9.5, "over"), () => getOdd("Total Goals", 2.5, "over")] },
+                    { name: "9+ kornera i 3+ golova i 4+ kartona", components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Goals", 2.5, "over"), () => getOdd("Total Cards", 3.5, "over")] },
+                    { name: "3+ golova i 4+ kartona", components: [() => getOdd("Total Goals", 2.5, "over"), () => getOdd("Total Cards", 3.5, "over")] },
+                    { name: "3+ golova i 8+ kornera", components: [() => getOdd("Total Goals", 2.5, "over"), () => getOdd("Total Corners", 7.5, "over")] },
+                    { name: "9+ suteva u okvir i GG", components: [() => getOdd("Total Shots on Target (Settled using Opta data)", 8.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { name: "12+ kornera i GG", components: [() => getOdd("Total Corners", 11.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { name: "9+ kornera i 3+ kartona i GG", components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Cards", 2.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { name: "9+ kornera i 4+ kartona i GG", components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Cards", 3.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { name: "8+ kornera i GG", components: [() => getOdd("Total Corners", 7.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { name: "Penal i crveni karton", components: [() => getOdd("Penalty Kick awarded", null, "yes"), () => getOdd("A Red Card to be shown", null, "yes")], multiplier: 0.8 },
                 ];
                 
                 specialsList.innerHTML = '';
@@ -255,3 +255,4 @@
     </script>
 </body>
 </html>
+
