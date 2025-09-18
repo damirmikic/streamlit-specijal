@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Merkur Specijali</title>
+    <title>Football Odds Exporter</title>
+    <!-- FAVICON - Ovde unesite link do vaše ikonice na GitHub-u -->
+    <link rel="icon" type="image/png" href="https://github.com/damirmikic/streamlit-specijal/blob/main/merkur.png">
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -38,7 +40,7 @@
 
     <div class="container mx-auto p-4 md:p-8 max-w-6xl">
         <header class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">Merkur Specijali</h1>
+            <h1 class="text-3xl font-bold text-gray-800">Football Odds Exporter</h1>
             <p class="text-gray-600 mt-2">Select a league and match to fetch available markets and download them as a CSV file.</p>
         </header>
 
@@ -432,6 +434,7 @@
                 // Serbian translations for player prop markets
                 const serbianTranslations = {
                     "To Score": "Daje gol",
+                    "To Get a Card": "Dobija karton",
                     "First Goal Scorer": "Prvi strelac",
                     "Player's shots on target (Settled using Opta data)": "Šutevi u okvir gola",
                     "To Assist (Settled using Opta data)": "Asistencija",
@@ -718,6 +721,7 @@
         
         const marketSortOrder = [
             'daje gol',
+            'daje gol i tim pobeđuje',
             'daje 2+ gola',
             'daje gol izvan 16m',
             'daje gol glavom',
@@ -732,7 +736,7 @@
             'šutevi u okvir gola 3+',
             'ukupno načinjenih faulova 1+',
             'ukupno načinjenih faulova 2+',
-            'dobija zuti karton', // Placeholder
+            'dobija karton',
             'dobija crveni karton'
         ];
 
@@ -748,6 +752,7 @@
                 'To Score or Assist': 'gol ili asistencija',
                 'To score or get an assist': 'gol ili asistencija',
                 'To Score Or Assist (Settled using Opta data)': 'gol ili asistencija',
+                'To Get a Card': 'dobija karton',
                 'To Get a Red Card': 'dobija crveni karton',
                 "Player's fouls conceded (Settled using Opta data)": 'faulovi',
                 'To score at least 2 goals': 'daje 2+ gola',
@@ -812,7 +817,29 @@
                         }
                     }
                 }
-                
+                 
+                // Find "Score and Win" odds from prePacks
+                if (fetchedMarketData && fetchedMarketData.prePacks) {
+                    const searchLabelTeamWin = `Full Time ${playerInfo.teamName}`;
+                    const searchLabelPlayerScore = `${playerInfo.name} To Score`;
+                    
+                    for (const pack of fetchedMarketData.prePacks) {
+                        for (const selection of pack.prePackSelections) {
+                            if (selection.label.length === 2 && 
+                                selection.label.includes(searchLabelTeamWin) && 
+                                selection.label.includes(searchLabelPlayerScore)) 
+                            {
+                                const scoreAndWinOdds = (selection.combinations[0].odds.decimal / 1000);
+                                if (scoreAndWinOdds >= 1.1 && scoreAndWinOdds <= 40) {
+                                    const marketKey = `daje gol i ${playerInfo.teamName} pobeđuje`;
+                                    markets[marketKey] = scoreAndWinOdds.toFixed(2);
+                                }
+                                break; 
+                            }
+                        }
+                    }
+                }
+
                 if (Object.keys(markets).length > 0) {
                     previewData.push({
                         teamName: playerInfo.teamName,
@@ -847,9 +874,15 @@
                 const tbody = document.createElement('tbody');
                 
                 const sortedMarketKeys = Object.keys(playerData.markets).sort((a, b) => {
+                    // Handle dynamic "score and win" market
+                    const isScoreWinA = a.includes('daje gol i');
+                    const isScoreWinB = b.includes('daje gol i');
+                    if (isScoreWinA && !isScoreWinB) return -1;
+                    if (!isScoreWinA && isScoreWinB) return 1;
+
                     const indexA = marketSortOrder.indexOf(a);
                     const indexB = marketSortOrder.indexOf(b);
-                    // if a market is not in our sort list, put it at the end
+                    
                     if (indexA === -1) return 1; 
                     if (indexB === -1) return -1;
                     return indexA - indexB;
@@ -925,6 +958,12 @@
                 csvRows.push(`LEAGUE_NAME:${removeDiacritics(playerData.playerName)}`);
                 
                 const sortedMarketKeys = Object.keys(playerData.markets).sort((a, b) => {
+                     // Handle dynamic "score and win" market
+                    const isScoreWinA = a.includes('daje gol i');
+                    const isScoreWinB = b.includes('daje gol i');
+                    if (isScoreWinA && !isScoreWinB) return -1;
+                    if (!isScoreWinA && isScoreWinB) return 1;
+
                     const indexA = marketSortOrder.indexOf(a);
                     const indexB = marketSortOrder.indexOf(b);
                     if (indexA === -1) return 1;
