@@ -175,7 +175,7 @@
                     // Calculated based on probabilities
                     { name: "Penal ili crveni karton", calculation: () => {
                         const pPen = 1 / getOdd("Penalty Kick awarded", null, "yes");
-                        const pRed = 1 / getOdd("A Red Card to be shown", null, "yes");
+                        const pRed = 1 / getOdd("Red Card given", null, "yes");
                         if (!pPen || !pRed) return null;
                         const pPenAndRed = 1 / ( (1/pPen) * (1/pRed) * 0.8);
                         const pOr = pPen + pRed - pPenAndRed;
