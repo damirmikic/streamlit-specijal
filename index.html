@@ -146,6 +146,7 @@
                     <button id="main-tab" class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">Main Markets</button>
                     <button id="stats-tab" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700">Stat Markets</button>
                     <button id="player-tab" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700">Player Props</button>
+                    <button id="match-specials-tab" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700">Meč Specijal</button>
                 </nav>
             </div>
 
@@ -222,6 +223,15 @@
                         </div>
                     </div>
                 </div>
+                 <!-- Match Specials Tab -->
+                <div id="match-specials-content" class="tab-panel hidden">
+                    <div class="text-center">
+                        <p class="text-gray-700 mb-4">Otvorite stranicu sa specijalima za izabrani meč.</p>
+                        <button id="openMatchSpecialsButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300" disabled>
+                            Otvori Specijale za Meč
+                        </button>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -272,6 +282,8 @@
         const csvPreviewSection = document.getElementById('csvPreviewSection');
         const csvPreviewContent = document.getElementById('csvPreviewContent');
         const generateFinalCsvButton = document.getElementById('generateFinalCsvButton');
+        
+        const openMatchSpecialsButton = document.getElementById('openMatchSpecialsButton');
 
         const tabs = document.querySelectorAll('.tab-button');
         const tabPanels = document.querySelectorAll('.tab-panel');
@@ -355,7 +367,7 @@
             toggleRawDataButton.classList.add('hidden');
             rawDataContainer.classList.add('hidden');
             rawDataOutput.textContent = '';
-
+            openMatchSpecialsButton.disabled = true;
 
             if (!leagueName) {
                 matchSelect.innerHTML = '<option value="">-- Waiting for League --</option>';
@@ -1013,6 +1025,7 @@
             leagueSelect.addEventListener('change', (e) => fetchMatchesForLeague(e.target.value));
             matchSelect.addEventListener('change', () => {
                 fetchMarketsButton.disabled = !matchSelect.value;
+                openMatchSpecialsButton.disabled = !matchSelect.value;
                 resetTables();
                 mainTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Click "Fetch Markets" to see data.</td></tr>';
                 downloadContainer.classList.add('hidden');
@@ -1033,6 +1046,13 @@
             previewPlayerCsvButton.addEventListener('click', showCsvPreview);
             generateFinalCsvButton.addEventListener('click', generateFinalPlayerPropsCSV);
             clearPlayersButton.addEventListener('click', handleClearPlayers);
+
+            openMatchSpecialsButton.addEventListener('click', () => {
+                const eventId = matchSelect.value;
+                if(eventId) {
+                    window.open(`match-specials.html?eventId=${eventId}`, '_blank');
+                }
+            });
         });
 
     </script>
