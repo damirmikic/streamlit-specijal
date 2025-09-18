@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xtip Specijali</title>
-    <link rel="icon" type="image/png" href="merkur.png">
+    <title>Xtip Specijal</title>
+    <link rel="icon" type="image/png" href="https://vaš-link-do-slike-na-githubu/merkur.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -149,12 +149,46 @@
                 );
                 return market ? market.odds : null;
             }
+
+            // 3. Newton-Raphson method to find lambda (expected goals)
+            function lambda_from_p_over(p_over, tol = 1e-8, maxiter = 50) {
+                let lam = 2.0; // Initial guess
+                for (let i = 0; i < maxiter; i++) {
+                    const exp_neg_lam = Math.exp(-lam);
+                    const f = 1 - exp_neg_lam * (1 + lam + (lam * lam) / 2) - p_over;
+                    const fp = exp_neg_lam * ((lam * lam) / 2);
+                    if (Math.abs(fp) < 1e-12) {
+                        break;
+                    }
+                    const step = f / fp;
+                    lam -= step;
+                    if (Math.abs(step) < tol) {
+                        break;
+                    }
+                }
+                return lam;
+            }
             
-            // 3. Define and Calculate Specials
+            // 4. Define and Calculate Specials
             function calculateAndDisplaySpecials() {
-                const odds00 = getOdd("Correct Score", null, "0-0");
-                const prob0Goals = odds00 ? 1 / odds00 : 0.08; // fallback
-                const probAtLeastOneGoal = 1 - prob0Goals;
+                const q_over_2_5 = getOdd("Total Goals", 2.5, "over");
+                const q_under_2_5 = getOdd("Total Goals", 2.5, "under");
+                let probAtLeastOneGoal = 0.92; // Default fallback probability
+
+                if (q_over_2_5 && q_under_2_5) {
+                    const p_over_raw = 1.0 / q_over_2_5;
+                    const p_under_raw = 1.0 / q_under_2_5;
+                    const margin = p_over_raw + p_under_raw;
+                    const p_over = p_over_raw / margin; // Normalize to remove margin
+                    const lam = lambda_from_p_over(p_over);
+                    // P(0 goals) = e^-lambda. P(at least one) = 1 - P(0)
+                    probAtLeastOneGoal = 1 - Math.exp(-lam);
+                } else {
+                    const odds00 = getOdd("Correct Score", null, "0-0");
+                    if (odds00) {
+                        probAtLeastOneGoal = 1 - (1 / odds00);
+                    }
+                }
 
                  const specialsToCalculate = [
                     { name: "10+ kornera i GG", components: [() => getOdd("Total Corners", 9.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
@@ -171,13 +205,14 @@
                     { name: "9+ kornera i 3+ kartona i GG", components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Cards", 2.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
                     { name: "9+ kornera i 4+ kartona i GG", components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Cards", 3.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
                     { name: "8+ kornera i GG", components: [() => getOdd("Total Corners", 7.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
-                    { name: "Penal i crveni karton", components: [() => getOdd("Penalty Kick awarded", null, "yes"), () => getOdd("Red Card given", null, "yes")], multiplier: 0.8 },
-                    // Calculated based on probabilities
+                    { name: "Penal i crveni karton", components: [() => getOdd("Penalty Kick awarded", null, "yes"), () => getOdd("A Red Card to be shown", null, "yes")], multiplier: 0.8 },
                     { name: "Penal ili crveni karton", calculation: () => {
-                        const pPen = 1 / getOdd("Penalty Kick awarded", null, "yes");
-                        const pRed = 1 / getOdd("Red Card given", null, "yes");
-                        if (!pPen || !pRed) return null;
-                        const pPenAndRed = 1 / ( (1/pPen) * (1/pRed) * 0.8);
+                        const oddsPen = getOdd("Penalty Kick awarded", null, "yes");
+                        const oddsRed = getOdd("A Red Card to be shown", null, "yes");
+                        if (!oddsPen || !oddsRed) return null;
+                        const pPen = 1 / oddsPen;
+                        const pRed = 1 / oddsRed;
+                        const pPenAndRed = 1 / (oddsPen * oddsRed * 0.8); // Approximation based on AND odds
                         const pOr = pPen + pRed - pPenAndRed;
                         return 1 / pOr;
                     }},
