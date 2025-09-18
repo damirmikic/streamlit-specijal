@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xtip Specijal</title>
+    <title>Xtip Specijali</title>
     <link rel="icon" type="image/png" href="merkur.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -173,21 +173,14 @@
             function calculateAndDisplaySpecials() {
                 const q_over_2_5 = getOdd("Total Goals", 2.5, "over");
                 const q_under_2_5 = getOdd("Total Goals", 2.5, "under");
-                let probAtLeastOneGoal = 0.92; // Default fallback probability
+                let lam = 2.7; // Default fallback lambda (expected goals)
 
                 if (q_over_2_5 && q_under_2_5) {
                     const p_over_raw = 1.0 / q_over_2_5;
                     const p_under_raw = 1.0 / q_under_2_5;
                     const margin = p_over_raw + p_under_raw;
                     const p_over = p_over_raw / margin; // Normalize to remove margin
-                    const lam = lambda_from_p_over(p_over);
-                    // P(0 goals) = e^-lambda. P(at least one) = 1 - P(0)
-                    probAtLeastOneGoal = 1 - Math.exp(-lam);
-                } else {
-                    const odds00 = getOdd("Correct Score", null, "0-0");
-                    if (odds00) {
-                        probAtLeastOneGoal = 1 - (1 / odds00);
-                    }
+                    lam = lambda_from_p_over(p_over);
                 }
 
                  const specialsToCalculate = [
@@ -212,14 +205,30 @@
                         if (!oddsPen || !oddsRed) return null;
                         const pPen = 1 / oddsPen;
                         const pRed = 1 / oddsRed;
-                        const pPenAndRed = 1 / (oddsPen * oddsRed * 0.8); // Approximation based on AND odds
+                        const pPenAndRed = 1 / (oddsPen * oddsRed * 0.8);
                         const pOr = pPen + pRed - pPenAndRed;
                         return 1 / pOr;
                     }},
-                    { name: "Izmena postize gol", calculation: () => 1 / (probAtLeastOneGoal * 0.15) },
-                    { name: "Gol glavom na mecu", calculation: () => 1 / (probAtLeastOneGoal * 0.17) },
-                    { name: "Gol izvan 16m", calculation: () => 1 / (probAtLeastOneGoal * 0.12) },
-                    { name: "Gol iz slobodnog udarca", calculation: () => 1 / (probAtLeastOneGoal * 0.05) },
+                    { name: "Izmena postize gol", calculation: () => {
+                        const lambda_sub = lam * 0.15;
+                        const prob = 1 - Math.exp(-lambda_sub);
+                        return prob > 0 ? 1 / prob : null;
+                    }},
+                    { name: "Gol glavom na mecu", calculation: () => {
+                        const lambda_header = lam * 0.17;
+                        const prob = 1 - Math.exp(-lambda_header);
+                        return prob > 0 ? 1 / prob : null;
+                    }},
+                    { name: "Gol izvan 16m", calculation: () => {
+                        const lambda_outside = lam * 0.12;
+                        const prob = 1 - Math.exp(-lambda_outside);
+                        return prob > 0 ? 1 / prob : null;
+                    }},
+                    { name: "Gol iz slobodnog udarca", calculation: () => {
+                        const lambda_fk = lam * 0.05;
+                        const prob = 1 - Math.exp(-lambda_fk);
+                        return prob > 0 ? 1 / prob : null;
+                    }},
                 ];
                 
                 specialsList.innerHTML = '';
