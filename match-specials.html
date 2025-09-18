@@ -126,28 +126,28 @@
                 const marketNameLower = marketNameIdentifier.toLowerCase();
                 const labelLower = labelIdentifier.toLowerCase();
                 
-                // Prioritize exact matches for "Total..." markets to avoid half-time/team versions
-                if (marketNameLower.startsWith("total")) {
-                    const exactMatch = allMarkets.find(m => 
-                        m.marketName.toLowerCase() === marketNameLower &&
-                        m.line === line &&
-                        m.label.toLowerCase() === labelLower
-                    );
-                    if (exactMatch) return exactMatch.odds;
-                }
-
-                // Fallback to looser search but exclude half-time and team specific
-                const market = allMarkets.find(m => 
+                // First, try for an exact market name match. This is the most reliable.
+                const exactMatch = allMarkets.find(m => 
+                    m.marketName.toLowerCase() === marketNameLower &&
+                    m.line === line &&
+                    m.label.toLowerCase() === labelLower
+                );
+                if (exactMatch) return exactMatch.odds;
+                
+                // If no exact match (e.g., API has slight variations), try a slightly looser search
+                // but ensure it's not a team-specific or half-time market.
+                const looserMatch = allMarkets.find(m => 
                     m.marketName.toLowerCase().includes(marketNameLower) &&
                     !m.marketName.toLowerCase().includes('1st half') &&
                     !m.marketName.toLowerCase().includes('2nd half') &&
                     !m.marketName.toLowerCase().includes('by team') &&
                     !m.marketName.toLowerCase().includes(`by ${fetchedData.events[0].participants[0].name.toLowerCase()}`) &&
-                     !m.marketName.toLowerCase().includes(`by ${fetchedData.events[0].participants[1].name.toLowerCase()}`) &&
+                    !m.marketName.toLowerCase().includes(`by ${fetchedData.events[0].participants[1].name.toLowerCase()}`) &&
                     m.line === line &&
-                    m.label.toLowerCase().includes(labelLower)
+                    m.label.toLowerCase() === labelLower
                 );
-                return market ? market.odds : null;
+
+                return looserMatch ? looserMatch.odds : null;
             }
 
             // 3. Newton-Raphson method to find lambda (expected goals)
