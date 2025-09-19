@@ -48,23 +48,23 @@
             <!-- Dropdown Selection Area -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                 <div>
-                    <label for="leagueSelect" class="block text-sm font-medium text-gray-700">1. Select League</label>
+                    <label for="leagueSelect" class="block text-sm font-medium text-gray-700">1. Izaberi ligu</label>
                     <select id="leagueSelect" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                        <option value="">-- Choose a League --</option>
+                        <option value="">--Izaberi ligu--</option>
                     </select>
                 </div>
                  <div>
-                    <label for="matchSelect" class="block text-sm font-medium text-gray-700">2. Select Match</label>
+                    <label for="matchSelect" class="block text-sm font-medium text-gray-700">2. Izaberi meč</label>
                     <select id="matchSelect" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" disabled>
-                        <option value="">-- Waiting for League --</option>
+                        <option value="">-- Liga se učitava --</option>
                     </select>
                 </div>
                 <div class="flex items-center gap-4">
                      <button id="fetchMarketsButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50" disabled>
-                        Fetch Markets (API)
-                    </button>
+                         Učitaj kvote
+                     </button>
                     <button id="loadFromJsonButton" class="hidden w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg" disabled>
-                        Učitaj Igrače (JSON)
+                        Učitaj Igrače (Serbia Superliga)
                     </button>
                     <div id="loader" class="hidden spinner"></div>
                 </div>
@@ -72,21 +72,46 @@
             
             <!-- New Player Props CSV Generator Section -->
             <div id="playerCsvGeneratorSection" class="mt-8 pt-6 border-t border-gray-200 hidden">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4">Player Props CSV Generator</h2>
+                <div class="flex items-center gap-2 mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">Player Props CSV Generator</h2>
+                    <div class="relative group">
+                        <button class="text-blue-600 hover:text-blue-800 focus:outline-none">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                            </svg>
+                        </button>
+                        <div class="absolute z-10 invisible group-hover:visible bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80 left-0 top-full mt-2">
+                            <h3 class="font-semibold text-gray-800 mb-2">Kako kreirati Player Props CSV:</h3>
+                            <ol class="list-decimal list-inside text-sm text-gray-700 space-y-1">
+                                <li>Izaberite ligu i meč, zatim kliknite "Fetch Markets" da učitate podatke.</li>
+                                <li>Izaberite tim iz padajućeg menija "3. Izaberi Tim".</li>
+                                <li>Izaberite igrača iz padajućeg menija "4. Izaberi igrača".</li>
+                                <li>Kliknite "+" dugme da dodate igrača u listu.</li>
+                                <li>Ponovite korake 3-4 za više igrača.</li>
+                                <li>Kliknite "Napravi Pregled" da vidite pregled CSV-a.</li>
+                                <li>Uredite podatke ako je potrebno u sekciji pregleda.</li>
+                                <li>Kliknite "Generiši Finalni CSV" da preuzmete fajl.</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                     <div>
-                        <label for="teamSelect" class="block text-sm font-medium text-gray-700">3. Select Team</label>
+                        <label for="teamSelect" class="block text-sm font-medium text-gray-700">3. Izaberi Tim</label>
                         <select id="teamSelect" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                            <option value="">-- Select a team --</option>
+                            <option value="">-- Izaberi tim --</option>
                         </select>
                     </div>
                     <div>
-                        <label for="playerSelect" class="block text-sm font-medium text-gray-700">4. Select Player</label>
-                         <div class="flex">
+                        <label for="playerSelect" class="block text-sm font-medium text-gray-700">4. Izaberi igrača</label>
+                         <div class="flex items-end gap-2">
                             <select id="playerSelect" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" disabled>
-                                <option value="">-- Select a player --</option>
+                                <option value="">-- Izaberi igrača --</option>
                             </select>
-                            <button id="addPlayerButton" class="ml-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-3 rounded-lg" disabled>+</button>
+                            <div class="flex flex-col items-center">
+                                <span class="text-xs text-gray-600 mb-1">Dodaj igrača</span>
+                                <button id="addPlayerButton" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-3 rounded-lg" disabled>+</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -305,6 +330,14 @@
             return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         }
 
+        function roundOdds(oddsStr) {
+            const odd = parseFloat(oddsStr);
+            if (odd > 3.5) {
+                return (Math.round(odd / 0.05) * 0.05).toFixed(2);
+            }
+            return oddsStr;
+        }
+
         /**
          * Converts an array of objects to a CSV string.
          * @param {Array<Object>} data - The array of objects to convert.
@@ -370,7 +403,7 @@
             matchSpecialsButtonContainer.classList.add('hidden');
 
             if (!leagueName) {
-                matchSelect.innerHTML = '<option value="">-- Waiting for League --</option>';
+                matchSelect.innerHTML = '<option value="">-- Liga se učitava --</option>';
                 return;
             }
 
@@ -383,7 +416,7 @@
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
 
-                matchSelect.innerHTML = '<option value="">-- Select a Match --</option>';
+                matchSelect.innerHTML = '<option value="">-- Izaberi meč --</option>';
                 if (data.events && data.events.length > 0) {
                     data.events.forEach(event => {
                         const option = document.createElement('option');
@@ -645,14 +678,14 @@
             const awayTeam = events[0].participants.find(p => !p.home);
 
             teamSelect.innerHTML = `
-                <option value="">-- Select a team --</option>
+                <option value="">-- Izaberi tim --</option>
                 <option value="${homeTeam.participantId}">${homeTeam.name}</option>
                 <option value="${awayTeam.participantId}">${awayTeam.name}</option>
             `;
         }
         
         function populatePlayersForTeam(teamId) {
-            playerSelect.innerHTML = '<option value="">-- Select a player --</option>';
+            playerSelect.innerHTML = '<option value="">-- Izaberi igrača --</option>';
             playerSelect.disabled = true;
             addPlayerButton.disabled = true;
             if (!teamId) return;
@@ -830,7 +863,9 @@
                         } else if (columnName) {
                             key = columnName;
                         }
-                        if(key) markets[key] = market.Odds;
+                        if(key) {
+                            markets[key] = roundOdds(market.Odds);
+                        }
                     });
 
                     // Calculate 'Gol ili asistencija' if not present but its components are
@@ -850,8 +885,8 @@
 
                                 // Apply the same filter as for other odds
                                 if (calculatedOdds >= 1.1 && calculatedOdds <= 40) {
-                                     markets['gol ili asistencija'] = calculatedOdds.toFixed(2);
-                                     logStatus(`Izračunata kvota 'Gol ili asistencija' za igrača ${playerInfo.name}: ${calculatedOdds.toFixed(2)}`);
+                                     markets['gol ili asistencija'] = roundOdds(calculatedOdds.toFixed(2));
+                                     logStatus(`Izračunata kvota 'Gol ili asistencija' za igrača ${playerInfo.name}: ${markets['gol ili asistencija']}`);
                                 }
                             }
                         }
@@ -871,7 +906,7 @@
                                     const scoreAndWinOdds = (selection.combinations[0].odds.decimal / 1000);
                                     if (scoreAndWinOdds >= 1.1 && scoreAndWinOdds <= 40) {
                                         const marketKey = `daje gol i ${playerInfo.teamName} pobeđuje`;
-                                        markets[marketKey] = scoreAndWinOdds.toFixed(2);
+                                        markets[marketKey] = roundOdds(scoreAndWinOdds.toFixed(2));
                                     }
                                     break;
                                 }
@@ -1040,6 +1075,7 @@
 
                 sortedMarketKeys.forEach(marketKey => {
                     const odd = playerData.markets[marketKey];
+                    if (!odd) return; // Skip markets without odds
                     let domacin = marketKey;
                     let gost = "DA";
                     
@@ -1118,7 +1154,7 @@
 
             const uniqueSquads = [...new Set(players.map(p => p.Squad))];
 
-            teamSelect.innerHTML = '<option value="">-- Select a team --</option>';
+            teamSelect.innerHTML = '<option value="">-- Izaberi tim --</option>';
             uniqueSquads.forEach(squad => {
                 const option = document.createElement('option');
                 option.value = squad;
