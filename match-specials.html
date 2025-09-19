@@ -85,7 +85,9 @@
 
             function roundOdds(oddsStr) {
                 const odd = parseFloat(oddsStr);
-                if (odd > 3.5) {
+                if (odd > 5) {
+                    return (Math.round(odd / 0.1) * 0.1).toFixed(2);
+                } else if (odd > 3.5) {
                     return (Math.round(odd / 0.05) * 0.05).toFixed(2);
                 }
                 return oddsStr;
