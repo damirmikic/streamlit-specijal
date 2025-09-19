@@ -83,6 +83,14 @@
                 return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             }
 
+            function roundOdds(oddsStr) {
+                const odd = parseFloat(oddsStr);
+                if (odd > 3.5) {
+                    return (Math.round(odd / 0.05) * 0.05).toFixed(2);
+                }
+                return oddsStr;
+            }
+
             function logError(message) {
                 loader.style.display = 'none';
                 errorContainer.textContent = message;
@@ -264,6 +272,8 @@
                     } else if (special.calculation) {
                         finalOdd = special.calculation();
                     }
+
+                    if (finalOdd) finalOdd = parseFloat(roundOdds(String(finalOdd)));
 
                     const div = document.createElement('div');
                     div.className = 'flex justify-between items-center p-3 border rounded-lg';
