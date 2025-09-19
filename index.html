@@ -61,7 +61,10 @@
                 </div>
                 <div class="flex items-center gap-4">
                      <button id="fetchMarketsButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50" disabled>
-                        Fetch Markets
+                        Fetch Markets (API)
+                    </button>
+                    <button id="loadFromJsonButton" class="hidden w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg" disabled>
+                        Učitaj Igrače (JSON)
                     </button>
                     <div id="loader" class="hidden spinner"></div>
                 </div>
@@ -271,6 +274,7 @@
         const csvPreviewSection = document.getElementById('csvPreviewSection');
         const csvPreviewContent = document.getElementById('csvPreviewContent');
         const generateFinalCsvButton = document.getElementById('generateFinalCsvButton');
+        const loadFromJsonButton = document.getElementById('loadFromJsonButton');
         
         const openMatchSpecialsButton = document.getElementById('openMatchSpecialsButton');
         const matchSpecialsButtonContainer = document.getElementById('matchSpecialsButtonContainer');
@@ -345,6 +349,10 @@
 
         // 2. Fetch matches when a league is selected
         async function fetchMatchesForLeague(leagueName) {
+            if (leagueName === 'Serbia Superliga') {
+                loadFromJsonButton.classList.remove('hidden');
+            } else {
+                loadFromJsonButton.classList.add('hidden');
             // Reset state
             matchSelect.innerHTML = '<option value="">-- Fetching Matches --</option>';
             matchSelect.disabled = true;
@@ -1025,6 +1033,86 @@
             logStatus('Lista izabranih igrača je obrisana.');
         }
 
+                /**
+         * Učitava igrače iz lokalnog JSON fajla za izabrani meč
+         */
+        async function loadPlayersFromJson() {
+            const selectedMatchText = matchSelect.options[matchSelect.selectedIndex].text;
+            if (!selectedMatchText || !selectedMatchText.includes(' vs ')) {
+                logStatus("Molimo izaberite meč prvo.", true);
+                return;
+            }
+        
+            const [homeTeamName, awayTeamName] = selectedMatchText.split(' vs ');
+            logStatus(`Učitavanje igrača iz JSON fajla za meč: ${homeTeamName} vs ${awayTeamName}`);
+            toggleLoading(true);
+        
+            try {
+                const response = await fetch('player_stats.json');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const allPlayers = await response.json();
+        
+                const matchPlayers = allPlayers.filter(player =>
+                    player.Squad === homeTeamName.trim() || player.Squad === awayTeamName.trim()
+                );
+        
+                // Sortiraj igrače po timu da budu grupisani
+                matchPlayers.sort((a, b) => a.Squad.localeCompare(b.Squad));
+        
+                showJsonPlayerPreview(matchPlayers);
+        
+            } catch (error) {
+                logStatus(`Greška pri učitavanju player_stats.json: ${error.message}`, true);
+                csvPreviewSection.classList.add('hidden');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+        
+        /**
+         * Kreira prazan pregled za ručni unos kvota na osnovu igrača iz JSON-a
+         */
+        function showJsonPlayerPreview(players) {
+            previewData = []; // Resetuj podatke za pregled
+        
+            // Definiši sve moguće markete za prazan šablon
+            const emptyMarketsTemplate = {
+                'daje gol': '',
+                'daje 2+ gola': '',
+                'daje gol izvan 16m': '',
+                'daje gol glavom': '',
+                'asistencija': '',
+                'gol ili asistencija': '',
+                'ukupno šuteva 1+': '', 'ukupno šuteva 2+': '', 'ukupno šuteva 3+': '', 'ukupno šuteva 4+': '', 'ukupno šuteva 5+': '', 'ukupno šuteva 6+': '',
+                'šutevi u okvir gola 1+': '', 'šutevi u okvir gola 2+': '', 'šutevi u okvir gola 3+': '',
+                'ukupno načinjenih faulova 1+': '', 'ukupno načinjenih faulova 2+': '',
+                'dobija karton': '',
+                'dobija crveni karton': ''
+            };
+        
+            players.forEach(player => {
+                let markets = { ...emptyMarketsTemplate };
+                // Dinamički dodaj i market "daje gol i tim pobeđuje"
+                markets[`daje gol i ${player.Squad} pobeđuje`] = '';
+        
+                previewData.push({
+                    teamName: player.Squad,
+                    playerName: player.Player,
+                    markets: markets
+                });
+            });
+        
+            if (previewData.length === 0) {
+                logStatus("Nisu pronađeni igrači za izabrane timove u JSON fajlu.", true);
+                csvPreviewSection.classList.add('hidden');
+                return;
+            }
+        
+            renderCsvPreview(); // Ponovo koristi postojeću funkciju za renderovanje
+            csvPreviewSection.classList.remove('hidden');
+            logStatus(`Prikazan prazan pregled za ${players.length} igrača. Unesite željene kvote.`);
+        }
+
 
         // --- Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -1034,6 +1122,7 @@
             leagueSelect.addEventListener('change', (e) => fetchMatchesForLeague(e.target.value));
             matchSelect.addEventListener('change', () => {
                 fetchMarketsButton.disabled = !matchSelect.value;
+                loadFromJsonButton.disabled = !matchSelect.value;
                 matchSpecialsButtonContainer.classList.add('hidden');
                 resetTables();
                 mainTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Click "Fetch Markets" to see data.</td></tr>';
@@ -1053,6 +1142,7 @@
             previewPlayerCsvButton.addEventListener('click', showCsvPreview);
             generateFinalCsvButton.addEventListener('click', generateFinalPlayerPropsCSV);
             clearPlayersButton.addEventListener('click', handleClearPlayers);
+            loadFromJsonButton.addEventListener('click', loadPlayersFromJson);
 
              openMatchSpecialsButton.addEventListener('click', () => {
                 const eventId = matchSelect.value;
