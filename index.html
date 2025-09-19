@@ -857,8 +857,26 @@
                 const playerDiv = document.createElement('div');
                 playerDiv.className = 'mb-4 p-4 border rounded-lg';
                 playerDiv.innerHTML = `
-                    <p class="font-bold text-lg"><span class="font-normal text-gray-500">MATCH_NAME:</span> ${playerData.teamName}</p>
-                    <p class="font-bold text-lg"><span class="font-normal text-gray-500">LEAGUE_NAME:</span> ${removeDiacritics(playerData.playerName)}</p>
+                    <div class="grid grid-cols-5 gap-2 items-center mb-2">
+                        <span class="font-normal text-gray-600 text-sm col-span-1">Ime tima:</span>
+                        <input 
+                            type="text" 
+                            value="${playerData.teamName}" 
+                            class="col-span-4 p-1 border rounded-md font-bold"
+                            data-player-index="${playerIndex}"
+                            data-name-type="team"
+                        >
+                    </div>
+                    <div class="grid grid-cols-5 gap-2 items-center">
+                        <span class="font-normal text-gray-600 text-sm col-span-1">Ime igrača:</span>
+                        <input 
+                            type="text" 
+                            value="${playerData.playerName}" 
+                            class="col-span-4 p-1 border rounded-md font-bold"
+                            data-player-index="${playerIndex}"
+                            data-name-type="player"
+                        >
+                    </div>
                 `;
                 const table = document.createElement('table');
                 table.className = 'mt-2 w-full text-sm';
@@ -914,8 +932,18 @@
         
         csvPreviewContent.addEventListener('input', (e) => {
             if (e.target.tagName === 'INPUT') {
-                const { playerIndex, marketKey } = e.target.dataset;
-                previewData[playerIndex].markets[marketKey] = e.target.value;
+                const { playerIndex, marketKey, nameType } = e.target.dataset;
+        
+                // Provera da li se menja ime tima ili igrača
+                if (nameType === 'team') {
+                    previewData[playerIndex].teamName = e.target.value;
+                } else if (nameType === 'player') {
+                    previewData[playerIndex].playerName = e.target.value;
+                } 
+                // Ako se menja kvota (postojeća logika)
+                else if (marketKey) {
+                    previewData[playerIndex].markets[marketKey] = e.target.value;
+                }
             }
         });
 
