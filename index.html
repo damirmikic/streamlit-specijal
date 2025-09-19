@@ -238,13 +238,15 @@
             "Ligue 1": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/france/ligue_1/all/matches.json?lang=en_GB&market=GB&useCombined=true",
             "Champions League": "https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/champions_league/all/all/matches.json?channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true",
             "Europa League": "https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/europa_league/all/all/matches.json?channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true",
-            "Serbia Superliga": "https://eu1.offering-api.kambicdn.com/offering/v2018/kambi/listView/football/serbia/super_liga/all/matches.json?channel_id=7&channel_id=7&client_id=2&client_id=2&competitionId=undefined&lang=en_GB&lang=en_GB&market=GB&market=GB&useCombined=true&useCombinedLive=true",
+            "Serbia Superliga": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/serbia/super_liga/all/matches.json?lang=en_GB&market=GB&useCombined=true",
         };
         
         let allMarketDataForCSV = [];
         let fetchedMarketData = null; // Store fetched data
         let selectedPlayersForCSV = []; // Store players for special CSV
         let previewData = []; // Data for the CSV preview, can be edited
+        let jsonPlayersData = []; // Store JSON players data
+        let isJsonMode = false; // Flag to distinguish API vs JSON mode
 
         // DOM Elements
         const leagueSelect = document.getElementById('leagueSelect');
@@ -353,53 +355,54 @@
                 loadFromJsonButton.classList.remove('hidden');
             } else {
                 loadFromJsonButton.classList.add('hidden');
-                // Reset state
-                matchSelect.innerHTML = '<option value="">-- Fetching Matches --</option>';
-                matchSelect.disabled = true;
-                fetchMarketsButton.disabled = true;
-                resetTables();
-                playerCsvGeneratorSection.classList.add('hidden');
-                allMarketDataForCSV = [];
-                fetchedMarketData = null;
-                toggleRawDataButton.classList.add('hidden');
-                rawDataContainer.classList.add('hidden');
-                rawDataOutput.textContent = '';
-                matchSpecialsButtonContainer.classList.add('hidden');
+            }
+            // Reset state
+            matchSelect.innerHTML = '<option value="">-- Fetching Matches --</option>';
+            matchSelect.disabled = true;
+            fetchMarketsButton.disabled = true;
+            resetTables();
+            playerCsvGeneratorSection.classList.add('hidden');
+            allMarketDataForCSV = [];
+            fetchedMarketData = null;
+            toggleRawDataButton.classList.add('hidden');
+            rawDataContainer.classList.add('hidden');
+            rawDataOutput.textContent = '';
+            matchSpecialsButtonContainer.classList.add('hidden');
 
-                if (!leagueName) {
-                    matchSelect.innerHTML = '<option value="">-- Waiting for League --</option>';
-                    return;
+            if (!leagueName) {
+                matchSelect.innerHTML = '<option value="">-- Waiting for League --</option>';
+                return;
+            }
+
+            const url = LEAGUE_URLS[leagueName];
+            logStatus(`Fetching matches for ${leagueName}...`);
+            toggleLoading(true);
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+
+                matchSelect.innerHTML = '<option value="">-- Select a Match --</option>';
+                if (data.events && data.events.length > 0) {
+                    data.events.forEach(event => {
+                        const option = document.createElement('option');
+                        option.value = event.event.id;
+                        option.textContent = `${event.event.homeName} vs ${event.event.awayName}`;
+                        matchSelect.appendChild(option);
+                    });
+                    matchSelect.disabled = false;
+                    logStatus(`Successfully found ${data.events.length} matches for ${leagueName}.`);
+                } else {
+                     matchSelect.innerHTML = '<option value="">-- No Matches Found --</option>';
+                     logStatus(`No matches found for ${leagueName}.`, true);
                 }
-
-                const url = LEAGUE_URLS[leagueName];
-                logStatus(`Fetching matches for ${leagueName}...`);
-                toggleLoading(true);
-
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    const data = await response.json();
-
-                    matchSelect.innerHTML = '<option value="">-- Select a Match --</option>';
-                    if (data.events && data.events.length > 0) {
-                        data.events.forEach(event => {
-                            const option = document.createElement('option');
-                            option.value = event.event.id;
-                            option.textContent = `${event.event.homeName} vs ${event.event.awayName}`;
-                            matchSelect.appendChild(option);
-                        });
-                        matchSelect.disabled = false;
-                        logStatus(`Successfully found ${data.events.length} matches for ${leagueName}.`);
-                    } else {
-                         matchSelect.innerHTML = '<option value="">-- No Matches Found --</option>';
-                         logStatus(`No matches found for ${leagueName}.`, true);
-                    }
-                } catch (error) {
-                    logStatus(`Failed to fetch matches for ${leagueName}: ${error.message}`, true);
-                    matchSelect.innerHTML = '<option value="">-- Error Fetching --</option>';
-                } finally {
-                    toggleLoading(false);
-                }
+            } catch (error) {
+                logStatus(`Failed to fetch matches for ${leagueName}: ${error.message}`, true);
+                matchSelect.innerHTML = '<option value="">-- Error Fetching --</option>';
+            } finally {
+                toggleLoading(false);
+                fetchMarketsButton.disabled = false;
             }
         }
 
@@ -430,6 +433,7 @@
                 fetchedMarketData = data; // Store the data
                 sessionStorage.setItem(`event_${eventId}`, JSON.stringify(data)); // Save to session storage
                 matchSpecialsButtonContainer.classList.remove('hidden');
+                isJsonMode = false; // Switch to API mode
 
 
                 // Display raw data
@@ -652,14 +656,23 @@
             playerSelect.disabled = true;
             addPlayerButton.disabled = true;
             if (!teamId) return;
-            
-            const teamParticipantId = parseInt(teamId, 10);
-            const teamName = fetchedMarketData.events[0].participants.find(p => p.participantId === teamParticipantId)?.name;
-            const teamPlayerMarkets = allMarketDataForCSV.filter(d => d.PlayerName && d.Team === teamName);
-            const teamPlayers = [...new Set(teamPlayerMarkets.map(p => p.PlayerName))];
+
+            let teamPlayers = [];
+
+            if (isJsonMode) {
+                // For JSON mode, teamId is the squad name
+                const teamName = teamId;
+                teamPlayers = jsonPlayersData.filter(p => p.Squad === teamName).map(p => p.Player);
+            } else {
+                // For API mode
+                const teamParticipantId = parseInt(teamId, 10);
+                const teamName = fetchedMarketData.events[0].participants.find(p => p.participantId === teamParticipantId)?.name;
+                const teamPlayerMarkets = allMarketDataForCSV.filter(d => d.PlayerName && d.Team === teamName);
+                teamPlayers = [...new Set(teamPlayerMarkets.map(p => p.PlayerName))];
+            }
 
             if (teamPlayers.length > 0) {
-                 teamPlayers.sort().forEach(playerName => {
+                teamPlayers.sort().forEach(playerName => {
                     const option = document.createElement('option');
                     option.value = playerName;
                     option.textContent = playerName;
@@ -672,7 +685,13 @@
         function handleAddPlayer() {
             const playerName = playerSelect.value;
             const teamId = teamSelect.value;
-            const teamName = teamSelect.options[teamSelect.selectedIndex].text;
+            let teamName;
+
+            if (isJsonMode) {
+                teamName = teamId; // For JSON, teamId is the squad name
+            } else {
+                teamName = teamSelect.options[teamSelect.selectedIndex].text;
+            }
 
             if (playerName && teamId && !selectedPlayersForCSV.some(p => p.name === playerName)) {
                 selectedPlayersForCSV.push({ name: playerName, teamName: teamName });
@@ -762,93 +781,111 @@
             previewData = []; // Reset and rebuild preview data
             
             selectedPlayersForCSV.forEach(playerInfo => {
-                const playerMarkets = allMarketDataForCSV.filter(m => m.PlayerName === playerInfo.name);
-                let markets = {};
-                 playerMarkets.forEach(market => {
-                    const oddValue = parseFloat(market.Odds);
-                    if (oddValue < 1.1 || oddValue > 40) return; // Skip odds outside the range
+                // Start with empty markets template
+                const emptyMarketsTemplate = {
+                    'daje gol': '',
+                    'daje 2+ gola': '',
+                    'daje gol izvan 16m': '',
+                    'daje gol glavom': '',
+                    'asistencija': '',
+                    'gol ili asistencija': '',
+                    'ukupno šuteva 1+': '', 'ukupno šuteva 2+': '', 'ukupno šuteva 3+': '', 'ukupno šuteva 4+': '', 'ukupno šuteva 5+': '', 'ukupno šuteva 6+': '',
+                    'šutevi u okvir gola 1+': '', 'šutevi u okvir gola 2+': '', 'šutevi u okvir gola 3+': '',
+                    'ukupno načinjenih faulova 1+': '', 'ukupno načinjenih faulova 2+': '',
+                    'dobija karton': '',
+                    'dobija crveni karton': '',
+                    [`daje gol i ${playerInfo.teamName} pobeđuje`]: ''
+                };
+                let markets = { ...emptyMarketsTemplate };
 
-                    const columnName = originalMarketToColumnMap[market.OriginalMarket];
-                    const isOver = market.Label.toLowerCase() === 'over' || market.Label.toLowerCase() === 'yes';
-                    if (!isOver && market.Line !== null) return;
-                    
-                    let key;
-                    if (columnName === 'faulovi') {
-                        if (market.Line === 1.5) key = 'ukupno načinjenih faulova 2+';
-                        if (market.Line === 0.5) key = 'ukupno načinjenih faulova 1+';
-                    } else if (columnName === 'sutevi') {
-                        if (market.Line === 0.5) key = 'ukupno šuteva 1+';
-                        if (market.Line === 1.5) key = 'ukupno šuteva 2+';
-                        if (market.Line === 2.5) key = 'ukupno šuteva 3+';
-                        if (market.Line === 3.5) key = 'ukupno šuteva 4+';
-                        if (market.Line === 4.5) key = 'ukupno šuteva 5+';
-                        if (market.Line === 5.5) key = 'ukupno šuteva 6+';
-                        if (market.Line === 6.5) key = 'ukupno šuteva 7+';
-                    } else if (columnName === 'sutevi_u_okvir') {
-                        if (market.Line === 0.5) key = 'šutevi u okvir gola 1+';
-                        if (market.Line === 1.5) key = 'šutevi u okvir gola 2+';
-                        if (market.Line === 2.5) key = 'šutevi u okvir gola 3+';
-                        if (market.Line === 3.5) key = 'šutevi u okvir gola 4+';
-                        if (market.Line === 4.5) key = 'šutevi u okvir gola 5+';
-                    } else if (columnName) {
-                        key = columnName;
-                    }
-                    if(key) markets[key] = market.Odds;
-                });
+                if (!isJsonMode) {
+                    // Try to fill with API odds if available
+                    const playerMarkets = allMarketDataForCSV.filter(m => m.PlayerName === playerInfo.name);
+                    playerMarkets.forEach(market => {
+                        const oddValue = parseFloat(market.Odds);
+                        if (oddValue < 1.1 || oddValue > 40) return; // Skip odds outside the range
 
-                // Calculate 'Gol ili asistencija' if not present but its components are
-                if (!markets['gol ili asistencija'] && markets['daje gol'] && markets['asistencija']) {
-                    const oddsScore = parseFloat(markets['daje gol']);
-                    const oddsAssist = parseFloat(markets['asistencija']);
+                        const columnName = originalMarketToColumnMap[market.OriginalMarket];
+                        const isOver = market.Label.toLowerCase() === 'over' || market.Label.toLowerCase() === 'yes';
+                        if (!isOver && market.Line !== null) return;
 
-                    if (!isNaN(oddsScore) && !isNaN(oddsAssist)) {
-                        const probScore = 1 / oddsScore;
-                        const probAssist = 1 / oddsAssist;
-                        
-                        // P(A or B) = 1 - P(not A) * P(not B)
-                        const probScoreOrAssist = 1 - (1 - probScore) * (1 - probAssist);
-                        
-                        if (probScoreOrAssist > 0) {
-                            const calculatedOdds = 1 / probScoreOrAssist;
-                            
-                            // Apply the same filter as for other odds
-                            if (calculatedOdds >= 1.1 && calculatedOdds <= 40) {
-                                 markets['gol ili asistencija'] = calculatedOdds.toFixed(2);
-                                 logStatus(`Izračunata kvota 'Gol ili asistencija' za igrača ${playerInfo.name}: ${calculatedOdds.toFixed(2)}`);
-                            }
+                        let key;
+                        if (columnName === 'faulovi') {
+                            if (market.Line === 1.5) key = 'ukupno načinjenih faulova 2+';
+                            if (market.Line === 0.5) key = 'ukupno načinjenih faulova 1+';
+                        } else if (columnName === 'sutevi') {
+                            if (market.Line === 0.5) key = 'ukupno šuteva 1+';
+                            if (market.Line === 1.5) key = 'ukupno šuteva 2+';
+                            if (market.Line === 2.5) key = 'ukupno šuteva 3+';
+                            if (market.Line === 3.5) key = 'ukupno šuteva 4+';
+                            if (market.Line === 4.5) key = 'ukupno šuteva 5+';
+                            if (market.Line === 5.5) key = 'ukupno šuteva 6+';
+                            if (market.Line === 6.5) key = 'ukupno šuteva 7+';
+                        } else if (columnName === 'sutevi_u_okvir') {
+                            if (market.Line === 0.5) key = 'šutevi u okvir gola 1+';
+                            if (market.Line === 1.5) key = 'šutevi u okvir gola 2+';
+                            if (market.Line === 2.5) key = 'šutevi u okvir gola 3+';
+                            if (market.Line === 3.5) key = 'šutevi u okvir gola 4+';
+                            if (market.Line === 4.5) key = 'šutevi u okvir gola 5+';
+                        } else if (columnName) {
+                            key = columnName;
                         }
-                    }
-                }
-                 
-                // Find "Score and Win" odds from prePacks
-                if (fetchedMarketData && fetchedMarketData.prePacks) {
-                    const searchLabelTeamWin = `Full Time ${playerInfo.teamName}`;
-                    const searchLabelPlayerScore = `${playerInfo.name} To Score`;
-                    
-                    for (const pack of fetchedMarketData.prePacks) {
-                        for (const selection of pack.prePackSelections) {
-                            if (selection.label.length === 2 && 
-                                selection.label.includes(searchLabelTeamWin) && 
-                                selection.label.includes(searchLabelPlayerScore)) 
-                            {
-                                const scoreAndWinOdds = (selection.combinations[0].odds.decimal / 1000);
-                                if (scoreAndWinOdds >= 1.1 && scoreAndWinOdds <= 40) {
-                                    const marketKey = `daje gol i ${playerInfo.teamName} pobeđuje`;
-                                    markets[marketKey] = scoreAndWinOdds.toFixed(2);
-                                }
-                                break; 
-                            }
-                        }
-                    }
-                }
-
-                if (Object.keys(markets).length > 0) {
-                    previewData.push({
-                        teamName: playerInfo.teamName,
-                        playerName: playerInfo.name, // Keep original name for display in preview
-                        markets: markets
+                        if(key) markets[key] = market.Odds;
                     });
+
+                    // Calculate 'Gol ili asistencija' if not present but its components are
+                    if (!markets['gol ili asistencija'] && markets['daje gol'] && markets['asistencija']) {
+                        const oddsScore = parseFloat(markets['daje gol']);
+                        const oddsAssist = parseFloat(markets['asistencija']);
+
+                        if (!isNaN(oddsScore) && !isNaN(oddsAssist)) {
+                            const probScore = 1 / oddsScore;
+                            const probAssist = 1 / oddsAssist;
+
+                            // P(A or B) = 1 - P(not A) * P(not B)
+                            const probScoreOrAssist = 1 - (1 - probScore) * (1 - probAssist);
+
+                            if (probScoreOrAssist > 0) {
+                                const calculatedOdds = 1 / probScoreOrAssist;
+
+                                // Apply the same filter as for other odds
+                                if (calculatedOdds >= 1.1 && calculatedOdds <= 40) {
+                                     markets['gol ili asistencija'] = calculatedOdds.toFixed(2);
+                                     logStatus(`Izračunata kvota 'Gol ili asistencija' za igrača ${playerInfo.name}: ${calculatedOdds.toFixed(2)}`);
+                                }
+                            }
+                        }
+                    }
+
+                    // Find "Score and Win" odds from prePacks
+                    if (fetchedMarketData && fetchedMarketData.prePacks) {
+                        const searchLabelTeamWin = `Full Time ${playerInfo.teamName}`;
+                        const searchLabelPlayerScore = `${playerInfo.name} To Score`;
+
+                        for (const pack of fetchedMarketData.prePacks) {
+                            for (const selection of pack.prePackSelections) {
+                                if (selection.label.length === 2 &&
+                                    selection.label.includes(searchLabelTeamWin) &&
+                                    selection.label.includes(searchLabelPlayerScore))
+                                {
+                                    const scoreAndWinOdds = (selection.combinations[0].odds.decimal / 1000);
+                                    if (scoreAndWinOdds >= 1.1 && scoreAndWinOdds <= 40) {
+                                        const marketKey = `daje gol i ${playerInfo.teamName} pobeđuje`;
+                                        markets[marketKey] = scoreAndWinOdds.toFixed(2);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
+
+                // Always push to previewData, even if no odds (for manual input)
+                previewData.push({
+                    teamName: playerInfo.teamName,
+                    playerName: playerInfo.name,
+                    markets: markets
+                });
             });
 
             if (previewData.length === 0) {
@@ -1056,11 +1093,11 @@
                 const matchPlayers = allPlayers.filter(player =>
                     player.Squad === homeTeamName.trim() || player.Squad === awayTeamName.trim()
                 );
-        
+
                 // Sortiraj igrače po timu da budu grupisani
                 matchPlayers.sort((a, b) => a.Squad.localeCompare(b.Squad));
-        
-                showJsonPlayerPreview(matchPlayers);
+
+                setupJsonPlayerCsvGenerator(matchPlayers, homeTeamName, awayTeamName);
         
             } catch (error) {
                 logStatus(`Greška pri učitavanju player_stats.json: ${error.message}`, true);
@@ -1071,11 +1108,34 @@
         }
         
         /**
+         * Postavlja generator za CSV igrača iz JSON-a, slično kao za API
+         */
+        function setupJsonPlayerCsvGenerator(players, homeTeamName, awayTeamName) {
+            jsonPlayersData = players;
+            isJsonMode = true;
+            selectedPlayersForCSV = [];
+            updateSelectedPlayersList();
+
+            const uniqueSquads = [...new Set(players.map(p => p.Squad))];
+
+            teamSelect.innerHTML = '<option value="">-- Select a team --</option>';
+            uniqueSquads.forEach(squad => {
+                const option = document.createElement('option');
+                option.value = squad;
+                option.textContent = squad;
+                teamSelect.appendChild(option);
+            });
+
+            playerCsvGeneratorSection.classList.remove('hidden');
+            logStatus(`Učitani igrači iz JSON-a za timove: ${uniqueSquads.join(', ')}. Izaberite tim da vidite igrače.`);
+        }
+
+        /**
          * Kreira prazan pregled za ručni unos kvota na osnovu igrača iz JSON-a
          */
         function showJsonPlayerPreview(players) {
             previewData = []; // Resetuj podatke za pregled
-        
+
             // Definiši sve moguće markete za prazan šablon
             const emptyMarketsTemplate = {
                 'daje gol': '',
@@ -1090,25 +1150,25 @@
                 'dobija karton': '',
                 'dobija crveni karton': ''
             };
-        
+
             players.forEach(player => {
                 let markets = { ...emptyMarketsTemplate };
                 // Dinamički dodaj i market "daje gol i tim pobeđuje"
                 markets[`daje gol i ${player.Squad} pobeđuje`] = '';
-        
+
                 previewData.push({
                     teamName: player.Squad,
                     playerName: player.Player,
                     markets: markets
                 });
             });
-        
+
             if (previewData.length === 0) {
                 logStatus("Nisu pronađeni igrači za izabrane timove u JSON fajlu.", true);
                 csvPreviewSection.classList.add('hidden');
                 return;
             }
-        
+
             renderCsvPreview(); // Ponovo koristi postojeću funkciju za renderovanje
             csvPreviewSection.classList.remove('hidden');
             logStatus(`Prikazan prazan pregled za ${players.length} igrača. Unesite željene kvote.`);
