@@ -353,52 +353,53 @@
                 loadFromJsonButton.classList.remove('hidden');
             } else {
                 loadFromJsonButton.classList.add('hidden');
-            // Reset state
-            matchSelect.innerHTML = '<option value="">-- Fetching Matches --</option>';
-            matchSelect.disabled = true;
-            fetchMarketsButton.disabled = true;
-            resetTables();
-            playerCsvGeneratorSection.classList.add('hidden');
-            allMarketDataForCSV = [];
-            fetchedMarketData = null;
-            toggleRawDataButton.classList.add('hidden');
-            rawDataContainer.classList.add('hidden');
-            rawDataOutput.textContent = '';
-            matchSpecialsButtonContainer.classList.add('hidden');
+                // Reset state
+                matchSelect.innerHTML = '<option value="">-- Fetching Matches --</option>';
+                matchSelect.disabled = true;
+                fetchMarketsButton.disabled = true;
+                resetTables();
+                playerCsvGeneratorSection.classList.add('hidden');
+                allMarketDataForCSV = [];
+                fetchedMarketData = null;
+                toggleRawDataButton.classList.add('hidden');
+                rawDataContainer.classList.add('hidden');
+                rawDataOutput.textContent = '';
+                matchSpecialsButtonContainer.classList.add('hidden');
 
-            if (!leagueName) {
-                matchSelect.innerHTML = '<option value="">-- Waiting for League --</option>';
-                return;
-            }
-            
-            const url = LEAGUE_URLS[leagueName];
-            logStatus(`Fetching matches for ${leagueName}...`);
-            toggleLoading(true);
-
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const data = await response.json();
-                
-                matchSelect.innerHTML = '<option value="">-- Select a Match --</option>';
-                if (data.events && data.events.length > 0) {
-                    data.events.forEach(event => {
-                        const option = document.createElement('option');
-                        option.value = event.event.id;
-                        option.textContent = `${event.event.homeName} vs ${event.event.awayName}`;
-                        matchSelect.appendChild(option);
-                    });
-                    matchSelect.disabled = false;
-                    logStatus(`Successfully found ${data.events.length} matches for ${leagueName}.`);
-                } else {
-                     matchSelect.innerHTML = '<option value="">-- No Matches Found --</option>';
-                     logStatus(`No matches found for ${leagueName}.`, true);
+                if (!leagueName) {
+                    matchSelect.innerHTML = '<option value="">-- Waiting for League --</option>';
+                    return;
                 }
-            } catch (error) {
-                logStatus(`Failed to fetch matches for ${leagueName}: ${error.message}`, true);
-                matchSelect.innerHTML = '<option value="">-- Error Fetching --</option>';
-            } finally {
-                toggleLoading(false);
+
+                const url = LEAGUE_URLS[leagueName];
+                logStatus(`Fetching matches for ${leagueName}...`);
+                toggleLoading(true);
+
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const data = await response.json();
+
+                    matchSelect.innerHTML = '<option value="">-- Select a Match --</option>';
+                    if (data.events && data.events.length > 0) {
+                        data.events.forEach(event => {
+                            const option = document.createElement('option');
+                            option.value = event.event.id;
+                            option.textContent = `${event.event.homeName} vs ${event.event.awayName}`;
+                            matchSelect.appendChild(option);
+                        });
+                        matchSelect.disabled = false;
+                        logStatus(`Successfully found ${data.events.length} matches for ${leagueName}.`);
+                    } else {
+                         matchSelect.innerHTML = '<option value="">-- No Matches Found --</option>';
+                         logStatus(`No matches found for ${leagueName}.`, true);
+                    }
+                } catch (error) {
+                    logStatus(`Failed to fetch matches for ${leagueName}: ${error.message}`, true);
+                    matchSelect.innerHTML = '<option value="">-- Error Fetching --</option>';
+                } finally {
+                    toggleLoading(false);
+                }
             }
         }
 
