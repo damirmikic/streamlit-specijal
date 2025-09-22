@@ -366,7 +366,7 @@
             generateCsvButton.addEventListener('click', () => {
                  if (specialsForPreview.length === 0) return;
 
-                const header = "Datum,Vreme,Sifra,,Domacin,Gost,,1,X,2,GR,U,O,Yes,No";
+                const header = "Datum,Vreme,Sifra,Domacin,Gost,1,X,2,GR,U,O,Yes,No";
                 let csvRows = [header];
 
                 const eventInfo = fetchedData.events[0];
@@ -378,7 +378,7 @@
                 csvRows.push(`LEAGUE_NAME:${eventInfo.name}`);
                 
                 specialsForPreview.forEach(special => {
-                    const row = [datum, vreme, '', '', special.name, 'DA', '', special.odds, '', '', '', '', '', '', ''];
+                    const row = [datum, vreme, '', special.name, 'DA', special.odds, '', '', '', '', '', '', ''];
                     csvRows.push(row.join(','));
                 });
 
