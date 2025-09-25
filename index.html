@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Merkur Specijal Feed</title>
+    <!-- FAVICON - Ovde unesite link do vaše ikonice na GitHub-u -->
     <link rel="icon" type="image/png" href="merkur.png">
+    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* A simple spinning animation for the loader */
@@ -38,11 +40,19 @@
 
     <div class="container mx-auto p-4 md:p-8 max-w-6xl">
         <header class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">Merkur Specijali</h1>
-            <p class="text-gray-600 mt-2">Select a league and match to fetch available markets and download them as a CSV file.</p>
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">Merkur Specijali</h1>
+                    <p class="text-gray-600 mt-2">Select a league and match to fetch available markets and download them as a CSV file.</p>
+                </div>
+                 <a href="xg_calculator.html" target="_blank" class="whitespace-nowrap bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
+                    Otvori xG Kalkulator
+                </a>
+            </div>
         </header>
 
         <main class="bg-white rounded-lg shadow-md p-6">
+            <!-- Dropdown Selection Area -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                 <div>
                     <label for="leagueSelect" class="block text-sm font-medium text-gray-700">1. Izaberi ligu</label>
@@ -67,6 +77,7 @@
                 </div>
             </div>
             
+            <!-- New Player Props CSV Generator Section -->
             <div id="playerCsvGeneratorSection" class="mt-8 pt-6 border-t border-gray-200 hidden">
                 <div class="flex items-center gap-2 mb-4">
                     <h2 class="text-2xl font-bold text-gray-800">Player Props CSV Generator</h2>
@@ -122,14 +133,17 @@
                  <div class="mt-4">
                     <h4 class="font-semibold">Selected Players:</h4>
                     <ul id="selectedPlayersList" class="list-disc list-inside bg-gray-50 p-3 rounded-md min-h-[40px]">
-                        </ul>
+                        <!-- Selected players will be listed here -->
+                    </ul>
                 </div>
             </div>
             
+            <!-- CSV Preview and Final Generation Section -->
             <div id="csvPreviewSection" class="mt-8 pt-6 border-t-2 border-indigo-200 hidden">
                  <h2 class="text-2xl font-bold text-indigo-800 mb-4">Pregled i Izmena CSV-a</h2>
                  <div id="csvPreviewContent" class="space-y-6">
-                     </div>
+                     <!-- Preview content will be generated here -->
+                 </div>
                  <div class="mt-6 text-right">
                      <button id="generateFinalCsvButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
                          Generiši Finalni CSV
@@ -137,20 +151,20 @@
                  </div>
             </div>
 
+            <!-- Status/Log Area -->
             <div id="status" class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 h-32 overflow-y-auto">
                 Please select a league to begin.
             </div>
 
-             <div id="actionsButtonContainer" class="mt-6 text-center hidden flex justify-center items-center gap-4">
+             <!-- Match Specials Button Container -->
+            <div id="matchSpecialsButtonContainer" class="mt-6 text-center hidden">
                  <button id="openMatchSpecialsButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300 text-lg">
                     Otvori Specijale za Meč
                 </button>
-                <a href="xg_calculator.html" target="_blank" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300 text-lg">
-                    Otvori xG Kalkulator
-                </a>
             </div>
 
 
+            <!-- Raw Data Display -->
             <div class="mt-4">
                 <button id="toggleRawDataButton" class="text-sm text-blue-600 hover:underline focus:outline-none hidden">Show/Hide Raw API Response</button>
             </div>
@@ -161,6 +175,7 @@
                 </pre>
             </div>
 
+            <!-- Tabs Navigation -->
             <div class="mt-6 border-b border-gray-200">
                 <nav class="-mb-px flex space-x-4" aria-label="Tabs">
                     <button id="main-tab" class="tab-button active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">Main Markets</button>
@@ -169,7 +184,9 @@
                 </nav>
             </div>
 
+            <!-- Tab Content -->
             <div id="tab-content" class="mt-4">
+                <!-- Main Markets Table -->
                 <div id="main-content" class="tab-panel">
                     <div class="overflow-x-auto">
                         <table class="min-w-full bg-white">
@@ -186,6 +203,7 @@
                         </table>
                     </div>
                 </div>
+                <!-- Stats Markets Table -->
                 <div id="stats-content" class="tab-panel hidden">
                      <div class="overflow-x-auto">
                         <table class="min-w-full bg-white">
@@ -202,6 +220,7 @@
                         </table>
                     </div>
                 </div>
+                <!-- Player Props Table -->
                 <div id="player-content" class="tab-panel hidden">
                     <div>
                         <h3 id="homeTeamHeader" class="text-xl font-semibold text-gray-800 mb-2"></h3>
@@ -215,7 +234,8 @@
                                     </tr>
                                 </thead>
                                 <tbody id="homePlayerTableBody">
-                                    </tbody>
+                                    <!-- Populated by script -->
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -231,7 +251,8 @@
                                     </tr>
                                 </thead>
                                 <tbody id="awayPlayerTableBody">
-                                    </tbody>
+                                    <!-- Populated by script -->
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -290,7 +311,7 @@
         const loadFromJsonButton = document.getElementById('loadFromJsonButton');
         
         const openMatchSpecialsButton = document.getElementById('openMatchSpecialsButton');
-        const actionsButtonContainer = document.getElementById('actionsButtonContainer');
+        const matchSpecialsButtonContainer = document.getElementById('matchSpecialsButtonContainer');
 
         const tabs = document.querySelectorAll('.tab-button');
         const tabPanels = document.querySelectorAll('.tab-panel');
@@ -386,7 +407,7 @@
             toggleRawDataButton.classList.add('hidden');
             rawDataContainer.classList.add('hidden');
             rawDataOutput.textContent = '';
-            actionsButtonContainer.classList.add('hidden');
+            matchSpecialsButtonContainer.classList.add('hidden');
 
             if (!leagueName) {
                 matchSelect.innerHTML = '<option value="">-- Liga se učitava --</option>';
@@ -441,7 +462,7 @@
             csvPreviewSection.classList.add('hidden');
             toggleRawDataButton.classList.add('hidden');
             rawDataContainer.classList.add('hidden');
-            actionsButtonContainer.classList.add('hidden');
+            matchSpecialsButtonContainer.classList.add('hidden');
             
             const oddsUrl = `https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/betoffer/event/${eventId}.json?lang=en_GB&market=GB&client_id=2&channel_id=7&includeParticipants=true`;
 
@@ -451,7 +472,7 @@
                 const data = await response.json();
                 fetchedMarketData = data; // Store the data
                 sessionStorage.setItem(`event_${eventId}`, JSON.stringify(data)); // Save to session storage
-                actionsButtonContainer.classList.remove('hidden');
+                matchSpecialsButtonContainer.classList.remove('hidden');
                 isJsonMode = false; // Switch to API mode
 
 
@@ -1206,7 +1227,7 @@
             matchSelect.addEventListener('change', () => {
                 fetchMarketsButton.disabled = !matchSelect.value;
                 loadFromJsonButton.disabled = !matchSelect.value;
-                actionsButtonContainer.classList.add('hidden');
+                matchSpecialsButtonContainer.classList.add('hidden');
                 resetTables();
                 mainTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Click "Fetch Markets" to see data.</td></tr>';
                 playerCsvGeneratorSection.classList.add('hidden');
