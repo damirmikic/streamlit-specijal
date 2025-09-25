@@ -99,10 +99,14 @@
                 errorContainer.classList.remove('hidden');
             }
 
-            function showToast(message) {
+            function showToast(message, type = 'success') {
                 const toastContainer = document.getElementById('toast-container');
                 const toast = document.createElement('div');
-                toast.className = 'bg-green-500 text-white text-sm font-bold px-4 py-3 rounded-lg shadow-md animate-pulse';
+                let bgColor = 'bg-green-500';
+                if (type === 'error') bgColor = 'bg-red-500';
+                if (type === 'info') bgColor = 'bg-blue-500';
+                
+                toast.className = `${bgColor} text-white text-sm font-bold px-4 py-3 rounded-lg shadow-md animate-pulse`;
                 toast.textContent = message;
                 
                 toastContainer.appendChild(toast);
@@ -158,7 +162,6 @@
                 const marketNameLower = marketNameIdentifier.toLowerCase();
                 const labelLower = labelIdentifier.toLowerCase();
                 
-                // First, try for an exact market name match. This is the most reliable.
                 const exactMatch = allMarkets.find(m => 
                     m.marketName.toLowerCase() === marketNameLower &&
                     m.line === line &&
@@ -166,8 +169,6 @@
                 );
                 if (exactMatch) return exactMatch.odds;
                 
-                // If no exact match (e.g., API has slight variations), try a slightly looser search
-                // but ensure it's not a team-specific or half-time market.
                 const looserMatch = allMarkets.find(m => 
                     m.marketName.toLowerCase().includes(marketNameLower) &&
                     !m.marketName.toLowerCase().includes('1st half') &&
@@ -277,16 +278,27 @@
 
                     if (finalOdd) finalOdd = parseFloat(roundOdds(String(finalOdd)));
 
+                    const oddValue = (finalOdd !== null && !isNaN(finalOdd)) ? finalOdd.toFixed(2) : '';
+                    const inputId = `odds-input-${special.name.replace(/[^a-zA-Z0-9]/g, '-')}`;
+
                     const div = document.createElement('div');
                     div.className = 'flex justify-between items-center p-3 border rounded-lg';
                     div.innerHTML = `
-                        <span class="text-gray-800">${special.name}</span>
-                        ${finalOdd !== null && !isNaN(finalOdd) ? `
-                        <div class="flex items-center">
-                            <span class="font-bold text-lg mr-4">${finalOdd.toFixed(2)}</span>
-                            <button data-name="${special.name}" data-odds="${finalOdd.toFixed(2)}" class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">+</button>
+                        <span class="text-gray-800 flex-1">${special.name}</span>
+                        <div class="flex items-center gap-3 w-auto md:w-1/3">
+                            <input 
+                                type="text" 
+                                value="${oddValue}" 
+                                class="odds-input w-24 p-1 border rounded text-center font-medium" 
+                                placeholder="Unesi kvotu"
+                                id="${inputId}"
+                            >
+                            <button 
+                                data-name="${special.name}" 
+                                data-input-id="${inputId}" 
+                                class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600"
+                            >+</button>
                         </div>
-                        ` : '<span class="text-sm text-gray-400">Nije dostupno</span>'}
                     `;
                     specialsList.appendChild(div);
                 });
@@ -320,11 +332,21 @@
             // Event Listeners
             specialsList.addEventListener('click', e => {
                 if (e.target.classList.contains('add-special-btn')) {
-                    const { name, odds } = e.target.dataset;
+                    const { name, inputId } = e.target.dataset;
+                    const oddsInput = document.getElementById(inputId);
+                    const odds = oddsInput.value;
+
+                    if (!odds || isNaN(parseFloat(odds))) {
+                        showToast("Molimo unesite ispravnu kvotu.", "error");
+                        return;
+                    }
+
                     if (!specialsForPreview.some(s => s.name === name)) {
                         specialsForPreview.push({ name, odds });
                         renderPreview();
                         showToast("Market dodat u CSV");
+                    } else {
+                        showToast("Market je već dodat u listu.", "info");
                     }
                 }
             });
@@ -333,8 +355,11 @@
                 let addedCount = 0;
                 const allSpecialElements = specialsList.querySelectorAll('.add-special-btn');
                 allSpecialElements.forEach(btn => {
-                    const { name, odds } = btn.dataset;
-                    if (!specialsForPreview.some(s => s.name === name)) {
+                    const { name, inputId } = btn.dataset;
+                    const oddsInput = document.getElementById(inputId);
+                    const odds = oddsInput.value;
+
+                    if (odds && !isNaN(parseFloat(odds)) && !specialsForPreview.some(s => s.name === name)) {
                         specialsForPreview.push({ name, odds });
                         addedCount++;
                     }
@@ -344,7 +369,7 @@
                     renderPreview();
                     showToast(`${addedCount} marketa dodato u CSV.`);
                 } else {
-                    showToast("Svi dostupni marketi su već dodati.");
+                    showToast("Nema novih marketa za dodavanje.", "info");
                 }
             });
 
@@ -403,4 +428,3 @@
     </script>
 </body>
 </html>
-
