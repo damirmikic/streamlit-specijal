@@ -6,6 +6,22 @@
     <title>xG Kalkulator - Merkur Specijal</title>
     <link rel="icon" type="image/png" href="merkur.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .csv-input {
+            width: 100%;
+            padding: 4px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+        }
+        .csv-input:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 2px #c7d2fe;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 font-sans">
 
@@ -40,19 +56,22 @@
                 <div class="space-y-6">
 
                     <!-- Result Item: Total xG -->
-                    <div class="bg-indigo-50 p-4 rounded-lg">
-                        <div class="flex justify-between items-center">
-                            <h3 class="font-semibold text-gray-700">Ukupan xG (Total xG):</h3>
-                            <p id="totalXg" class="text-2xl font-bold text-indigo-600">0.00</p>
+                    <div class="result-card bg-indigo-50 p-4 rounded-lg" data-market-name="Ukupno golova">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-semibold text-gray-700">Ukupan xG (Total xG):</h3>
+                                <p id="totalXg" class="text-2xl font-bold text-indigo-600">0.00</p>
+                            </div>
+                            <button class="add-selection-to-csv-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-lg text-sm" data-market-id="total">Dodaj Selekciju</button>
                         </div>
                         <div class="odds-calculator-container mt-3 pt-3 border-t border-indigo-200">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                                 <div>
-                                    <label for="margin-total" class="block text-xs font-medium text-gray-600">Margina (%)</label>
+                                    <label class="block text-xs font-medium text-gray-600">Margina (%)</label>
                                     <input type="number" id="margin-total" step="0.1" value="8.0" class="odds-input mt-1 block w-full py-1 px-2 border border-gray-300 rounded-md text-sm">
                                 </div>
                                 <div>
-                                    <label for="line-total" class="block text-xs font-medium text-gray-600">Granica</label>
+                                    <label class="block text-xs font-medium text-gray-600">Granica</label>
                                     <input type="number" id="line-total" step="0.5" value="2.5" class="odds-input mt-1 block w-full py-1 px-2 border border-gray-300 rounded-md text-sm">
                                 </div>
                                 <div class="grid grid-cols-2 gap-2 items-center bg-white p-2 rounded-md shadow-inner">
@@ -64,10 +83,13 @@
                     </div>
                     
                     <!-- Result Item: First Half xG -->
-                     <div class="bg-indigo-50 p-4 rounded-lg">
-                        <div class="flex justify-between items-center">
-                            <h3 class="font-semibold text-gray-700">xG Prvo Poluvreme (44%):</h3>
-                            <p id="firstHalfXg" class="text-2xl font-bold text-indigo-600">0.00</p>
+                     <div class="result-card bg-indigo-50 p-4 rounded-lg" data-market-name="uk. golova 1. poluvreme">
+                        <div class="flex justify-between items-start">
+                           <div>
+                                <h3 class="font-semibold text-gray-700">xG Prvo Poluvreme (44%):</h3>
+                                <p id="firstHalfXg" class="text-2xl font-bold text-indigo-600">0.00</p>
+                           </div>
+                           <button class="add-selection-to-csv-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-lg text-sm" data-market-id="fh">Dodaj Selekciju</button>
                         </div>
                          <div class="odds-calculator-container mt-3 pt-3 border-t border-indigo-200">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
@@ -81,41 +103,63 @@
                         </div>
                     </div>
                     
-                    <!-- Other result items follow the same pattern -->
-                    <div class="bg-indigo-50 p-4 rounded-lg">
-                        <div class="flex justify-between items-center"><h3 class="font-semibold text-gray-700">xG Drugo Poluvreme (56%):</h3><p id="secondHalfXg" class="text-2xl font-bold text-indigo-600">0.00</p></div>
-                        <div class="odds-calculator-container mt-3 pt-3 border-t border-indigo-200"><div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"><div><input type="number" id="margin-sh" step="0.1" value="8.0" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Margina %"></div><div><input type="number" id="line-sh" step="0.5" value="1.5" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Granica"></div><div class="grid grid-cols-2 gap-2 bg-white p-2 rounded-md shadow-inner"><div class="text-center"><p id="over-sh" class="font-bold text-green-600 text-lg">-</p></div><div class="text-center"><p id="under-sh" class="font-bold text-red-600 text-lg">-</p></div></div></div></div>
-                    </div>
-
-                    <div class="bg-indigo-50 p-4 rounded-lg">
-                        <div class="flex justify-between items-center"><h3 class="font-semibold text-gray-700">xG do 10 min:</h3><p id="xg_10_min" class="text-2xl font-bold text-indigo-600">0.00</p></div>
-                        <div class="odds-calculator-container mt-3 pt-3 border-t border-indigo-200"><div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"><div><input type="number" id="margin-10" step="0.1" value="8.0" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Margina %"></div><div><input type="number" id="line-10" step="0.5" value="0.5" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Granica"></div><div class="grid grid-cols-2 gap-2 bg-white p-2 rounded-md shadow-inner"><div class="text-center"><p id="over-10" class="font-bold text-green-600 text-lg">-</p></div><div class="text-center"><p id="under-10" class="font-bold text-red-600 text-lg">-</p></div></div></div></div>
-                    </div>
-
-                    <div class="bg-indigo-50 p-4 rounded-lg">
-                        <div class="flex justify-between items-center"><h3 class="font-semibold text-gray-700">xG do 15 min:</h3><p id="xg_15_min" class="text-2xl font-bold text-indigo-600">0.00</p></div>
-                        <div class="odds-calculator-container mt-3 pt-3 border-t border-indigo-200"><div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"><div><input type="number" id="margin-15" step="0.1" value="8.0" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Margina %"></div><div><input type="number" id="line-15" step="0.5" value="0.5" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Granica"></div><div class="grid grid-cols-2 gap-2 bg-white p-2 rounded-md shadow-inner"><div class="text-center"><p id="over-15" class="font-bold text-green-600 text-lg">-</p></div><div class="text-center"><p id="under-15" class="font-bold text-red-600 text-lg">-</p></div></div></div></div>
-                    </div>
-
-                     <div class="bg-indigo-50 p-4 rounded-lg">
-                        <div class="flex justify-between items-center"><h3 class="font-semibold text-gray-700">xG do 30 min:</h3><p id="xg_30_min" class="text-2xl font-bold text-indigo-600">0.00</p></div>
-                        <div class="odds-calculator-container mt-3 pt-3 border-t border-indigo-200"><div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"><div><input type="number" id="margin-30" step="0.1" value="8.0" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Margina %"></div><div><input type="number" id="line-30" step="0.5" value="0.5" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Granica"></div><div class="grid grid-cols-2 gap-2 bg-white p-2 rounded-md shadow-inner"><div class="text-center"><p id="over-30" class="font-bold text-green-600 text-lg">-</p></div><div class="text-center"><p id="under-30" class="font-bold text-red-600 text-lg">-</p></div></div></div></div>
-                    </div>
-
-                    <div class="bg-indigo-50 p-4 rounded-lg">
-                        <div class="flex justify-between items-center"><h3 class="font-semibold text-gray-700">xG od 15 do 45 min:</h3><p id="xg_15_45_min" class="text-2xl font-bold text-indigo-600">0.00</p></div>
-                        <div class="odds-calculator-container mt-3 pt-3 border-t border-indigo-200"><div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"><div><input type="number" id="margin-1545" step="0.1" value="8.0" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Margina %"></div><div><input type="number" id="line-1545" step="0.5" value="0.5" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Granica"></div><div class="grid grid-cols-2 gap-2 bg-white p-2 rounded-md shadow-inner"><div class="text-center"><p id="over-1545" class="font-bold text-green-600 text-lg">-</p></div><div class="text-center"><p id="under-1545" class="font-bold text-red-600 text-lg">-</p></div></div></div></div>
-                    </div>
+                    <!-- Other result items -->
+                    <div class="result-card bg-indigo-50 p-4 rounded-lg" data-market-name="uk. golova 2. poluvreme"><div class="flex justify-between items-start"><div><h3 class="font-semibold text-gray-700">xG Drugo Poluvreme (56%):</h3><p id="secondHalfXg" class="text-2xl font-bold text-indigo-600">0.00</p></div><button class="add-selection-to-csv-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-lg text-sm" data-market-id="sh">Dodaj Selekciju</button></div><div class="odds-calculator-container mt-3 pt-3 border-t border-indigo-200"><div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"><div><input type="number" id="margin-sh" step="0.1" value="8.0" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Margina %"></div><div><input type="number" id="line-sh" step="0.5" value="1.5" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Granica"></div><div class="grid grid-cols-2 gap-2 bg-white p-2 rounded-md shadow-inner"><div class="text-center"><p id="over-sh" class="font-bold text-green-600 text-lg">-</p></div><div class="text-center"><p id="under-sh" class="font-bold text-red-600 text-lg">-</p></div></div></div></div></div>
+                    <div class="result-card bg-indigo-50 p-4 rounded-lg" data-market-name="uk. golova do 10 min"><div class="flex justify-between items-start"><div><h3 class="font-semibold text-gray-700">xG do 10 min:</h3><p id="xg_10_min" class="text-2xl font-bold text-indigo-600">0.00</p></div><button class="add-selection-to-csv-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-lg text-sm" data-market-id="10">Dodaj Selekciju</button></div><div class="odds-calculator-container mt-3 pt-3 border-t border-indigo-200"><div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"><div><input type="number" id="margin-10" step="0.1" value="8.0" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Margina %"></div><div><input type="number" id="line-10" step="0.5" value="0.5" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Granica"></div><div class="grid grid-cols-2 gap-2 bg-white p-2 rounded-md shadow-inner"><div class="text-center"><p id="over-10" class="font-bold text-green-600 text-lg">-</p></div><div class="text-center"><p id="under-10" class="font-bold text-red-600 text-lg">-</p></div></div></div></div></div>
+                    <div class="result-card bg-indigo-50 p-4 rounded-lg" data-market-name="uk. golova do 15 min"><div class="flex justify-between items-start"><div><h3 class="font-semibold text-gray-700">xG do 15 min:</h3><p id="xg_15_min" class="text-2xl font-bold text-indigo-600">0.00</p></div><button class="add-selection-to-csv-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-lg text-sm" data-market-id="15">Dodaj Selekciju</button></div><div class="odds-calculator-container mt-3 pt-3 border-t border-indigo-200"><div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"><div><input type="number" id="margin-15" step="0.1" value="8.0" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Margina %"></div><div><input type="number" id="line-15" step="0.5" value="0.5" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Granica"></div><div class="grid grid-cols-2 gap-2 bg-white p-2 rounded-md shadow-inner"><div class="text-center"><p id="over-15" class="font-bold text-green-600 text-lg">-</p></div><div class="text-center"><p id="under-15" class="font-bold text-red-600 text-lg">-</p></div></div></div></div></div>
+                    <div class="result-card bg-indigo-50 p-4 rounded-lg" data-market-name="uk. golova do 30 min"><div class="flex justify-between items-start"><div><h3 class="font-semibold text-gray-700">xG do 30 min:</h3><p id="xg_30_min" class="text-2xl font-bold text-indigo-600">0.00</p></div><button class="add-selection-to-csv-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-lg text-sm" data-market-id="30">Dodaj Selekciju</button></div><div class="odds-calculator-container mt-3 pt-3 border-t border-indigo-200"><div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"><div><input type="number" id="margin-30" step="0.1" value="8.0" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Margina %"></div><div><input type="number" id="line-30" step="0.5" value="0.5" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Granica"></div><div class="grid grid-cols-2 gap-2 bg-white p-2 rounded-md shadow-inner"><div class="text-center"><p id="over-30" class="font-bold text-green-600 text-lg">-</p></div><div class="text-center"><p id="under-30" class="font-bold text-red-600 text-lg">-</p></div></div></div></div></div>
+                    <div class="result-card bg-indigo-50 p-4 rounded-lg" data-market-name="uk. golova 15-45 min"><div class="flex justify-between items-start"><div><h3 class="font-semibold text-gray-700">xG od 15 do 45 min:</h3><p id="xg_15_45_min" class="text-2xl font-bold text-indigo-600">0.00</p></div><button class="add-selection-to-csv-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-lg text-sm" data-market-id="1545">Dodaj Selekciju</button></div><div class="odds-calculator-container mt-3 pt-3 border-t border-indigo-200"><div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"><div><input type="number" id="margin-1545" step="0.1" value="8.0" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Margina %"></div><div><input type="number" id="line-1545" step="0.5" value="0.5" class="odds-input w-full py-1 px-2 border rounded-md text-sm" placeholder="Granica"></div><div class="grid grid-cols-2 gap-2 bg-white p-2 rounded-md shadow-inner"><div class="text-center"><p id="over-1545" class="font-bold text-green-600 text-lg">-</p></div><div class="text-center"><p id="under-1545" class="font-bold text-red-600 text-lg">-</p></div></div></div></div></div>
                 </div>
             </div>
+            
+             <!-- CSV Export Section -->
+            <div id="csvExportSection" class="mt-8 pt-6 border-t border-gray-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">Pregled za CSV</h2>
+                    <button id="generateCsvButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300" disabled>
+                        Generiši CSV
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="dateInput" class="block text-sm font-medium text-gray-700">Datum</label>
+                        <input type="text" id="dateInput" class="csv-input mt-1" placeholder="dd.mm.yyyy">
+                    </div>
+                    <div>
+                        <label for="timeInput" class="block text-sm font-medium text-gray-700">Vreme</label>
+                        <input type="text" id="timeInput" class="csv-input mt-1" placeholder="hh:mm">
+                    </div>
+                    <div>
+                        <label for="matchNameInput" class="block text-sm font-medium text-gray-700">MATCH_NAME</label>
+                        <input type="text" id="matchNameInput" class="csv-input mt-1" placeholder="npr. Tim A vs Tim B">
+                    </div>
+                    <div>
+                        <label for="leagueNameInput" class="block text-sm font-medium text-gray-700">LEAGUE_NAME</label>
+                        <input type="text" id="leagueNameInput" class="csv-input mt-1" value="XG Specijal">
+                    </div>
+                </div>
+                <div id="csvPreviewContainer" class="bg-gray-50 p-3 rounded-md min-h-[60px] space-y-2">
+                    <p class="text-gray-500">Nema dodatih marketa za CSV.</p>
+                </div>
+            </div>
+
         </main>
     </div>
+    
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50"></div>
+
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const xgInputContainer = document.getElementById('xgInputContainer');
+            const resultsSection = document.getElementById('resultsSection');
+            const csvPreviewContainer = document.getElementById('csvPreviewContainer');
+            const generateCsvButton = document.getElementById('generateCsvButton');
+            const dateInput = document.getElementById('dateInput');
+            const timeInput = document.getElementById('timeInput');
+
+            let specialsForCsv = [];
             
-            // --- Helper Functions for Poisson Calculation ---
             const factorial = (n) => {
                 if (n < 0 || n > 170) return Infinity; 
                 if (n === 0) return 1;
@@ -181,16 +225,11 @@
                 const firstHalfXg = totalXg * 0.44;
                 const xg_per_minute_fh = firstHalfXg / 45;
                 const results = {
-                    total: totalXg,
-                    fh: firstHalfXg,
-                    sh: totalXg * 0.56,
-                    '10': xg_per_minute_fh * 10,
-                    '15': xg_per_minute_fh * 15,
-                    '30': xg_per_minute_fh * 30,
-                    '1545': xg_per_minute_fh * 30
+                    total: totalXg, fh: firstHalfXg, sh: totalXg * 0.56,
+                    '10': xg_per_minute_fh * 10, '15': xg_per_minute_fh * 15,
+                    '30': xg_per_minute_fh * 30, '1545': xg_per_minute_fh * 30
                 };
                 
-                // Update text content
                 document.getElementById('totalXg').textContent = results.total.toFixed(2);
                 document.getElementById('firstHalfXg').textContent = results.fh.toFixed(2);
                 document.getElementById('secondHalfXg').textContent = results.sh.toFixed(2);
@@ -199,36 +238,146 @@
                 document.getElementById('xg_30_min').textContent = results['30'].toFixed(2);
                 document.getElementById('xg_15_45_min').textContent = results['1545'].toFixed(2);
 
-                // Update all odds sections
-                for (const key in results) {
-                    calculateOddsFor(key, results[key]);
+                for (const key in results) calculateOddsFor(key, results[key]);
+            };
+
+             const showToast = (message) => {
+                const toastContainer = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = 'bg-green-500 text-white text-sm font-bold px-4 py-3 rounded-lg shadow-md animate-pulse';
+                toast.textContent = message;
+                toastContainer.appendChild(toast);
+                setTimeout(() => { toast.remove(); }, 2500);
+            }
+
+            const renderCsvPreview = () => {
+                if (specialsForCsv.length === 0) {
+                    csvPreviewContainer.innerHTML = '<p class="text-gray-500">Nema dodatih marketa za CSV.</p>';
+                    generateCsvButton.disabled = true;
+                    return;
                 }
+                
+                let tableHTML = `
+                    <div class="grid grid-cols-[3fr,1fr,1fr,1fr,auto] gap-x-4 gap-y-2 font-semibold text-sm text-gray-600 px-2 pb-2 border-b">
+                        <span>Market (Domacin)</span>
+                        <span>Granica (GR)</span>
+                        <span>Manje (U)</span>
+                        <span>Više (O)</span>
+                        <span></span>
+                    </div>
+                    <div class="space-y-2 mt-2">
+                `;
+
+                specialsForCsv.forEach((special, index) => {
+                    tableHTML += `
+                        <div class="grid grid-cols-[3fr,1fr,1fr,1fr,auto] gap-x-4 gap-y-2 items-center">
+                            <input type="text" class="csv-input" value="${special.marketName}" data-index="${index}" data-field="marketName">
+                            <input type="text" class="csv-input" value="${special.line}" data-index="${index}" data-field="line">
+                            <input type="text" class="csv-input" value="${special.underOdds}" data-index="${index}" data-field="underOdds">
+                            <input type="text" class="csv-input" value="${special.overOdds}" data-index="${index}" data-field="overOdds">
+                            <button class="remove-from-csv-btn text-red-500 font-bold text-lg" data-index="${index}">&times;</button>
+                        </div>
+                    `;
+                });
+
+                tableHTML += '</div>';
+                csvPreviewContainer.innerHTML = tableHTML;
+                generateCsvButton.disabled = false;
             };
             
-            // Event Delegation for adding/removing rows and input changes
+            const generateCsv = () => {
+                if (specialsForCsv.length === 0) return;
+                const header = "Datum,Vreme,Sifra,Domacin,Gost,1,X,2,GR,U,O,Yes,No";
+                let csvRows = [header];
+                
+                const datum = dateInput.value;
+                const vreme = timeInput.value;
+                
+                const matchName = document.getElementById('matchNameInput').value || 'XG Specijal Meč';
+                const leagueName = document.getElementById('leagueNameInput').value || 'XG Specijal';
+                
+                csvRows.push(`MATCH_NAME:${matchName}`);
+                csvRows.push(`LEAGUE_NAME:${leagueName}`);
+                
+                specialsForCsv.forEach(special => {
+                    const domacin = special.marketName;
+                    const gost = '';
+                    const gr = special.line;
+                    const u = special.underOdds;
+                    const o = special.overOdds;
+                    const row = [datum, vreme, '', domacin, gost, '', '', '', gr, u, o, '', ''];
+                    csvRows.push(row.join(','));
+                });
+
+                const csvContent = "\uFEFF" + csvRows.join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.setAttribute('href', URL.createObjectURL(blob));
+                link.setAttribute('download', `${matchName.replace(/ /g, '_')}_specijal.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            // --- Event Listeners ---
             xgInputContainer.addEventListener('click', (e) => {
                 const target = e.target.closest('button');
                 if (!target) return;
-
                 if (target.classList.contains('add-xg-row')) {
-                    const newRow = createXgRow();
-                    target.closest('.xg-row').insertAdjacentElement('afterend', newRow);
+                    target.closest('.xg-row').insertAdjacentElement('afterend', createXgRow());
                 } else if (target.classList.contains('remove-xg-row')) {
-                    if (document.querySelectorAll('.xg-row').length > 1) {
-                        target.closest('.xg-row').remove();
-                    }
+                    if (document.querySelectorAll('.xg-row').length > 1) target.closest('.xg-row').remove();
                 }
                 calculateAll();
             });
 
             xgInputContainer.addEventListener('input', calculateAll);
-            document.getElementById('resultsSection').addEventListener('input', (e) => {
-                 if(e.target.classList.contains('odds-input')) {
-                    calculateAll();
-                 }
+            resultsSection.addEventListener('input', (e) => {
+                 if(e.target.classList.contains('odds-input')) calculateAll();
             });
 
-            // Initial setup
+            resultsSection.addEventListener('click', (e) => {
+                const target = e.target.closest('button.add-selection-to-csv-btn');
+                if (!target) return;
+                
+                const { marketId } = target.dataset;
+                const overOdds = document.getElementById(`over-${marketId}`).textContent;
+                const underOdds = document.getElementById(`under-${marketId}`).textContent;
+                
+                if (overOdds === '-' || underOdds === '-') { 
+                    showToast("Nema kvota za dodavanje."); 
+                    return; 
+                }
+
+                const marketName = target.closest('.result-card').dataset.marketName;
+                const line = document.getElementById(`line-${marketId}`).value;
+
+                specialsForCsv.push({ marketName, line, overOdds, underOdds });
+                renderCsvPreview();
+                showToast("Selekcija dodata u CSV.");
+            });
+            
+            csvPreviewContainer.addEventListener('input', (e) => {
+                 if(e.target.classList.contains('csv-input')) {
+                    const { index, field } = e.target.dataset;
+                    specialsForCsv[index][field] = e.target.value;
+                }
+            });
+
+            csvPreviewContainer.addEventListener('click', (e) => {
+                if(e.target.classList.contains('remove-from-csv-btn')) {
+                    specialsForCsv.splice(e.target.dataset.index, 1);
+                    renderCsvPreview();
+                }
+            });
+            
+            generateCsvButton.addEventListener('click', generateCsv);
+
+            // --- Initial setup ---
+            const now = new Date();
+            dateInput.value = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')}.${now.getFullYear()}`;
+            timeInput.value = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
             xgInputContainer.appendChild(createXgRow());
             calculateAll();
         });
