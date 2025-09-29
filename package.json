@@ -1,0 +1,18 @@
+{
+  "name": "streamlit-specijal",
+  "version": "1.0.0",
+  "description": "Merkur Specijal Generator",
+  "main": "index.html",
+  "scripts": {
+    "dev": "netlify dev"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  },
+  "author": "damirmikic",
+  "license": "MIT"
+}
+
