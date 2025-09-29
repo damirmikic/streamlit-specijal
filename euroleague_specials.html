@@ -85,6 +85,31 @@
             color: white;
             border-color: #ef4444;
         }
+        .stat-card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 0.75rem;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+        .stat-value {
+            font-size: 1.125rem;
+            color: #1e293b;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-slate-800">
@@ -115,8 +140,47 @@
                             <option>Učitavanje mečeva...</option>
                         </select>
                     </div>
+                    <div id="team-stats-container" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+                    </div>
+                    <div id="calculation-display" class="mt-4 grid grid-cols-2 gap-4 hidden">
+                        <div>
+                            <label class="text-sm font-medium text-slate-500">Poeni po min. (Domaćin):</label>
+                            <p id="lambda-home-display" class="font-bold text-lg text-blue-600">N/A</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-slate-500">Poeni po min. (Gost):</label>
+                            <p id="lambda-away-display" class="font-bold text-lg text-blue-600">N/A</p>
+                        </div>
+                    </div>
                 </section>
                 
+                <section class="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-lg text-slate-800">Podešavanje Udela Poena</h3>
+                        <div class="flex gap-2">
+                           <button id="apply-suggested-btn" class="action-btn primary !py-1 !px-3 text-xs hidden">Primeni Sugerisane Vrednosti</button>
+                           <button id="reset-sliders-btn" class="action-btn secondary !py-1 !px-3 text-xs">
+                               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-ccw"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                               Resetuj Vrednosti
+                           </button>
+                        </div>
+                    </div>
+                    <div id="shot-distribution-sliders" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="input-group">
+                            <label for="ft-slider" class="flex justify-between">Slobodna Bacanja <span id="ft-value" class="font-bold"></span></label>
+                            <input type="range" id="ft-slider" min="0" max="100" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div class="input-group">
+                            <label for="p2-slider" class="flex justify-between">2 Poena <span id="p2-value" class="font-bold"></span></label>
+                            <input type="range" id="p2-slider" min="0" max="100" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div class="input-group">
+                            <label for="p3-slider" class="flex justify-between">3 Poena <span id="p3-value" class="font-bold"></span></label>
+                            <input type="range" id="p3-slider" min="0" max="100" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+                </section>
+
                 <section class="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
                     <h3 class="font-bold text-lg text-slate-800 mb-4">2. Dodavanje Igara</h3>
                     <div id="betting-form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
@@ -203,16 +267,40 @@
             const bballDownloadCsvBtn = document.getElementById('bball-download-csv-btn');
             const bballPreviewSection = document.getElementById('bball-preview-section');
             const bballPreviewTableBody = document.getElementById('bball-preview-table-body');
-            
+            const calculationDisplay = document.getElementById('calculation-display');
+            const lambdaHomeDisplay = document.getElementById('lambda-home-display');
+            const lambdaAwayDisplay = document.getElementById('lambda-away-display');
+            const teamStatsContainer = document.getElementById('team-stats-container');
+            const applySuggestedBtn = document.getElementById('apply-suggested-btn');
+
+
+            // Sliders for point distribution
+            const ftSlider = document.getElementById('ft-slider');
+            const p2Slider = document.getElementById('p2-slider');
+            const p3Slider = document.getElementById('p3-slider');
+            const ftValue = document.getElementById('ft-value');
+            const p2Value = document.getElementById('p2-value');
+            const p3Value = document.getElementById('p3-value');
+            const allSliders = [ftSlider, p2Slider, p3Slider];
+            const resetSlidersBtn = document.getElementById('reset-sliders-btn');
+
+
             let competitionData = null;
             let generatedBets = [];
-            
+            let tournamentAverageDistribution = { ft: 17, p2: 49, p3: 34 };
+            let suggestedDistribution = null;
+
             const bettingMarkets = [
-                'Ukupno poena',
-                'Ukupno skokova', 
-                'Ukupno asistencija', 
-                'Ukupno 3P',
-                'Igrac postize 20+ poena'
+                'Ukupno skokova', 'Ukupno asistencija', 
+                'Ukupno postignutih 2P', 'Ukupno postignutih 3P', 'Ukupno postignutih sl. bacanja',
+                'Ukupno izgubljenih lopti', '1. min oba tima daju trojku',
+                'Igrac postize 20+ poena',
+                '1. minut oba tima daju kos', 
+                '1. min 3+ poena', 
+                '1. min 4+ poena',
+                '1. min 5+ poena',
+                '1. min - tačno 0 poena', '1. min - tačno 2 poena', '1. min - tačno 3 poena', '1. min - tačno 4 poena',
+                '2m 8+ poena', '2m 10+ poena'
             ];
 
             function populateBettingMarkets() {
@@ -225,7 +313,7 @@
                 });
             }
 
-            async function fetchBasketballApiEvents() {
+            async function fetchEuroleagueApiEvents() {
                 try {
                     const response = await fetch('/api/euroleague-events');
                     if (!response.ok) {
@@ -296,22 +384,20 @@
                 const selectedEvent = competitionData.events[matchIndex];
                 const marketType = betMarketSelect.value;
                 let guestValue = marketType;
-                let domacinValue = selectedEvent.name;
 
-                if (marketType.startsWith('Igrac')) {
+                if (marketType === 'Igrac postize 20+ poena') {
                     const selectedPlayer = playerSelect.value;
                     if (!selectedPlayer) {
                         alert('Molimo Vas izaberite igrača.');
                         return;
                     }
-                    domacinValue = selectedPlayer;
-                    guestValue = marketType.replace('Igrac', '').trim();
+                    guestValue = `${selectedPlayer} - ${marketType}`;
                 }
 
                 const bet = {
                     matchName: competitionData.name,
                     leagueName: marketType,
-                    domacin: domacinValue,
+                    domacin: selectedEvent.name,
                     gost: guestValue,
                     cutoffTime: selectedEvent.cutoffTime,
                     gr: betHandicapInput.value || '',
@@ -325,6 +411,15 @@
                 resetBetForm();
             }
             
+            function updateShotDistributionSliders(p2Percent, p3Percent, ftPercent) {
+                p2Slider.value = p2Percent;
+                p3Slider.value = p3Percent;
+                ftSlider.value = ftPercent;
+
+                p2Value.textContent = `${p2Percent}%`;
+                p3Value.textContent = `${p3Percent}%`;
+                ftValue.textContent = `${ftPercent}%`;
+            }
 
             function renderPreviewTable() {
                 bballPreviewTableBody.innerHTML = '';
@@ -418,6 +513,274 @@
                 document.body.removeChild(link);
             }
 
+            // --- Math & Calculation Helpers ---
+            const factCache = [1];
+            function factorial(n) {
+                if (n < 0 || n > 170) return Infinity;
+                if (factCache[n] !== undefined) return factCache[n];
+                let val = factCache[factCache.length - 1];
+                for (let i = factCache.length; i <= n; i++) {
+                    val *= i;
+                    factCache[i] = val;
+                }
+                return val;
+            }
+
+            function poissonPMF(mu, k) {
+                if(mu < 0 || k < 0) return 0;
+                return (Math.pow(mu, k) * Math.exp(-mu)) / factorial(k);
+            }
+            
+            function poissonCDF(mu, k) {
+                let sum = 0;
+                for (let i = 0; i <= k; i++) {
+                    sum += poissonPMF(mu, i);
+                }
+                return sum;
+            }
+
+            function probOver(mu, k) {
+                return 1 - poissonCDF(mu, k);
+            }
+
+            function applyMargin(odd, margin = 8) {
+                if (!odd || odd <= 1) return odd;
+                const probability = 1 / odd;
+                const marginFactor = 1 + (margin / 100);
+                const newProbability = probability * marginFactor;
+                return 1 / newProbability;
+            }
+
+            function findMainLineData(selections) {
+                if (!selections || selections.length === 0) return { total: 0, overOdd: 0, underOdd: 0 };
+                let minDiff = Infinity;
+                let mainLine = { total: 0, overOdd: 0, underOdd: 0 };
+                
+                const totals = {};
+                selections.forEach(sel => {
+                    const totalMatch = sel.params.match(/total=([\d.]+)/);
+                    if (totalMatch) {
+                        const total = totalMatch[1];
+                        if (!totals[total]) totals[total] = {};
+                        totals[total][sel.outcome] = sel.price;
+                    }
+                });
+
+                for (const total in totals) {
+                    if (totals[total].over && totals[total].under) {
+                        const diff = Math.abs(totals[total].over - totals[total].under);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            mainLine = {
+                                total: parseFloat(total),
+                                overOdd: totals[total].over,
+                                underOdd: totals[total].under
+                            };
+                        }
+                    }
+                }
+                return mainLine;
+            }
+
+            function calculateAndDisplayOdds(marketType) {
+                const matchIndex = bballMatchSelect.value;
+                betOdd1Input.value = '';
+                if (matchIndex === "" || matchIndex === null) {
+                    calculationDisplay.classList.add('hidden');
+                    return;
+                }
+
+                const selectedEvent = competitionData.events[matchIndex];
+                const market1H = selectedEvent.markets?.['basketball.1st_half_team_total'];
+                const marketTotals = selectedEvent.markets?.['basketball.totals'];
+
+                if (!market1H || !marketTotals) {
+                    alert('Podaci za izračunavanje (1st half team total ili totals) nisu dostupni za ovaj meč.');
+                    return;
+                }
+
+                const homeSelections1H = market1H.submarkets['period=1h&period=q1&period=q2&team=home']?.selections;
+                const awaySelections1H = market1H.submarkets['period=1h&period=q1&period=q2&team=away']?.selections;
+                
+                const homeTotal1H = findMainLineData(homeSelections1H).total;
+                const awayTotal1H = findMainLineData(awaySelections1H).total;
+
+                if (homeTotal1H === 0 || awayTotal1H === 0) {
+                    lambdaHomeDisplay.textContent = 'N/A';
+                    lambdaAwayDisplay.textContent = 'N/A';
+                    calculationDisplay.classList.remove('hidden');
+                    return;
+                }
+
+                const lambda_home_1min = (homeTotal1H / 20) * 0.95;
+                const lambda_away_1min = (awayTotal1H / 20) * 0.95;
+                const lambda_home_2min = (homeTotal1H / 20);
+                const lambda_away_2min = (awayTotal1H / 20);
+                
+                lambdaHomeDisplay.textContent = lambda_home_1min.toFixed(4);
+                lambdaAwayDisplay.textContent = lambda_away_1min.toFixed(4);
+                calculationDisplay.classList.remove('hidden');
+
+                const mu_1min = lambda_home_1min + lambda_away_1min;
+                const mu_2min_total = lambda_home_1min + lambda_away_1min + lambda_home_2min + lambda_away_2min;
+                
+                let probability = 0;
+                let rawOdd = 0;
+                let margin = 10;
+
+                switch(marketType) {
+                    case '1. minut oba tima daju kos':
+                        const prob_home_2_plus = 1 - poissonPMF(lambda_home_1min, 0) - poissonPMF(lambda_home_1min, 1);
+                        const prob_away_2_plus = 1 - poissonPMF(lambda_away_1min, 0) - poissonPMF(lambda_away_1min, 1);
+                        probability = prob_home_2_plus * prob_away_2_plus;
+                        rawOdd = 1 / probability;
+                        betOdd1Input.value = (rawOdd * 0.80).toFixed(2);
+                        return; 
+                    case '1. min oba tima daju trojku':
+                        const mainLineTotal = findMainLineData(marketTotals?.submarkets?.['period=ot&period=ft']?.selections).total;
+                        if (mainLineTotal > 0) {
+                            const total3P = (mainLineTotal * 0.34) / 3;
+                            const home3P_game = total3P * (homeTotal1H / (homeTotal1H + awayTotal1H));
+                            const away3P_game = total3P * (awayTotal1H / (homeTotal1H + awayTotal1H));
+                            const lambda_home_3p_min = home3P_game / 40;
+                            const lambda_away_3p_min = away3P_game / 40;
+                            const prob_home_3p = 1 - Math.exp(-lambda_home_3p_min);
+                            const prob_away_3p = 1 - Math.exp(-lambda_away_3p_min);
+                            probability = prob_home_3p * prob_away_3p;
+                        }
+                        break;
+                    case '1. min 3+ poena': probability = probOver(mu_1min, 2); break;
+                    case '1. min 4+ poena': probability = probOver(mu_1min, 3); break;
+                    case '1. min 5+ poena': probability = probOver(mu_1min, 4); break;
+                    case '1. min - tačno 0 poena': probability = poissonPMF(mu_1min, 0); break;
+                    case '1. min - tačno 2 poena': probability = poissonPMF(mu_1min, 2); break;
+                    case '1. min - tačno 3 poena': probability = poissonPMF(mu_1min, 3); break;
+                    case '1. min - tačno 4 poena': probability = poissonPMF(mu_1min, 4); break;
+                    case '2m 8+ poena': probability = probOver(mu_2min_total, 7); break;
+                    case '2m 10+ poena': probability = probOver(mu_2min_total, 9); break;
+                }
+
+                if (probability > 0) {
+                    rawOdd = 1 / probability;
+                    const finalOdd = applyMargin(rawOdd, margin);
+                    betOdd1Input.value = finalOdd.toFixed(2);
+                }
+            }
+
+            function calculateAndSetHandicap(marketType) {
+                const matchIndex = bballMatchSelect.value;
+                betHandicapInput.value = '';
+                betOddOverInput.value = '';
+                betOddUnderInput.value = '';
+                if (matchIndex === "" || matchIndex === null) return;
+
+                const selectedEvent = competitionData.events[matchIndex];
+                const totalsMarket = selectedEvent.markets?.['basketball.totals']?.submarkets?.['period=ot&period=ft']?.selections;
+                const mainLineData = findMainLineData(totalsMarket);
+
+                if (mainLineData.total === 0) {
+                    alert('Glavna granica za ukupan broj poena nije dostupna za ovaj meč.');
+                    return;
+                }
+
+                const p2Percent = parseInt(p2Slider.value, 10) / 100;
+                const p3Percent = parseInt(p3Slider.value, 10) / 100;
+                const ftPercent = parseInt(ftSlider.value, 10) / 100;
+
+                let lambda = 0;
+                switch(marketType) {
+                    case 'Ukupno postignutih 2P':
+                        lambda = (mainLineData.total * p2Percent) / 2;
+                        break;
+                    case 'Ukupno postignutih 3P':
+                        lambda = (mainLineData.total * p3Percent) / 3;
+                        break;
+                    case 'Ukupno postignutih sl. bacanja':
+                        lambda = (mainLineData.total * ftPercent) / 1;
+                        break;
+                }
+                
+                const calculatedHandicap = Math.floor(lambda) + 0.5;
+                betHandicapInput.value = calculatedHandicap.toFixed(1);
+
+                const prob_over = probOver(lambda, Math.floor(lambda));
+                const prob_under = 1 - prob_over;
+
+                const raw_odd_over = 1 / prob_over;
+                const raw_odd_under = 1 / prob_under;
+
+                betOddOverInput.value = applyMargin(raw_odd_over).toFixed(2);
+                betOddUnderInput.value = applyMargin(raw_odd_under).toFixed(2);
+            }
+            
+            function handleSliderUpdate(changedSlider) {
+                const values = {
+                    ft: parseInt(ftSlider.value, 10),
+                    p2: parseInt(p2Slider.value, 10),
+                    p3: parseInt(p3Slider.value, 10)
+                };
+
+                const sliders = {
+                    ft: ftSlider,
+                    p2: p2Slider,
+                    p3: p3Slider
+                };
+
+                let changedKey = null;
+                if (changedSlider === ftSlider) changedKey = 'ft';
+                if (changedSlider === p2Slider) changedKey = 'p2';
+                if (changedSlider === p3Slider) changedKey = 'p3';
+
+                const remainder = 100 - values[changedKey];
+                const otherKeys = Object.keys(sliders).filter(k => k !== changedKey);
+                
+                const otherSlider1 = sliders[otherKeys[0]];
+                const otherSlider2 = sliders[otherKeys[1]];
+                
+                let oldVal1 = values[otherKeys[0]];
+                let oldVal2 = values[otherKeys[1]];
+                
+                const otherValuesSum = oldVal1 + oldVal2;
+                
+                let newVal1, newVal2;
+
+                if (otherValuesSum === 0) {
+                    newVal1 = remainder / 2;
+                    newVal2 = remainder / 2;
+                } else {
+                    const ratio1 = oldVal1 / otherValuesSum;
+                    newVal1 = remainder * ratio1;
+                    newVal2 = remainder - newVal1;
+                }
+
+                otherSlider1.value = Math.round(newVal1);
+                otherSlider2.value = Math.round(newVal2);
+                
+                let finalSum = Math.round(newVal1) + Math.round(newVal2) + values[changedKey];
+                if (finalSum !== 100) {
+                    let diff = 100 - finalSum;
+                    otherSlider1.value = parseInt(otherSlider1.value) + diff;
+                }
+
+                ftValue.textContent = `${ftSlider.value}%`;
+                p2Value.textContent = `${p2Slider.value}%`;
+                p3Value.textContent = `${p3Slider.value}%`;
+
+                const currentMarket = betMarketSelect.value;
+                const autoCalcHandicapMarkets = ['Ukupno postignutih 2P', 'Ukupno postignutih 3P', 'Ukupno postignutih sl. bacanja'];
+                if (autoCalcHandicapMarkets.includes(currentMarket)) {
+                    calculateAndSetHandicap(currentMarket);
+                }
+            }
+
+             function resetSlidersToDefaults() {
+                updateShotDistributionSliders(tournamentAverageDistribution.p2, tournamentAverageDistribution.p3, tournamentAverageDistribution.ft);
+            }
+
+            allSliders.forEach(slider => {
+                slider.addEventListener('input', () => handleSliderUpdate(slider));
+            });
+            
             function resetBetForm() {
                 betMarketSelect.selectedIndex = 0;
                 handleMarketSelectionChange();
@@ -425,34 +788,62 @@
 
             function handleMarketSelectionChange() {
                  const marketType = betMarketSelect.value;
-                
+                 const autoCalcOddMarkets = [
+                    '1. minut oba tima daju kos', 
+                    '1. min oba tima daju trojku',
+                    '1. min 3+ poena', '1. min 4+ poena', '1. min 5+ poena',
+                    '1. min - tačno 0 poena', '1. min - tačno 2 poena', '1. min - tačno 3 poena', '1. min - tačno 4 poena',
+                    '2m 8+ poena', '2m 10+ poena'
+                 ];
+                 const autoCalcHandicapMarkets = ['Ukupno postignutih 2P', 'Ukupno postignutih 3P', 'Ukupno postignutih sl. bacanja'];
+
                 betOdd1Input.readOnly = false;
                 playerSelectionGroup.classList.add('hidden');
+                calculationDisplay.classList.add('hidden');
                 
                 betHandicapInput.value = '';
                 betOdd1Input.value = '';
                 betOddUnderInput.value = '';
                 betOddOverInput.value = '';
 
-                if (marketType.startsWith('Igrac')) {
+
+                if (marketType === 'Igrac postize 20+ poena') {
                     playerSelectionGroup.classList.remove('hidden');
                     populatePlayerDropdown(bballMatchSelect.value);
-                } 
+                } else if (autoCalcOddMarkets.includes(marketType)) {
+                    calculateAndDisplayOdds(marketType);
+                    betOdd1Input.readOnly = true;
+                } else if (autoCalcHandicapMarkets.includes(marketType)) {
+                    calculateAndSetHandicap(marketType);
+                }
             }
             
             bballMatchSelect.addEventListener('change', (e) => {
+                const selectedEvent = competitionData.events[e.target.value];
+                if (!selectedEvent) {
+                    teamStatsContainer.classList.add('hidden');
+                    applySuggestedBtn.classList.add('hidden');
+                    resetSlidersToDefaults();
+                }
                 handleMarketSelectionChange();
             });
             
+            applySuggestedBtn.addEventListener('click', () => {
+                if (suggestedDistribution) {
+                    updateShotDistributionSliders(suggestedDistribution.p2, suggestedDistribution.p3, suggestedDistribution.ft);
+                }
+            });
 
             betMarketSelect.addEventListener('change', handleMarketSelectionChange);
             addBetBtn.addEventListener('click', addBetToGenerator);
             resetBetBtn.addEventListener('click', resetBetForm);
             bballDownloadCsvBtn.addEventListener('click', downloadBballCsv);
+            resetSlidersBtn.addEventListener('click', resetSlidersToDefaults);
 
             async function init() {
+                resetSlidersToDefaults();
                 populateBettingMarkets();
-                fetchBasketballApiEvents();
+                fetchEuroleagueApiEvents();
             }
 
             init();
