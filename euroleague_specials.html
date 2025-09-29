@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Euroleague Specijala</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #475569;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background-color: #f9fafb;
+            color: #1f2937;
+        }
+        .input-group input:disabled, .input-group input:read-only {
+             background-color: #e5e7eb;
+             cursor: not-allowed;
+        }
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+        }
+        .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            padding: 0.75rem 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            transition: all 0.2s ease-in-out;
+            transform: translateY(0);
+        }
+        .action-btn:hover {
+             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+             transform: translateY(-2px);
+        }
+        .action-btn.primary {
+            background-image: linear-gradient(to right, #3b82f6, #2563eb);
+            color: white;
+        }
+        .action-btn.secondary {
+            background-color: #4b5563;
+            color: white;
+        }
+        .action-btn.success {
+            background-image: linear-gradient(to right, #22c55e, #16a34a);
+            color: white;
+        }
+        .remove-preview-row {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            border-radius: 9999px;
+            width: 1.5rem;
+            height: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .remove-preview-row:hover {
+            background-color: #ef4444;
+            color: white;
+            border-color: #ef4444;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-slate-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="max-w-4xl mx-auto bg-white rounded-xl border border-slate-200 shadow-sm">
+            <header class="p-6 sm:p-8 flex items-center justify-between border-b border-slate-200">
+                <div class="flex items-center gap-4">
+                    <div class="bg-blue-100 text-blue-600 p-3 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-basketball"><circle cx="12" cy="12" r="10"/><path d="M4.2 14.2c.627.442 1.346.734 2.14.868"/><path d="M17.66 2.34c.2.63.34 1.3.34 2.01"/><path d="M21.66 14.25c-.134.8-.426 1.519-.868 2.146"/><path d="M1.95 12c0-.71.14-1.38.34-2.01"/><path d="M9.8 2.8c-.442.627-.734 1.346-.868 2.14"/><path d="M14.25 21.66c-.8.134-1.519.426-2.146.868"/><path d="M2.34 6.34a10.02 10.02 0 0 0-1.99 4.21"/><path d="M12 22.05c.71 0 1.38-.14 2.01-.34"/><path d="M3.4 17.66c-.63-.2-1.3-.34-2.01-.34"/><path d="M2.8 9.8a10.02 10.02 0 0 0 4.21-1.99"/><path d="M22.05 12c0 .71-.14 1.38-.34 2.01"/><path d="M17.66 20.6a10.02 10.02 0 0 0 1.99-4.21"/></svg>
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-slate-800">Generator Euroleague Specijala</h1>
+                </div>
+                 <div class="flex items-center gap-4">
+                    <a href="/index.html" class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg shadow-sm transition-all text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-dribbble"><circle cx="12" cy="12" r="10"/><path d="M19.13 5.09C15.22 9.14 10 10.44 2.25 10.94"/><path d="M21.75 12.84c-5.76-1.4-11.64-2.2-17.62-2.96"/><path d="M16.25 18.02c-3.55-3.84-6.7-8.44-7.75-12.82"/></svg>
+                        Idi na Fudbal
+                    </a>
+                </div>
+            </header>
+            
+            <div class="p-6 sm:p-8">
+                <section class="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4">1. Izbor Meča</h3>
+                    <div class="input-group">
+                        <label for="bball-match-select">Izaberi Meč</label>
+                        <select id="bball-match-select">
+                            <option>Učitavanje mečeva...</option>
+                        </select>
+                    </div>
+                </section>
+                
+                <section class="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4">2. Dodavanje Igara</h3>
+                    <div id="betting-form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div class="input-group md:col-span-2">
+                            <label for="bet-market-select">Vrsta igre</label>
+                            <select id="bet-market-select"></select>
+                        </div>
+
+                        <div id="player-selection-group" class="input-group md:col-span-2 hidden">
+                            <label for="player-select">Izaberi Igrača</label>
+                            <select id="player-select"></select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="bet-handicap">Granica (GR)</label>
+                            <input type="number" id="bet-handicap" step="0.5" placeholder="npr. 67.5">
+                        </div>
+                         <div class="input-group">
+                            <label for="bet-odd-1">Kvota (1)</label>
+                            <input type="number" id="bet-odd-1" step="0.01" placeholder="npr. 1.85">
+                        </div>
+                        <div class="input-group">
+                            <label for="bet-odd-under">Kvota Manje (U)</label>
+                            <input type="number" id="bet-odd-under" step="0.01" placeholder="npr. 1.85">
+                        </div>
+                        <div class="input-group">
+                            <label for="bet-odd-over">Kvota Više (O)</label>
+                            <input type="number" id="bet-odd-over" step="0.01" placeholder="npr. 1.85">
+                        </div>
+                        <div class="md:col-span-4 flex items-end gap-4">
+                             <button id="add-bet-btn" class="w-full action-btn secondary">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-circle"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                                Dodaj Igru
+                            </button>
+                            <button id="reset-bet-btn" class="w-full action-btn primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-cw"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 1 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path></svg>
+                                Poništi Unos
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                 <div id="bball-preview-section" class="hidden">
+                    <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-6 text-center">3. Pregled Generisanih Igara</h2>
+                    <div class="overflow-x-auto rounded-lg border border-slate-200">
+                        <table class="min-w-full">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Domacin (Naziv Meča)</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Gost (Vrsta Igre)</th>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">GR</th>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">U</th>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">O</th>
+                                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">1</th>
+                                    <th scope="col" class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Ukloni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bball-preview-table-body" class="bg-white"></tbody>
+                        </table>
+                    </div>
+                    <div class="flex justify-center mt-8">
+                        <button id="bball-download-csv-btn" class="w-full md:w-auto action-btn success">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-cloud"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="M12 12v9"></path><path d="m8 17 4 4 4-4"></path></svg>
+                            Preuzmi CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bballMatchSelect = document.getElementById('bball-match-select');
+            const betMarketSelect = document.getElementById('bet-market-select');
+            const playerSelectionGroup = document.getElementById('player-selection-group');
+            const playerSelect = document.getElementById('player-select');
+            const betHandicapInput = document.getElementById('bet-handicap');
+            const betOdd1Input = document.getElementById('bet-odd-1');
+            const betOddUnderInput = document.getElementById('bet-odd-under');
+            const betOddOverInput = document.getElementById('bet-odd-over');
+            const addBetBtn = document.getElementById('add-bet-btn');
+            const resetBetBtn = document.getElementById('reset-bet-btn');
+            const bballDownloadCsvBtn = document.getElementById('bball-download-csv-btn');
+            const bballPreviewSection = document.getElementById('bball-preview-section');
+            const bballPreviewTableBody = document.getElementById('bball-preview-table-body');
+            
+            let competitionData = null;
+            let generatedBets = [];
+            
+            const bettingMarkets = [
+                'Ukupno poena',
+                'Ukupno skokova', 
+                'Ukupno asistencija', 
+                'Ukupno 3P',
+                'Igrac postize 20+ poena'
+            ];
+
+            function populateBettingMarkets() {
+                betMarketSelect.innerHTML = '';
+                bettingMarkets.forEach(market => {
+                    const option = document.createElement('option');
+                    option.value = market;
+                    option.textContent = market;
+                    betMarketSelect.appendChild(option);
+                });
+            }
+
+            async function fetchBasketballApiEvents() {
+                try {
+                    const response = await fetch('/api/euroleague-events');
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`API greška: ${errorData.error || response.statusText}`);
+                    }
+                    
+                    competitionData = await response.json();
+                    
+                    if (competitionData.events && competitionData.events.length > 0) {
+                        bballMatchSelect.innerHTML = '<option value="">-- Izaberi Meč --</option>';
+                        competitionData.events.forEach((event, index) => {
+                            if (event.home && event.home.name) {
+                                const option = document.createElement('option');
+                                option.value = index;
+                                option.textContent = event.name;
+                                bballMatchSelect.appendChild(option);
+                            }
+                        });
+                    } else {
+                        bballMatchSelect.innerHTML = '<option value="">Nema dostupnih mečeva</option>';
+                    }
+                } catch (error) {
+                    console.error('Greška pri učitavanju košarkaških mečeva:', error);
+                    bballMatchSelect.innerHTML = `<option value="">Greška: ${error.message}</option>`;
+                }
+            }
+            
+            function populatePlayerDropdown(matchIndex) {
+                playerSelect.innerHTML = '<option value="">-- Izaberite igrača --</option>';
+                if (matchIndex === "" || matchIndex === null) {
+                    return;
+                }
+
+                const selectedEvent = competitionData.events[matchIndex];
+                const players = selectedEvent.players;
+                const playerPointsMarket = selectedEvent.markets?.['basketball.player_points']?.submarkets?.['period=ot&period=ft']?.selections;
+
+                if (players) {
+                    Object.values(players).forEach(player => {
+                        let optionText = player.name;
+                        
+                        if (playerPointsMarket) {
+                            const playerMarket = playerPointsMarket.find(p => p.params.includes(player.name.toLowerCase().replace(/ /g, '-')));
+                            if (playerMarket) {
+                                const totalMatch = playerMarket.params.match(/total=([\d.]+)/);
+                                if (totalMatch && totalMatch[1]) {
+                                    optionText += ` (${totalMatch[1]})`;
+                                }
+                            }
+                        }
+                        
+                        const option = document.createElement('option');
+                        option.value = player.name;
+                        option.textContent = optionText;
+                        playerSelect.appendChild(option);
+                    });
+                }
+            }
+
+            function addBetToGenerator() {
+                const matchIndex = bballMatchSelect.value;
+                if (matchIndex === "" || matchIndex === null) {
+                    alert('Molimo Vas izaberite meč.');
+                    return;
+                }
+
+                const selectedEvent = competitionData.events[matchIndex];
+                const marketType = betMarketSelect.value;
+                let guestValue = marketType;
+                let domacinValue = selectedEvent.name;
+
+                if (marketType.startsWith('Igrac')) {
+                    const selectedPlayer = playerSelect.value;
+                    if (!selectedPlayer) {
+                        alert('Molimo Vas izaberite igrača.');
+                        return;
+                    }
+                    domacinValue = selectedPlayer;
+                    guestValue = marketType.replace('Igrac', '').trim();
+                }
+
+                const bet = {
+                    matchName: competitionData.name,
+                    leagueName: marketType,
+                    domacin: domacinValue,
+                    gost: guestValue,
+                    cutoffTime: selectedEvent.cutoffTime,
+                    gr: betHandicapInput.value || '',
+                    u: betOddUnderInput.value || '',
+                    o: betOddOverInput.value || '',
+                    '1': betOdd1Input.value || ''
+                };
+
+                generatedBets.push(bet);
+                renderPreviewTable();
+                resetBetForm();
+            }
+            
+
+            function renderPreviewTable() {
+                bballPreviewTableBody.innerHTML = '';
+                if (generatedBets.length > 0) {
+                    bballPreviewSection.classList.remove('hidden');
+                } else {
+                    bballPreviewSection.classList.add('hidden');
+                }
+
+                generatedBets.forEach((bet, index) => {
+                    const row = bballPreviewTableBody.insertRow();
+                    row.className = 'bg-white even:bg-slate-50';
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-800">${bet.domacin}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${bet.gost}</td>
+                        <td class="px-2 py-1"><input type="number" step="0.5" class="w-full text-center bg-transparent rounded-md p-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" value="${bet.gr}" data-index="${index}" data-field="gr"></td>
+                        <td class="px-2 py-1"><input type="number" step="0.01" class="w-full text-center bg-transparent rounded-md p-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" value="${bet.u}" data-index="${index}" data-field="u"></td>
+                        <td class="px-2 py-1"><input type="number" step="0.01" class="w-full text-center bg-transparent rounded-md p-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" value="${bet.o}" data-index="${index}" data-field="o"></td>
+                        <td class="px-2 py-1"><input type="number" step="0.01" class="w-full text-center bg-transparent rounded-md p-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" value="${bet['1']}" data-index="${index}" data-field="1"></td>
+                        <td class="px-4 py-4 text-center">
+                            <button type="button" class="remove-preview-row" data-index="${index}" title="Ukloni ovu igru">&times;</button>
+                        </td>
+                    `;
+                });
+            }
+            
+            bballPreviewTableBody.addEventListener('input', function(e) {
+                if (e.target.tagName === 'INPUT') {
+                    const index = parseInt(e.target.dataset.index, 10);
+                    const field = e.target.dataset.field;
+                    const value = e.target.value;
+                    
+                    if (generatedBets[index]) {
+                        generatedBets[index][field] = value;
+                    }
+                }
+            });
+
+            bballPreviewTableBody.addEventListener('click', function(e) {
+                if(e.target.classList.contains('remove-preview-row')) {
+                    const indexToRemove = parseInt(e.target.dataset.index, 10);
+                    generatedBets.splice(indexToRemove, 1);
+                    renderPreviewTable();
+                }
+            });
+
+            function downloadBballCsv() {
+                if (generatedBets.length === 0) {
+                    alert('Nema dodatih igara za preuzimanje.');
+                    return;
+                }
+                
+                const header = "Datum,Vreme,Sifra,Domacin,Gost,1,X,2,GR,U,O,Yes,No\n";
+                let csvContent = header;
+
+                csvContent += `MATCH_NAME:${generatedBets[0].matchName},,,,,,,,,,,,\n`;
+
+                const groupedBets = generatedBets.reduce((acc, bet) => {
+                    if (!acc[bet.leagueName]) {
+                        acc[bet.leagueName] = [];
+                    }
+                    acc[bet.leagueName].push(bet);
+                    return acc;
+                }, {});
+
+                for (const leagueName in groupedBets) {
+                    csvContent += `LEAGUE_NAME:${leagueName},,,,,,,,,,,,\n`;
+                    
+                    groupedBets[leagueName].forEach(bet => {
+                        const kickoff = new Date(bet.cutoffTime);
+                        const date = `${kickoff.getDate().toString().padStart(2, '0')}.${(kickoff.getMonth() + 1).toString().padStart(2, '0')}.${kickoff.getFullYear()}`;
+                        const time = `${kickoff.getHours().toString().padStart(2, '0')}:${kickoff.getMinutes().toString().padStart(2, '0')}`;
+
+                        const rowData = [
+                            date, time, '',
+                            `"${bet.domacin.replace(/"/g, '""')}"`,
+                            `"${bet.gost.replace(/"/g, '""')}"`,
+                            bet['1'], '', '', bet.gr, bet.u, bet.o, '', ''
+                        ];
+                        csvContent += rowData.join(',') + '\n';
+                    });
+                }
+                
+                const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const fileName = `${generatedBets[0].matchName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_specials.csv`;
+                link.href = URL.createObjectURL(blob);
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            function resetBetForm() {
+                betMarketSelect.selectedIndex = 0;
+                handleMarketSelectionChange();
+            }
+
+            function handleMarketSelectionChange() {
+                 const marketType = betMarketSelect.value;
+                
+                betOdd1Input.readOnly = false;
+                playerSelectionGroup.classList.add('hidden');
+                
+                betHandicapInput.value = '';
+                betOdd1Input.value = '';
+                betOddUnderInput.value = '';
+                betOddOverInput.value = '';
+
+                if (marketType.startsWith('Igrac')) {
+                    playerSelectionGroup.classList.remove('hidden');
+                    populatePlayerDropdown(bballMatchSelect.value);
+                } 
+            }
+            
+            bballMatchSelect.addEventListener('change', (e) => {
+                handleMarketSelectionChange();
+            });
+            
+
+            betMarketSelect.addEventListener('change', handleMarketSelectionChange);
+            addBetBtn.addEventListener('click', addBetToGenerator);
+            resetBetBtn.addEventListener('click', resetBetForm);
+            bballDownloadCsvBtn.addEventListener('click', downloadBballCsv);
+
+            async function init() {
+                populateBettingMarkets();
+                fetchBasketballApiEvents();
+            }
+
+            init();
+        });
+    </script>
+</body>
+</html>
+
