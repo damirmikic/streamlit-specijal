@@ -1,0 +1,8 @@
+[build]
+  functions = "netlify/functions"
+  publish = "/"
+
+[[redirects]]
+  from = "/api/euroleague-events"
+  to = "/.netlify/functions/fetch-euroleague-events"
+  status = 200
