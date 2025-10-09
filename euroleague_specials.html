@@ -94,7 +94,7 @@
         }
         .stat-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
             gap: 0.75rem;
         }
         .stat-item {
@@ -536,6 +536,8 @@
                     rebounds: ((teamStats.offRebounds + teamStats.defRebounds) / teamStats.games).toFixed(1),
                     assists: (teamStats.assists / teamStats.games).toFixed(1),
                     turnovers: (teamStats.turnovers / teamStats.games).toFixed(1),
+                    madeFt: (teamStats.madeFt / teamStats.games).toFixed(1),
+                    madeTwo: (teamStats.madeTwo / teamStats.games).toFixed(1),
                     made3P: (teamStats.madeThree / teamStats.games).toFixed(1)
                 };
 
@@ -556,10 +558,12 @@
                         <div class="stat-grid mb-4">
                             <div class="stat-item"><div class="stat-label">Poeni (Za)</div><div class="stat-value text-green-600">${stats.pointsFor}</div></div>
                             <div class="stat-item"><div class="stat-label">Poeni (Protiv)</div><div class="stat-value text-red-600">${stats.pointsAgainst}</div></div>
+                            <div class="stat-item"><div class="stat-label">Pogođena Sl. Bacanja</div><div class="stat-value">${stats.madeFt}</div></div>
+                            <div class="stat-item"><div class="stat-label">Pogođene 2P</div><div class="stat-value">${stats.madeTwo}</div></div>
+                            <div class="stat-item"><div class="stat-label">Pogođene 3P</div><div class="stat-value">${stats.made3P}</div></div>
                             <div class="stat-item"><div class="stat-label">Skokovi</div><div class="stat-value">${stats.rebounds}</div></div>
                             <div class="stat-item"><div class="stat-label">Asistencije</div><div class="stat-value">${stats.assists}</div></div>
                             <div class="stat-item"><div class="stat-label">Izg. Lopte</div><div class="stat-value">${stats.turnovers}</div></div>
-                            <div class="stat-item"><div class="stat-label">Pogođene 3P</div><div class="stat-value">${stats.made3P}</div></div>
                         </div>
 
                         <h5 class="font-semibold text-center text-sm mt-4 mb-2 text-slate-600 border-b pb-2">Prosek Protivnika (protiv ovog tima)</h5>
