@@ -539,16 +539,37 @@
                     made3P: (teamStats.madeThree / teamStats.games).toFixed(1)
                 };
 
+                const opponentStats = {
+                    rebounds: ((teamStats.oppOffRebounds + teamStats.oppDefRebounds) / teamStats.games).toFixed(1),
+                    assists: (teamStats.oppAssists / teamStats.games).toFixed(1),
+                    turnovers: (teamStats.oppTurnovers / teamStats.games).toFixed(1),
+                    madeFt: (teamStats.oppMadeFt / teamStats.games).toFixed(1),
+                    madeTwo: (teamStats.oppMadeTwo / teamStats.games).toFixed(1),
+                    made3P: (teamStats.oppMadeThree / teamStats.games).toFixed(1)
+                };
+
                 return `
                     <div class="stat-card">
                         <h4 class="font-bold text-center mb-3 text-slate-700">${teamStats.teamName}</h4>
-                        <div class="stat-grid">
+                        
+                        <h5 class="font-semibold text-center text-sm mb-2 text-slate-600 border-b pb-2">Prosek Tima</h5>
+                        <div class="stat-grid mb-4">
                             <div class="stat-item"><div class="stat-label">Poeni (Za)</div><div class="stat-value text-green-600">${stats.pointsFor}</div></div>
                             <div class="stat-item"><div class="stat-label">Poeni (Protiv)</div><div class="stat-value text-red-600">${stats.pointsAgainst}</div></div>
                             <div class="stat-item"><div class="stat-label">Skokovi</div><div class="stat-value">${stats.rebounds}</div></div>
                             <div class="stat-item"><div class="stat-label">Asistencije</div><div class="stat-value">${stats.assists}</div></div>
                             <div class="stat-item"><div class="stat-label">Izg. Lopte</div><div class="stat-value">${stats.turnovers}</div></div>
                             <div class="stat-item"><div class="stat-label">Pogođene 3P</div><div class="stat-value">${stats.made3P}</div></div>
+                        </div>
+
+                        <h5 class="font-semibold text-center text-sm mt-4 mb-2 text-slate-600 border-b pb-2">Prosek Protivnika (protiv ovog tima)</h5>
+                        <div class="stat-grid">
+                            <div class="stat-item"><div class="stat-label">Pogođena Sl. Bacanja</div><div class="stat-value">${opponentStats.madeFt}</div></div>
+                            <div class="stat-item"><div class="stat-label">Pogođene 2P</div><div class="stat-value">${opponentStats.madeTwo}</div></div>
+                            <div class="stat-item"><div class="stat-label">Pogođene 3P</div><div class="stat-value">${opponentStats.made3P}</div></div>
+                            <div class="stat-item"><div class="stat-label">Skokovi</div><div class="stat-value">${opponentStats.rebounds}</div></div>
+                            <div class="stat-item"><div class="stat-label">Asistencije</div><div class="stat-value">${opponentStats.assists}</div></div>
+                            <div class="stat-item"><div class="stat-label">Izg. Lopte</div><div class="stat-value">${opponentStats.turnovers}</div></div>
                         </div>
                     </div>
                 `;
@@ -958,3 +979,4 @@
     </script>
 </body>
 </html>
+
