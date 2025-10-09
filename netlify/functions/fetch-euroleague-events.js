@@ -8,7 +8,10 @@ exports.handler = async function(event, context) {
     };
   }
 
-  const API_ENDPOINT = `https://sports-api.cloudbet.com/pub/v2/odds/competitions/basketball-international-euroleague?from=1759131849&to=1759563849&players=true&limit=100`;
+  const nowInSeconds = Math.floor(Date.now() / 1000);
+  const sevenDaysFromNowInSeconds = nowInSeconds + (7 * 24 * 60 * 60);
+
+  const API_ENDPOINT = `https://sports-api.cloudbet.com/pub/v2/odds/competitions/basketball-international-euroleague?from=${nowInSeconds}&to=${sevenDaysFromNowInSeconds}&players=true&limit=100`;
 
   try {
     const response = await fetch(API_ENDPOINT, {
