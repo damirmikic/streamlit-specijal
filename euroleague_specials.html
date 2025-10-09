@@ -142,7 +142,7 @@
                     </div>
                     <div id="team-stats-container" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
                     </div>
-                    <div id="calculation-display" class="mt-4 grid grid-cols-2 gap-4 hidden">
+                    <div id="calculation-display" class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4 hidden">
                         <div>
                             <label class="text-sm font-medium text-slate-500">Poeni po min. (Domaćin):</label>
                             <p id="lambda-home-display" class="font-bold text-lg text-blue-600">N/A</p>
@@ -150,6 +150,10 @@
                         <div>
                             <label class="text-sm font-medium text-slate-500">Poeni po min. (Gost):</label>
                             <p id="lambda-away-display" class="font-bold text-lg text-blue-600">N/A</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-slate-500">Očekivani Poeni (API):</label>
+                            <p id="expected-points-display" class="font-bold text-lg text-green-600">N/A</p>
                         </div>
                     </div>
                 </section>
@@ -272,6 +276,7 @@
             const lambdaAwayDisplay = document.getElementById('lambda-away-display');
             const teamStatsContainer = document.getElementById('team-stats-container');
             const applySuggestedBtn = document.getElementById('apply-suggested-btn');
+            const expectedPointsDisplay = document.getElementById('expected-points-display');
 
             const ftSlider = document.getElementById('ft-slider');
             const p2Slider = document.getElementById('p2-slider');
@@ -287,6 +292,15 @@
             let generatedBets = [];
             let tournamentAverageDistribution = { ft: 17, p2: 49, p3: 34 };
             let suggestedDistribution = null;
+
+            const teamNameMapping = {
+                "Crvena Zvezda Meridianbet": "Crvena Zvezda",
+                "Maccabi Playtika Tel Aviv": "Maccabi Tel Aviv",
+                "Virtus Segafredo Bologna": "Virtus Bologna",
+                "EA7 Emporio Armani Milan": "Olimpia Milano",
+                "FC Bayern Munich": "Bayern Munich",
+                "LDLC ASVEL Villeurbanne": "ASVEL"
+            };
 
             const bettingMarkets = [
                 'Ukupno skokova', 'Ukupno asistencija', 
@@ -931,9 +945,12 @@
             
             bballMatchSelect.addEventListener('change', (e) => {
                 const selectedIndex = e.target.value;
+                
                 if (selectedIndex === "") {
                     teamStatsContainer.classList.add('hidden');
                     applySuggestedBtn.classList.add('hidden');
+                    calculationDisplay.classList.add('hidden');
+                    expectedPointsDisplay.textContent = 'N/A';
                     resetSlidersToDefaults();
                     return;
                 }
@@ -948,13 +965,25 @@
                 const homeTeamName = selectedEvent.home.name;
                 const awayTeamName = selectedEvent.away.name;
 
-                const findTeamStats = (name) => euroleagueTeamStats.find(team => name.toLowerCase().includes(team.shortName.toLowerCase()) || team.teamName.toLowerCase().includes(name.toLowerCase()));
+                const findTeamStats = (name) => {
+                    const mappedName = teamNameMapping[name] || name;
+                    return euroleagueTeamStats.find(team => 
+                        mappedName.toLowerCase().includes(team.shortName.toLowerCase()) || 
+                        team.teamName.toLowerCase().includes(mappedName.toLowerCase())
+                    );
+                };
 
                 const homeTeamStats = findTeamStats(homeTeamName);
                 const awayTeamStats = findTeamStats(awayTeamName);
 
                 displayTeamStats(homeTeamStats, awayTeamStats);
                 calculateAndSuggestDistribution(homeTeamStats, awayTeamStats);
+
+                // Display expected points
+                const totalsMarket = selectedEvent.markets?.['basketball.totals']?.submarkets?.['period=ot&period=ft']?.selections;
+                const mainLineData = findMainLineData(totalsMarket);
+                expectedPointsDisplay.textContent = mainLineData.total > 0 ? mainLineData.total.toFixed(1) : 'N/A';
+
 
                 handleMarketSelectionChange();
             });
