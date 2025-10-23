@@ -33,8 +33,7 @@
 
             <div id="specialsContent" class="hidden">
                 <div id="specialsList" class="space-y-3">
-                    <!-- Calculated specials will be inserted here -->
-                </div>
+                    </div>
                 
                  <div class="mt-8 pt-6 border-t border-gray-200">
                     <div class="flex justify-between items-center mb-4">
@@ -44,8 +43,7 @@
                         </button>
                     </div>
                      <div id="csvPreviewContent" class="space-y-6">
-                         <!-- Preview content will be generated here -->
-                     </div>
+                         </div>
                      <div class="mt-6 text-right">
                          <button id="generateCsvButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
                              Generiši CSV za Meč Specijal
@@ -54,8 +52,7 @@
                 </div>
             </div>
              <div id="errorContainer" class="hidden text-center text-red-500 p-4 bg-red-50 rounded-lg">
-                <!-- Error messages will be shown here -->
-            </div>
+                </div>
         </main>
     </div>
     
@@ -92,6 +89,38 @@
                 }
                 return oddsStr;
             }
+            
+            function translatePrepackLabel(label) {
+                // Primeri: "Lamine Yamal To Score", "Player's shots... Over 1.5", "To Get a Card", "Full Time FC Barcelona"
+
+                // Prvo, opštiji prevodi koji sadrže druge
+                label = label.replace("Player's shots on target (Settled using Opta data)", "Šutevi u okvir gola");
+                label = label.replace("Player's shots (Settled using Opta data)", "Ukupno šuteva");
+                label = label.replace("Player's fouls conceded (Settled using Opta data)", "Načinjenih faulova");
+                label = label.replace("To Score Or Assist (Settled using Opta data)", "Gol ili asistencija");
+                label = label.replace("To score or get an assist", "Gol ili asistencija");
+                label = label.replace("To Score or Assist", "Gol ili asistencija");
+                label = label.replace("To Assist (Settled using Opta data)", "Asistencija");
+                label = label.replace("To score at least 2 goals", "Daje 2+ gola");
+                label = label.replace("To score at least 3 goals", "Daje 3+ gola (Het-trik)");
+                label = label.replace("To score from a header", "Daje gol glavom");
+                label = label.replace("To score from outside the penalty box", "Daje gol izvan šesnaesterca");
+
+                // Zatim specifični, kraći
+                label = label.replace("To Score", "Daje gol");
+                label = label.replace("To Get a Card", "Dobija karton");
+                label = label.replace("To Get a Red Card", "Dobija crveni karton");
+                
+                // Ishodi
+                label = label.replace("Over", "Preko");
+                label = label.replace("Under", "Ispod");
+                
+                // Timovi
+                label = label.replace(/Full Time (.+)/, "$1 pobeđuje");
+
+                return label.trim();
+            }
+
 
             function logError(message) {
                 loader.style.display = 'none';
@@ -265,6 +294,8 @@
                 ];
                 
                 specialsList.innerHTML = '';
+                
+                // Prvo, prikaži izračunate specijale
                 specialsToCalculate.forEach(special => {
                     let finalOdd = null;
                     if (special.components) {
@@ -302,6 +333,50 @@
                     `;
                     specialsList.appendChild(div);
                 });
+                
+                // NOVO: Dodaj PrePacks
+                if (fetchedData.prePacks && fetchedData.prePacks.length > 0) {
+                    
+                    const separator = document.createElement('div');
+                    separator.className = 'pt-4 mt-4 border-t border-gray-200';
+                    separator.innerHTML = '<h3 class="text-lg font-semibold text-gray-700 mb-2">Pre-Pack Specijali (Direktno iz API-ja)</h3>';
+                    specialsList.appendChild(separator);
+
+                    fetchedData.prePacks.forEach(pack => {
+                        pack.prePackSelections.forEach((selection, index) => {
+                            const odds = (selection.combinations[0].odds.decimal / 1000);
+                            if (odds < 1.1 || odds > 40) return; // Preskoči kvote van opsega
+
+                            const translatedLabels = selection.label.map(translatePrepackLabel);
+                            const marketName = translatedLabels.join(' I ');
+                            const finalOdd = parseFloat(roundOdds(String(odds)));
+                            
+                            const oddValue = (finalOdd !== null && !isNaN(finalOdd)) ? finalOdd.toFixed(2) : '';
+                            const inputId = `odds-input-prepack-${selection.selectionId || index}`; // Jedinstven ID
+
+                            const div = document.createElement('div');
+                            div.className = 'flex justify-between items-center p-3 border rounded-lg bg-indigo-50'; // Drugačija pozadina
+                            div.innerHTML = `
+                                <span class="text-gray-800 flex-1 text-sm">${marketName}</span>
+                                <div class="flex items-center gap-3 w-auto md:w-1/3">
+                                    <input 
+                                        type="text" 
+                                        value="${oddValue}" 
+                                        class="odds-input w-24 p-1 border rounded text-center font-medium" 
+                                        placeholder="Unesi kvotu"
+                                        id="${inputId}"
+                                    >
+                                    <button 
+                                        data-name="${marketName}" 
+                                        data-input-id="${inputId}" 
+                                        class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600"
+                                    >+</button>
+                                </div>
+                            `;
+                            specialsList.appendChild(div);
+                        });
+                    });
+                }
                 
                 loader.style.display = 'none';
                 specialsContent.classList.remove('hidden');
