@@ -91,34 +91,45 @@
             }
             
             function translatePrepackLabel(label) {
-                // Primeri: "Lamine Yamal To Score", "Player's shots... Over 1.5", "To Get a Card", "Full Time FC Barcelona"
-
+                let originalLabel = label;
+                
                 // Prvo, opštiji prevodi koji sadrže druge
-                label = label.replace("Player's shots on target (Settled using Opta data)", "Šutevi u okvir gola");
-                label = label.replace("Player's shots (Settled using Opta data)", "Ukupno šuteva");
-                label = label.replace("Player's fouls conceded (Settled using Opta data)", "Načinjenih faulova");
-                label = label.replace("To Score Or Assist (Settled using Opta data)", "Gol ili asistencija");
-                label = label.replace("To score or get an assist", "Gol ili asistencija");
-                label = label.replace("To Score or Assist", "Gol ili asistencija");
-                label = label.replace("To Assist (Settled using Opta data)", "Asistencija");
-                label = label.replace("To score at least 2 goals", "Daje 2+ gola");
-                label = label.replace("To score at least 3 goals", "Daje 3+ gola (Het-trik)");
-                label = label.replace("To score from a header", "Daje gol glavom");
-                label = label.replace("To score from outside the penalty box", "Daje gol izvan šesnaesterca");
+                label = label.replace(/Player's shots on target \(Settled using Opta data\)/gi, "Šutevi u okvir gola");
+                label = label.replace(/Player's shots \(Settled using Opta data\)/gi, "Ukupno šuteva");
+                label = label.replace(/Player's fouls conceded \(Settled using Opta data\)/gi, "Načinjenih faulova");
+                label = label.replace(/To Score Or Assist \(Settled using Opta data\)/gi, "Gol ili asistencija");
+                label = label.replace(/To score or get an assist/gi, "Gol ili asistencija");
+                label = label.replace(/To Score or Assist/gi, "Gol ili asistencija");
+                label = label.replace(/To Assist \(Settled using Opta data\)/gi, "Asistencija");
+                label = label.replace(/To score at least 2 goals/gi, "Daje 2+ gola");
+                label = label.replace(/To score at least 3 goals/gi, "Daje 3+ gola (Het-trik)");
+                label = label.replace(/To score from a header/gi, "Daje gol glavom");
+                label = label.replace(/To score from outside the penalty box/gi, "Daje gol izvan šesnaesterca");
+
+                // Specifični prevodi
+                label = label.replace(/Yes Both Teams To Score/gi, "GG");
+                label = label.replace(/No Both Teams To Score/gi, "NG");
+                label = label.replace(/Both Teams To Score/gi, "GG"); // Fallback
+                label = label.replace(/Total Corners/gi, "ukupno kornera");
+                label = label.replace(/Total Cards/gi, "ukupno kartona");
+                label = label.replace(/Total Goals/gi, "ukupno golova");
+                label = label.replace(/Most Corners/gi, "više kornera");
+                label = label.replace(/Most Cards/gi, "više kartona");
 
                 // Zatim specifični, kraći
-                label = label.replace("To Score", "Daje gol");
-                label = label.replace("To Get a Card", "Dobija karton");
-                label = label.replace("To Get a Red Card", "Dobija crveni karton");
+                label = label.replace(/To Score/gi, "Daje gol");
+                label = label.replace(/To Get a Card/gi, "Dobija karton");
+                label = label.replace(/To Get a Red Card/gi, "Dobija crveni karton");
                 
                 // Ishodi
-                label = label.replace("Over", "Preko");
-                label = label.replace("Under", "Ispod");
+                label = label.replace(/Over/gi, "više");
+                label = label.replace(/Under/gi, "manje");
                 
                 // Timovi
-                label = label.replace(/Full Time (.+)/, "$1 pobeđuje");
+                label = label.replace(/Full Time (.+)/gi, "$1 pobeđuje");
 
-                return label.trim();
+                // Ako nijedan prevod nije primenjen, vrati original (malo verovatno)
+                return label.trim() === originalLabel.trim() ? label : label.trim();
             }
 
 
@@ -191,22 +202,52 @@
                 const marketNameLower = marketNameIdentifier.toLowerCase();
                 const labelLower = labelIdentifier.toLowerCase();
                 
+                // Mape za prevod na osnovu korisničkih zahteva
+                const marketTranslations = {
+                    "total goals": "ukupno golova",
+                    "total corners": "ukupno kornera",
+                    "total cards": "ukupno kartona",
+                    "both teams to score": "gg",
+                    "penalty kick awarded": "penalty kick awarded",
+                    "red card given": "red card given",
+                    "total shots on target (settled using opta data)": "total shots on target (settled using opta data)"
+                };
+                
+                const labelTranslations = {
+                    "over": "više",
+                    "under": "manje",
+                    "yes": "yes",
+                    "no": "no"
+                };
+
+                const translatedMarket = marketTranslations[marketNameLower] || marketNameLower;
+                const translatedLabel = labelTranslations[labelLower] || labelLower;
+
                 const exactMatch = allMarkets.find(m => 
+                    m.marketName.toLowerCase() === translatedMarket &&
+                    m.line === line &&
+                    m.label.toLowerCase() === translatedLabel
+                );
+                if (exactMatch) return exactMatch.odds;
+                
+                // Fallback za sirove engleske nazive
+                const rawMatch = allMarkets.find(m => 
                     m.marketName.toLowerCase() === marketNameLower &&
                     m.line === line &&
                     m.label.toLowerCase() === labelLower
                 );
-                if (exactMatch) return exactMatch.odds;
-                
+                if (rawMatch) return rawMatch.odds;
+
+
                 const looserMatch = allMarkets.find(m => 
-                    m.marketName.toLowerCase().includes(marketNameLower) &&
+                    (m.marketName.toLowerCase().includes(translatedMarket) || m.marketName.toLowerCase().includes(marketNameLower)) &&
                     !m.marketName.toLowerCase().includes('1st half') &&
                     !m.marketName.toLowerCase().includes('2nd half') &&
                     !m.marketName.toLowerCase().includes('by team') &&
                     !m.marketName.toLowerCase().includes(`by ${fetchedData.events[0].participants[0].name.toLowerCase()}`) &&
                     !m.marketName.toLowerCase().includes(`by ${fetchedData.events[0].participants[1].name.toLowerCase()}`) &&
                     m.line === line &&
-                    m.label.toLowerCase() === labelLower
+                    (m.label.toLowerCase() === translatedLabel || m.label.toLowerCase() === labelLower)
                 );
 
                 return looserMatch ? looserMatch.odds : null;
@@ -392,13 +433,26 @@
                 csvPreviewContent.innerHTML = '';
                 specialsForPreview.forEach((special, index) => {
                      const div = document.createElement('div');
-                     div.className = 'flex justify-between items-center p-2 border-b';
+                     div.className = 'grid grid-cols-[1fr,auto,auto] gap-4 items-center p-2 border-b';
                      div.innerHTML = `
-                        <span>${special.name}</span>
-                        <div class="flex items-center">
-                            <input type="text" value="${special.odds}" class="w-20 p-1 border rounded" data-index="${index}">
-                            <button class="remove-special-btn ml-4 text-red-500 font-bold" data-index="${index}">&times;</button>
-                        </div>
+                        <input 
+                            type="text" 
+                            value="${special.name}" 
+                            class="w-full p-1 border rounded" 
+                            data-index="${index}"
+                            data-field="name"
+                        >
+                        <input 
+                            type="text" 
+                            value="${special.odds}" 
+                            class="w-20 p-1 border rounded text-center" 
+                            data-index="${index}"
+                            data-field="odds"
+                        >
+                        <button 
+                            class="remove-special-btn ml-4 text-red-500 font-bold" 
+                            data-index="${index}"
+                        >&times;</button>
                      `;
                      csvPreviewContent.appendChild(div);
                 });
@@ -459,7 +513,8 @@
              csvPreviewContent.addEventListener('input', e => {
                 if (e.target.tagName === 'INPUT') {
                     const index = parseInt(e.target.dataset.index, 10);
-                    specialsForPreview[index].odds = e.target.value;
+                    const field = e.target.dataset.field; // "name" or "odds"
+                    specialsForPreview[index][field] = e.target.value;
                 }
             });
             
@@ -478,6 +533,7 @@
                 csvRows.push(`LEAGUE_NAME:${eventInfo.name}`);
                 
                 specialsForPreview.forEach(special => {
+                    // Koristi ažurirani 'special.name' i 'special.odds' iz niza
                     const row = [datum, vreme, '', special.name, 'DA', special.odds, '', '', '', '', '', '', ''];
                     csvRows.push(row.join(','));
                 });
