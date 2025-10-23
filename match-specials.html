@@ -100,16 +100,24 @@
                      roundedOdd = Math.round(odd * 100) / 100;
                 }
                  roundedOdd = Math.max(1.01, roundedOdd);
-                 return roundedOdd.toFixed(2);
+                 return roundedOdd.toFixed(2); // Vraća string
             }
 
              function formatLineValue(lineValue, type = 'over') {
+                 // Vraća string formatiran kao "X+" ili "0-Y" ili originalnu vrednost ako nije .5
                  if (lineValue === null || lineValue === undefined) return '';
                  const lineNum = parseFloat(lineValue);
                  if (isNaN(lineNum)) return '';
+
                  if (lineNum % 1 === 0.5) {
-                     return type === 'over' ? `${Math.ceil(lineNum)}+` : `0-${Math.floor(lineNum)}`;
+                     if (type === 'over') {
+                         return `${Math.ceil(lineNum)}+`;
+                     } else { // type === 'under'
+                         return `0-${Math.floor(lineNum)}`;
+                     }
                  }
+                 // Ako nije .5, vrati samo broj (možda dodati '+' za cele brojeve over?)
+                 // Za sada vraćamo samo broj za cele linije
                  return lineNum.toString();
             }
 
@@ -150,8 +158,7 @@
             function showToast(message, type = 'success') {
                 const toastContainer = document.getElementById('toast-container');
                 const toast = document.createElement('div');
-                let bgColor = 'bg-green-500';
-                if (type === 'error') bgColor = 'bg-red-500'; if (type === 'info') bgColor = 'bg-blue-500';
+                let bgColor = 'bg-green-500'; if (type === 'error') bgColor = 'bg-red-500'; if (type === 'info') bgColor = 'bg-blue-500';
                 toast.className = `${bgColor} text-white text-sm font-bold px-4 py-3 rounded-lg shadow-md animate-pulse`;
                 toast.textContent = message; toastContainer.appendChild(toast);
                 setTimeout(() => { toast.remove(); }, 2500);
@@ -214,11 +221,11 @@
                     { nameTemplate: "{corners} kornera i {cards} kartona i GG", lineCorners: 8.5, lineCards: 3.5, components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Cards", 3.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
                     { nameTemplate: "{corners} kornera i GG", lineCorners: 7.5, components: [() => getOdd("Total Corners", 7.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
                     { nameTemplate: "Penal i crveni karton", components: [() => getOdd("Penalty Kick awarded", null, "yes"), () => getOdd("Red Card given", null, "yes")], multiplier: 0.8 },
-                    { nameTemplate: "Penal ili crveni karton", calculation: () => { const oddsPen = getOdd("Penalty Kick awarded", null, "yes"); const oddsRed = getOdd("Red Card given", null, "yes"); if (!oddsPen || !oddsRed) return null; const pPen = 1 / oddsPen; const pRed = 1 / oddsRed; const pPenAndRed = (pPen * pRed) * 1.2; const pOr = pPen + pRed - pPenAndRed; return (pOr > 0 && pOr <=1) ? 1 / pOr : null; }},
-                    { nameTemplate: "Izmena postize gol", calculation: () => { const lambda_sub = lam * 0.15; const prob = 1 - Math.exp(-lambda_sub); return prob > 0 ? 1 / prob : null; }},
-                    { nameTemplate: "Gol glavom na mecu", calculation: () => { const lambda_header = lam * 0.17; const prob = 1 - Math.exp(-lambda_header); return prob > 0 ? 1 / prob : null; }},
-                    { nameTemplate: "Gol izvan 16m", calculation: () => { const lambda_outside = lam * 0.12; const prob = 1 - Math.exp(-lambda_outside); return prob > 0 ? 1 / prob : null; }},
-                    { nameTemplate: "Gol iz slobodnog udarca", calculation: () => { const lambda_fk = lam * 0.05; const prob = 1 - Math.exp(-lambda_fk); return prob > 0 ? 1 / prob : null; }},
+                    { nameTemplate: "Penal ili crveni karton", calculation: () => { const oP=getOdd("Penalty Kick awarded",null,"yes"), oR=getOdd("Red Card given",null,"yes"); if(!oP||!oR)return null; const pP=1/oP, pR=1/oR, pPR=(pP*pR)*1.2, pOr=pP+pR-pPR; return (pOr>0&&pOr<=1)?1/pOr:null; }}, // Calculation functions inline
+                    { nameTemplate: "Izmena postize gol", calculation: () => { const lS=lam*0.15, p=1-Math.exp(-lS); return p>0?1/p:null; }},
+                    { nameTemplate: "Gol glavom na mecu", calculation: () => { const lH=lam*0.17, p=1-Math.exp(-lH); return p>0?1/p:null; }},
+                    { nameTemplate: "Gol izvan 16m", calculation: () => { const lO=lam*0.12, p=1-Math.exp(-lO); return p>0?1/p:null; }},
+                    { nameTemplate: "Gol iz slobodnog udarca", calculation: () => { const lF=lam*0.05, p=1-Math.exp(-lF); return p>0?1/p:null; }},
                 ];
 
                 specialsList.innerHTML = '';
@@ -242,9 +249,8 @@
                         } else if (specialDef.calculation) { calculatedOdd = specialDef.calculation(); }
                     } catch (calcError) { console.error(`Greška: ${finalName}: ${calcError}`); calculatedOdd = null; }
 
-                    // Round the final calculated odd before display
-                    const finalOddForDisplayString = roundOdds(calculatedOdd); // This returns string "X.XX" or ""
-                    const oddValue = finalOddForDisplayString; // Keep it as string
+                    const finalOddForDisplayString = roundOdds(calculatedOdd); // Returns string or ""
+                    const oddValue = finalOddForDisplayString;
                     const inputId = `odds-input-${specialDef.nameTemplate.replace(/[^a-zA-Z0-9-{}]/g, '-')}`;
 
                     const div = document.createElement('div');
@@ -265,7 +271,7 @@
                         pack.prePackSelections.forEach((selection, index) => {
                             const odds = (selection.combinations[0].odds.decimal / 1000); if (odds < 1.01 || odds > 40) return;
                             const translatedLabels = selection.label.map(translatePrepackLabel); const marketName = translatedLabels.join(' I ');
-                            const finalOddForDisplayString = roundOdds(String(odds)); // Round before display
+                            const finalOddForDisplayString = roundOdds(String(odds));
                             const oddValue = finalOddForDisplayString;
                             const inputId = `odds-input-prepack-${selection.selectionId || index}`;
                             const div = document.createElement('div'); div.setAttribute('data-special-type', 'prepack'); div.className = 'flex justify-between items-center p-3 border rounded-lg bg-indigo-50';
@@ -307,13 +313,10 @@
                     const oddsValueFromInput = oddsInput.value; // Read the exact displayed value (string)
 
                     if (!oddsValueFromInput || isNaN(parseFloat(oddsValueFromInput)) || parseFloat(oddsValueFromInput) < 1.01) {
-                        showToast("Kvota u polju nije validna (min 1.01).", "error");
-                        return;
+                        showToast("Kvota u polju nije validna (min 1.01).", "error"); return;
                     }
-
                     if (!specialsForPreview.some(s => s.name === name)) {
-                         // Store the exact string value from the input
-                        specialsForPreview.push({ name, odds: oddsValueFromInput });
+                        specialsForPreview.push({ name, odds: oddsValueFromInput }); // Store the exact string
                         renderPreview(); showToast("Market dodat u CSV");
                     } else { showToast("Market je već dodat.", "info"); }
                 }
@@ -328,10 +331,8 @@
                      const { name, inputId } = btn.dataset;
                      const oddsInput = document.getElementById(inputId);
                      const oddsValueFromInput = oddsInput.value; // Read the exact displayed value (string)
-
                      if (oddsValueFromInput && !isNaN(parseFloat(oddsValueFromInput)) && parseFloat(oddsValueFromInput) >= 1.01 && !specialsForPreview.some(s => s.name === name)) {
-                          // Store the exact string value from the input
-                         specialsForPreview.push({ name, odds: oddsValueFromInput });
+                         specialsForPreview.push({ name, odds: oddsValueFromInput }); // Store the exact string
                          addedCount++;
                      }
                  });
@@ -361,12 +362,9 @@
                  csvRows.push('MATCH_NAME:Xtip Specijal'); csvRows.push(`LEAGUE_NAME:${eventInfo.name || 'Nepoznata Liga'}`);
 
                  specialsForPreview.forEach(special => {
-                     // Parse and validate just before adding to CSV
-                     const finalOdds = parseFloat(special.odds); // Parse the stored/edited string
+                     const finalOdds = parseFloat(special.odds);
                      if (!isNaN(finalOdds) && finalOdds >= 1.01) {
-                         // Format to 2 decimals for CSV consistency
-                         const row = [datum, vreme, '', special.name, 'DA', finalOdds.toFixed(2), '', '', '', '', '', '', ''];
-                         csvRows.push(row.join(','));
+                         const row = [datum, vreme, '', special.name, 'DA', finalOdds.toFixed(2), '', '', '', '', '', '', '']; csvRows.push(row.join(','));
                      } else {
                          console.warn(`Preskačem red za "${special.name}" zbog nevalidne kvote: ${special.odds}`);
                          showToast(`Kvota za "${special.name}" (${special.odds}) nije validna (min 1.01) i biće preskočena.`, "error");
