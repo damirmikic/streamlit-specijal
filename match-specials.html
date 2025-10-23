@@ -38,9 +38,14 @@
                  <div class="mt-8 pt-6 border-t border-gray-200">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-2xl font-bold text-indigo-800">Pregled Specijala za CSV</h2>
-                        <button id="addAllSpecialsButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm">
-                            Dodaj sve markete u CSV
-                        </button>
+                        <div class="flex space-x-2">
+                            <button id="addCalculatedSpecialsButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg text-xs">
+                                Dodaj Kalkulisane
+                            </button>
+                             <button id="addPrepackSpecialsButton" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-3 rounded-lg text-xs">
+                                Dodaj PrePacks
+                            </button>
+                        </div>
                     </div>
                      <div id="csvPreviewContent" class="space-y-6">
                          </div>
@@ -68,7 +73,8 @@
             const specialsList = document.getElementById('specialsList');
             const csvPreviewContent = document.getElementById('csvPreviewContent');
             const generateCsvButton = document.getElementById('generateCsvButton');
-            const addAllSpecialsButton = document.getElementById('addAllSpecialsButton');
+            const addCalculatedSpecialsButton = document.getElementById('addCalculatedSpecialsButton');
+            const addPrepackSpecialsButton = document.getElementById('addPrepackSpecialsButton');
             
             let allMarkets = [];
             let fetchedData = null;
@@ -82,12 +88,33 @@
 
             function roundOdds(oddsStr) {
                 const odd = parseFloat(oddsStr);
+                 if (isNaN(odd)) return ''; // Handle cases where input is not a number
+
+                let roundedOdd;
                 if (odd > 5) {
-                    return (Math.round(odd / 0.1) * 0.1).toFixed(2);
+                    roundedOdd = Math.round(odd / 0.1) * 0.1;
                 } else if (odd > 3.5) {
-                    return (Math.round(odd / 0.05) * 0.05).toFixed(2);
+                     roundedOdd = Math.round(odd / 0.05) * 0.05;
+                } else {
+                     roundedOdd = odd; // Keep original precision if below 3.5
                 }
-                return oddsStr;
+                
+                 // Ensure minimum odd is 1.01
+                 roundedOdd = Math.max(1.01, roundedOdd); 
+                 
+                 return roundedOdd.toFixed(2);
+            }
+            
+             function formatLine(lineValue) {
+                if (lineValue === null || lineValue === undefined) return '';
+                const lineNum = parseFloat(lineValue);
+                 if (isNaN(lineNum)) return ''; 
+                 
+                 // Provera da li je .5
+                 if (lineNum % 1 === 0.5) {
+                     return Math.ceil(lineNum); // Zaokruži na sledeći ceo broj
+                 }
+                 return lineNum.toString(); // Vrati kao string ako nije .5
             }
             
             function translatePrepackLabel(label) {
@@ -121,15 +148,32 @@
                 label = label.replace(/To Get a Card/gi, "Dobija karton");
                 label = label.replace(/To Get a Red Card/gi, "Dobija crveni karton");
                 
-                // Ishodi
-                label = label.replace(/Over/gi, "više");
-                label = label.replace(/Under/gi, "manje");
+                // *** IZMENJENA LOGIKA ZA OVER/UNDER ***
+                 label = label.replace(/Over\s+([\d.]+)/gi, (match, p1) => {
+                    const lineNum = parseFloat(p1);
+                    // Provera za .5 linije -> X+1 +
+                    if (!isNaN(lineNum) && lineNum % 1 === 0.5) {
+                        return `${Math.ceil(lineNum)}+`;
+                    }
+                    // Fallback za ostale Over slučajeve (ako postoje)
+                    return `više ${p1}`; 
+                });
+                label = label.replace(/Under\s+([\d.]+)/gi, (match, p1) => {
+                    const lineNum = parseFloat(p1);
+                     // Provera za .5 linije -> 0-X
+                    if (!isNaN(lineNum) && lineNum % 1 === 0.5) {
+                        return `0-${Math.floor(lineNum)}`;
+                    }
+                     // Fallback za ostale Under slučajeve (ako postoje)
+                    return `manje ${p1}`; 
+                });
+                // *** KRAJ IZMENJENE LOGIKE ***
                 
                 // Timovi
                 label = label.replace(/Full Time (.+)/gi, "$1 pobeđuje");
 
-                // Ako nijedan prevod nije primenjen, vrati original (malo verovatno)
-                return label.trim() === originalLabel.trim() ? label : label.trim();
+                // Ukloni duple razmake koji mogu nastati
+                return label.replace(/\s+/g, ' ').trim();
             }
 
 
@@ -201,49 +245,52 @@
              function getOdd(marketNameIdentifier, line, labelIdentifier) {
                 const marketNameLower = marketNameIdentifier.toLowerCase();
                 const labelLower = labelIdentifier.toLowerCase();
-                
+                 
                 // Mape za prevod na osnovu korisničkih zahteva
                 const marketTranslations = {
                     "total goals": "ukupno golova",
                     "total corners": "ukupno kornera",
                     "total cards": "ukupno kartona",
-                    "both teams to score": "gg",
+                    "both teams to score": "gg", // Mapira se na GG
                     "penalty kick awarded": "penalty kick awarded",
                     "red card given": "red card given",
                     "total shots on target (settled using opta data)": "total shots on target (settled using opta data)"
                 };
                 
                 const labelTranslations = {
-                    "over": "više",
-                    "under": "manje",
+                    "over": "više", // Mapira se na više
+                    "under": "manje", // Mapira se na manje
                     "yes": "yes",
                     "no": "no"
                 };
 
+                // Prioritet dajemo prevedenim nazivima ako postoje
                 const translatedMarket = marketTranslations[marketNameLower] || marketNameLower;
                 const translatedLabel = labelTranslations[labelLower] || labelLower;
 
-                const exactMatch = allMarkets.find(m => 
-                    m.marketName.toLowerCase() === translatedMarket &&
-                    m.line === line &&
-                    m.label.toLowerCase() === translatedLabel
-                );
-                if (exactMatch) return exactMatch.odds;
-                
-                // Fallback za sirove engleske nazive
-                const rawMatch = allMarkets.find(m => 
+                // Pokušaj da nađeš koristeći prevedene nazive
+                 const exactMatchTranslated = allMarkets.find(m => 
+                     m.marketName.toLowerCase() === translatedMarket &&
+                     m.line === line &&
+                     m.label.toLowerCase() === translatedLabel
+                 );
+                 if (exactMatchTranslated) return exactMatchTranslated.odds;
+
+                // Ako nije nađeno, pokušaj sa originalnim engleskim nazivima
+                const exactMatchRaw = allMarkets.find(m => 
                     m.marketName.toLowerCase() === marketNameLower &&
                     m.line === line &&
                     m.label.toLowerCase() === labelLower
                 );
-                if (rawMatch) return rawMatch.odds;
-
-
+                if (exactMatchRaw) return exactMatchRaw.odds;
+                
+                // Looser match sa proverom za prevod i original
                 const looserMatch = allMarkets.find(m => 
                     (m.marketName.toLowerCase().includes(translatedMarket) || m.marketName.toLowerCase().includes(marketNameLower)) &&
                     !m.marketName.toLowerCase().includes('1st half') &&
                     !m.marketName.toLowerCase().includes('2nd half') &&
                     !m.marketName.toLowerCase().includes('by team') &&
+                     fetchedData.events[0]?.participants?.length === 2 && // Proveri da li postoje participants pre pristupa
                     !m.marketName.toLowerCase().includes(`by ${fetchedData.events[0].participants[0].name.toLowerCase()}`) &&
                     !m.marketName.toLowerCase().includes(`by ${fetchedData.events[0].participants[1].name.toLowerCase()}`) &&
                     m.line === line &&
@@ -255,22 +302,61 @@
 
             // 3. Newton-Raphson method to find lambda (expected goals)
             function lambda_from_p_over(p_over, tol = 1e-8, maxiter = 50) {
+                 if (p_over <= 0) return 0.1; // Handle edge case: probability cannot be zero or negative
+                 if (p_over >= 1) return 20; // Handle edge case: probability cannot be 1 or more (arbitrarily large lambda)
+
                 let lam = 2.0; // Initial guess
                 for (let i = 0; i < maxiter; i++) {
                     const exp_neg_lam = Math.exp(-lam);
+                     // Calculate f(lambda) = 1 - P(X <= 2) - p_over
                     const f = 1 - exp_neg_lam * (1 + lam + (lam * lam) / 2) - p_over;
+                     // Calculate f'(lambda) = P(X = 2) = e^(-lambda) * lambda^2 / 2
                     const fp = exp_neg_lam * ((lam * lam) / 2);
-                    if (Math.abs(fp) < 1e-12) {
-                        break;
-                    }
+                     
+                     // Avoid division by zero or very small numbers
+                    if (Math.abs(fp) < 1e-12) { 
+                         // If derivative is near zero, try a small perturbation or stop
+                         lam += (f > 0 ? -tol : tol); // Nudge lambda slightly
+                         if (lam <= 0) lam = tol;
+                         continue; // Try again with nudged lambda
+                         // break; // Alternative: Stop iteration if derivative is too small
+                     }
                     const step = f / fp;
                     lam -= step;
+                     // Ensure lambda stays positive
+                     if (lam <= 0) {
+                         lam = tol; // Reset to a small positive value if it goes non-positive
+                         // break; // Option: stop if lambda becomes non-positive
+                     }
                     if (Math.abs(step) < tol) {
                         break;
                     }
                 }
-                return lam;
+                 // Ensure final lambda is positive
+                 return lam > 0 ? lam : 0.1;
             }
+            
+            // Function to rename specials based on lines (using 0-X and Y+ format)
+            function renameSpecialWithLine(baseName, line, type = 'over') {
+                 if (line === null || line === undefined) return baseName;
+                 const lineNum = parseFloat(line);
+                 if (isNaN(lineNum)) return baseName;
+
+                 // Only change for .5 lines
+                 if (lineNum % 1 === 0.5) { 
+                     if (type === 'over') {
+                         const boundary = Math.ceil(lineNum);
+                         // Replace first number found (e.g., 9.5+, 9+) with boundary+
+                         return baseName.replace(/(\d+(\.\d+)?\+?)/, `${boundary}+`); 
+                     } else { // type === 'under'
+                         const boundary = Math.floor(lineNum);
+                          // Replace first number found (e.g., 2.5-, 3-) with 0-boundary
+                         return baseName.replace(/(\d+(\.\d+)?\-?)/, `0-${boundary}`);
+                     }
+                 }
+                 return baseName; // Vrati originalni naziv ako nije .5 linija
+            }
+
             
             // 4. Define and Calculate Specials
             function calculateAndDisplaySpecials() {
@@ -282,100 +368,149 @@
                     const p_over_raw = 1.0 / q_over_2_5;
                     const p_under_raw = 1.0 / q_under_2_5;
                     const margin = p_over_raw + p_under_raw;
-                    const p_over = p_over_raw / margin; // Normalize to remove margin
-                    lam = lambda_from_p_over(p_over);
+                     if (margin > 0 && p_over_raw <= margin) { // Ensure valid probabilities
+                        const p_over = p_over_raw / margin; // Normalize to remove margin
+                        lam = lambda_from_p_over(p_over);
+                    } else {
+                         logStatus(`Invalid odds for Total Goals 2.5: Over=${q_over_2_5}, Under=${q_under_2_5}. Using default lambda.`, true);
+                     }
+                } else {
+                    logStatus("Could not find Total Goals 2.5 odds. Using default lambda.", true);
                 }
 
-                 const specialsToCalculate = [
-                    { name: "10+ kornera i GG", components: [() => getOdd("Total Corners", 9.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
-                    { name: "10+ suteva u okvir i 3+ golova", components: [() => getOdd("Total Shots on Target (Settled using Opta data)", 9.5, "over"), () => getOdd("Total Goals", 2.5, "over")] },
-                    { name: "11+ suteva u okvir i GG", components: [() => getOdd("Total Shots on Target (Settled using Opta data)", 10.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
-                    { name: "15+ kornera i 3+ golova", components: [() => getOdd("Total Corners", 14.5, "over"), () => getOdd("Total Goals", 2.5, "over")] },
-                    { name: "15+ kornera i GG", components: [() => getOdd("Total Corners", 14.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
-                    { name: "10+ kornera i 3+ golova", components: [() => getOdd("Total Corners", 9.5, "over"), () => getOdd("Total Goals", 2.5, "over")] },
-                    { name: "9+ kornera i 3+ golova i 4+ kartona", components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Goals", 2.5, "over"), () => getOdd("Total Cards", 3.5, "over")] },
-                    { name: "3+ golova i 4+ kartona", components: [() => getOdd("Total Goals", 2.5, "over"), () => getOdd("Total Cards", 3.5, "over")] },
-                    { name: "3+ golova i 8+ kornera", components: [() => getOdd("Total Goals", 2.5, "over"), () => getOdd("Total Corners", 7.5, "over")] },
-                    { name: "9+ suteva u okvir i GG", components: [() => getOdd("Total Shots on Target (Settled using Opta data)", 8.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
-                    { name: "12+ kornera i GG", components: [() => getOdd("Total Corners", 11.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
-                    { name: "9+ kornera i 3+ kartona i GG", components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Cards", 2.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
-                    { name: "9+ kornera i 4+ kartona i GG", components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Cards", 3.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
-                    { name: "8+ kornera i GG", components: [() => getOdd("Total Corners", 7.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
-                    { name: "Penal i crveni karton", components: [() => getOdd("Penalty Kick awarded", null, "yes"), () => getOdd("Red Card given", null, "yes")], multiplier: 0.8 },
-                    { name: "Penal ili crveni karton", calculation: () => {
+                 // Original names might now be slightly different due to renaming logic later
+                 let specialsToCalculate = [
+                    { originalName: "ukupno kornera 9.5+ i GG", lineCorners: 9.5, lineGoals: null, components: [() => getOdd("Total Corners", 9.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] , reduceOdds: true },
+                    { originalName: "ukupno šuteva u okvir 9.5+ i ukupno golova 2.5+", lineShots: 9.5, lineGoals: 2.5, components: [() => getOdd("Total Shots on Target (Settled using Opta data)", 9.5, "over"), () => getOdd("Total Goals", 2.5, "over")] },
+                    { originalName: "ukupno šuteva u okvir 10.5+ i GG", lineShots: 10.5, lineGoals: null, components: [() => getOdd("Total Shots on Target (Settled using Opta data)", 10.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { originalName: "ukupno kornera 14.5+ i ukupno golova 2.5+", lineCorners: 14.5, lineGoals: 2.5, components: [() => getOdd("Total Corners", 14.5, "over"), () => getOdd("Total Goals", 2.5, "over")] },
+                    { originalName: "ukupno kornera 14.5+ i GG", lineCorners: 14.5, lineGoals: null, components: [() => getOdd("Total Corners", 14.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { originalName: "ukupno kornera 9.5+ i ukupno golova 2.5+", lineCorners: 9.5, lineGoals: 2.5, components: [() => getOdd("Total Corners", 9.5, "over"), () => getOdd("Total Goals", 2.5, "over")], reduceOdds: true },
+                    { originalName: "ukupno kornera 8.5+ i ukupno golova 2.5+ i ukupno kartona 3.5+", lineCorners: 8.5, lineGoals: 2.5, lineCards: 3.5, components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Goals", 2.5, "over"), () => getOdd("Total Cards", 3.5, "over")] },
+                    { originalName: "ukupno golova 2.5+ i ukupno kartona 3.5+", lineGoals: 2.5, lineCards: 3.5, components: [() => getOdd("Total Goals", 2.5, "over"), () => getOdd("Total Cards", 3.5, "over")] },
+                    { originalName: "ukupno golova 2.5+ i ukupno kornera 7.5+", lineGoals: 2.5, lineCorners: 7.5, components: [() => getOdd("Total Goals", 2.5, "over"), () => getOdd("Total Corners", 7.5, "over")] },
+                    { originalName: "ukupno šuteva u okvir 8.5+ i GG", lineShots: 8.5, lineGoals: null, components: [() => getOdd("Total Shots on Target (Settled using Opta data)", 8.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { originalName: "ukupno kornera 11.5+ i GG", lineCorners: 11.5, lineGoals: null, components: [() => getOdd("Total Corners", 11.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { originalName: "ukupno kornera 8.5+ i ukupno kartona 2.5+ i GG", lineCorners: 8.5, lineCards: 2.5, lineGoals: null, components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Cards", 2.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { originalName: "ukupno kornera 8.5+ i ukupno kartona 3.5+ i GG", lineCorners: 8.5, lineCards: 3.5, lineGoals: null, components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Cards", 3.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { originalName: "ukupno kornera 7.5+ i GG", lineCorners: 7.5, lineGoals: null, components: [() => getOdd("Total Corners", 7.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
+                    { originalName: "Penal i crveni karton", components: [() => getOdd("Penalty Kick awarded", null, "yes"), () => getOdd("Red Card given", null, "yes")], multiplier: 0.8 },
+                    { originalName: "Penal ili crveni karton", calculation: () => { 
                         const oddsPen = getOdd("Penalty Kick awarded", null, "yes");
                         const oddsRed = getOdd("Red Card given", null, "yes");
                         if (!oddsPen || !oddsRed) return null;
                         const pPen = 1 / oddsPen;
                         const pRed = 1 / oddsRed;
-                        const pPenAndRed = 1 / (oddsPen * oddsRed * 0.8);
+                        const pPenAndRed = (pPen * pRed) * 1.2; // Adjusted intersection probability
                         const pOr = pPen + pRed - pPenAndRed;
-                        return 1 / pOr;
-                    }},
-                    { name: "Izmena postize gol", calculation: () => {
+                        return (pOr > 0 && pOr <=1) ? 1 / pOr : null; 
+                     }},
+                    { originalName: "Izmena postize gol", calculation: () => { 
                         const lambda_sub = lam * 0.15;
                         const prob = 1 - Math.exp(-lambda_sub);
                         return prob > 0 ? 1 / prob : null;
                     }},
-                    { name: "Gol glavom na mecu", calculation: () => {
+                    { originalName: "Gol glavom na mecu", calculation: () => { 
                         const lambda_header = lam * 0.17;
                         const prob = 1 - Math.exp(-lambda_header);
-                        return prob > 0 ? 1 / prob : null;
+                         return prob > 0 ? 1 / prob : null;
                     }},
-                    { name: "Gol izvan 16m", calculation: () => {
-                        const lambda_outside = lam * 0.12;
+                    { originalName: "Gol izvan 16m", calculation: () => {
+                         const lambda_outside = lam * 0.12;
                         const prob = 1 - Math.exp(-lambda_outside);
-                        return prob > 0 ? 1 / prob : null;
+                         return prob > 0 ? 1 / prob : null;
                     }},
-                    { name: "Gol iz slobodnog udarca", calculation: () => {
-                        const lambda_fk = lam * 0.05;
+                    { originalName: "Gol iz slobodnog udarca", calculation: () => {
+                         const lambda_fk = lam * 0.05;
                         const prob = 1 - Math.exp(-lambda_fk);
-                        return prob > 0 ? 1 / prob : null;
+                         return prob > 0 ? 1 / prob : null;
                     }},
                 ];
+
+                // Rename specials based on lines BEFORE calculating odds
+                specialsToCalculate = specialsToCalculate.map(s => {
+                    let name = s.originalName;
+                     // Prvo primeni prevod za linije
+                     if (s.lineCorners !== undefined) name = renameSpecialWithLine(name, s.lineCorners, 'over');
+                     if (s.lineGoals !== undefined) name = renameSpecialWithLine(name, s.lineGoals, 'over');
+                     if (s.lineCards !== undefined) name = renameSpecialWithLine(name, s.lineCards, 'over');
+                     if (s.lineShots !== undefined) name = renameSpecialWithLine(name, s.lineShots, 'over');
+                     
+                     // Zatim prevedi ostale delove ako nisu već prevedeni (npr. GG)
+                     name = name.replace(/ukupno kornera [\d.]+\+/g, match => renameSpecialWithLine(match, parseFloat(match.match(/[\d.]+/)[0]), 'over'));
+                     name = name.replace(/ukupno golova [\d.]+\+/g, match => renameSpecialWithLine(match, parseFloat(match.match(/[\d.]+/)[0]), 'over'));
+                     name = name.replace(/ukupno kartona [\d.]+\+/g, match => renameSpecialWithLine(match, parseFloat(match.match(/[\d.]+/)[0]), 'over'));
+                     name = name.replace(/ukupno šuteva u okvir [\d.]+\+/g, match => renameSpecialWithLine(match, parseFloat(match.match(/[\d.]+/)[0]), 'over'));
+
+                    return { ...s, name: name.replace(/\s+/g, ' ').trim() }; // Add the final 'name' property and clean spaces
+                });
+
                 
                 specialsList.innerHTML = '';
                 
                 // Prvo, prikaži izračunate specijale
                 specialsToCalculate.forEach(special => {
                     let finalOdd = null;
-                    if (special.components) {
-                        const odds = special.components.map(fn => fn());
-                        if (odds.every(o => o !== null)) {
-                            finalOdd = odds.reduce((acc, val) => acc * val, 1) * (special.multiplier || 1);
+                    try {
+                        if (special.components) {
+                            const odds = special.components.map(fn => fn());
+                             // Proveri da li su sve komponente validne kvote (veće od 1)
+                            if (odds.every(o => o !== null && o > 1)) { 
+                                finalOdd = odds.reduce((acc, val) => acc * val, 1) * (special.multiplier || 1);
+                                 // Reduce odds if specified
+                                if (special.reduceOdds) {
+                                    finalOdd *= 0.9;
+                                }
+                            } else {
+                                 // Ako neka komponenta nedostaje ili je <= 1, loguj upozorenje
+                                 // console.warn(`Nedostajuće ili nevalidne komponente za ${special.name}:`, odds);
+                             }
+                        } else if (special.calculation) {
+                            finalOdd = special.calculation();
                         }
-                    } else if (special.calculation) {
-                        finalOdd = special.calculation();
+                    } catch (calcError) {
+                         console.error(`Greška pri izračunavanju specijala ${special.name}: ${calcError}`);
+                         finalOdd = null; // Osiguraj da je finalOdd null u slučaju greške
+                     }
+
+
+                    // Round AFTER potential reduction and ensure >= 1.01
+                    if (finalOdd !== null && !isNaN(finalOdd)) {
+                         finalOdd = parseFloat(roundOdds(String(finalOdd))); 
+                    } else {
+                        finalOdd = null; // Ensure it's null if calculation failed or resulted in NaN
                     }
 
-                    if (finalOdd) finalOdd = parseFloat(roundOdds(String(finalOdd)));
 
-                    const oddValue = (finalOdd !== null && !isNaN(finalOdd)) ? finalOdd.toFixed(2) : '';
-                    const inputId = `odds-input-${special.name.replace(/[^a-zA-Z0-9]/g, '-')}`;
+                    const oddValue = (finalOdd !== null && finalOdd >= 1.01) ? finalOdd.toFixed(2) : ''; // Only set value if valid
+                    const inputId = `odds-input-${special.originalName.replace(/[^a-zA-Z0-9]/g, '-')}`; // Use original name for stable ID
 
                     const div = document.createElement('div');
+                    div.setAttribute('data-special-type', 'calculated'); // Mark as calculated
                     div.className = 'flex justify-between items-center p-3 border rounded-lg';
                     div.innerHTML = `
-                        <span class="text-gray-800 flex-1">${special.name}</span>
+                        <span class="text-gray-800 flex-1">${special.name}</span> {/* Use potentially renamed name */}
                         <div class="flex items-center gap-3 w-auto md:w-1/3">
                             <input 
                                 type="text" 
                                 value="${oddValue}" 
                                 class="odds-input w-24 p-1 border rounded text-center font-medium" 
-                                placeholder="Unesi kvotu"
+                                placeholder="N/A" 
                                 id="${inputId}"
+                                ${!oddValue ? 'disabled' : ''} /* Disable input if no valid odd */
                             >
                             <button 
-                                data-name="${special.name}" 
+                                data-name="${special.name}" {/* Use final name for adding */}
                                 data-input-id="${inputId}" 
-                                class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600"
+                                class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 ${!oddValue ? 'opacity-50 cursor-not-allowed' : ''}"
+                                ${!oddValue ? 'disabled' : ''} /* Disable button if no valid odd */
                             >+</button>
                         </div>
                     `;
                     specialsList.appendChild(div);
                 });
                 
-                // NOVO: Dodaj PrePacks
+                // Dodaj PrePacks
                 if (fetchedData.prePacks && fetchedData.prePacks.length > 0) {
                     
                     const separator = document.createElement('div');
@@ -386,17 +521,18 @@
                     fetchedData.prePacks.forEach(pack => {
                         pack.prePackSelections.forEach((selection, index) => {
                             const odds = (selection.combinations[0].odds.decimal / 1000);
-                            if (odds < 1.1 || odds > 40) return; // Preskoči kvote van opsega
+                             if (odds < 1.01 || odds > 40) return; 
 
                             const translatedLabels = selection.label.map(translatePrepackLabel);
                             const marketName = translatedLabels.join(' I ');
-                            const finalOdd = parseFloat(roundOdds(String(odds)));
+                            let finalOdd = parseFloat(roundOdds(String(odds)));
                             
-                            const oddValue = (finalOdd !== null && !isNaN(finalOdd)) ? finalOdd.toFixed(2) : '';
-                            const inputId = `odds-input-prepack-${selection.selectionId || index}`; // Jedinstven ID
+                            const oddValue = (finalOdd >= 1.01) ? finalOdd.toFixed(2) : ''; 
+                            const inputId = `odds-input-prepack-${selection.selectionId || index}`; 
 
                             const div = document.createElement('div');
-                            div.className = 'flex justify-between items-center p-3 border rounded-lg bg-indigo-50'; // Drugačija pozadina
+                            div.setAttribute('data-special-type', 'prepack'); // Mark as prepack
+                            div.className = 'flex justify-between items-center p-3 border rounded-lg bg-indigo-50'; 
                             div.innerHTML = `
                                 <span class="text-gray-800 flex-1 text-sm">${marketName}</span>
                                 <div class="flex items-center gap-3 w-auto md:w-1/3">
@@ -404,13 +540,15 @@
                                         type="text" 
                                         value="${oddValue}" 
                                         class="odds-input w-24 p-1 border rounded text-center font-medium" 
-                                        placeholder="Unesi kvotu"
+                                        placeholder="N/A"
                                         id="${inputId}"
+                                         ${!oddValue ? 'disabled' : ''} /* Disable input if no valid odd */
                                     >
                                     <button 
                                         data-name="${marketName}" 
                                         data-input-id="${inputId}" 
-                                        class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600"
+                                        class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 ${!oddValue ? 'opacity-50 cursor-not-allowed' : ''}"
+                                         ${!oddValue ? 'disabled' : ''} /* Disable button if no valid odd */
                                     >+</button>
                                 </div>
                             `;
@@ -424,10 +562,11 @@
             }
 
             function renderPreview() {
+                 const previewSectionContainer = csvPreviewContent.closest('div.mt-8.pt-6'); 
                 if (specialsForPreview.length > 0) {
-                    csvPreviewContent.parentElement.classList.remove('hidden');
+                    if (previewSectionContainer) previewSectionContainer.classList.remove('hidden');
                 } else {
-                    csvPreviewContent.parentElement.classList.add('hidden');
+                     if (previewSectionContainer) previewSectionContainer.classList.add('hidden');
                 }
 
                 csvPreviewContent.innerHTML = '';
@@ -440,7 +579,7 @@
                             value="${special.name}" 
                             class="w-full p-1 border rounded" 
                             data-index="${index}"
-                            data-field="name"
+                            data-field="name" 
                         >
                         <input 
                             type="text" 
@@ -461,34 +600,41 @@
             // Event Listeners
             specialsList.addEventListener('click', e => {
                 if (e.target.classList.contains('add-special-btn')) {
-                    const { name, inputId } = e.target.dataset;
+                    const button = e.target;
+                     if (button.disabled) return; 
+                    
+                    const { name, inputId } = button.dataset;
                     const oddsInput = document.getElementById(inputId);
                     const odds = oddsInput.value;
 
-                    if (!odds || isNaN(parseFloat(odds))) {
-                        showToast("Molimo unesite ispravnu kvotu.", "error");
+                    if (!odds || isNaN(parseFloat(odds)) || parseFloat(odds) < 1.01) {
+                        showToast("Molimo unesite ispravnu kvotu (minimalno 1.01).", "error");
                         return;
                     }
-
-                    if (!specialsForPreview.some(s => s.name === name)) {
-                        specialsForPreview.push({ name, odds });
-                        renderPreview();
-                        showToast("Market dodat u CSV");
-                    } else {
-                        showToast("Market je već dodat u listu.", "info");
-                    }
+                    
+                     if (!specialsForPreview.some(s => s.name === name)) {
+                         specialsForPreview.push({ name, odds: parseFloat(odds).toFixed(2) }); // Ensure odds are formatted
+                         renderPreview();
+                         showToast("Market dodat u CSV");
+                     } else {
+                         showToast("Market je već dodat u listu.", "info");
+                     }
                 }
             });
             
-            addAllSpecialsButton.addEventListener('click', () => {
+            function addSpecialsByType(type) {
                 let addedCount = 0;
-                const allSpecialElements = specialsList.querySelectorAll('.add-special-btn');
+                const allSpecialElements = specialsList.querySelectorAll(`div[data-special-type="${type}"] .add-special-btn`);
+                
                 allSpecialElements.forEach(btn => {
+                     if (btn.disabled) return; 
+                    
                     const { name, inputId } = btn.dataset;
                     const oddsInput = document.getElementById(inputId);
-                    const odds = oddsInput.value;
+                    let odds = oddsInput.value;
 
-                    if (odds && !isNaN(parseFloat(odds)) && !specialsForPreview.some(s => s.name === name)) {
+                    if (odds && !isNaN(parseFloat(odds)) && parseFloat(odds) >= 1.01 && !specialsForPreview.some(s => s.name === name)) {
+                        odds = parseFloat(odds).toFixed(2); // Format odds on add
                         specialsForPreview.push({ name, odds });
                         addedCount++;
                     }
@@ -496,17 +642,23 @@
 
                 if (addedCount > 0) {
                     renderPreview();
-                    showToast(`${addedCount} marketa dodato u CSV.`);
+                    showToast(`${addedCount} ${type === 'calculated' ? 'kalkulisanih' : 'PrePack'} marketa dodato u CSV.`);
                 } else {
-                    showToast("Nema novih marketa za dodavanje.", "info");
+                     showToast(`Nema novih ${type === 'calculated' ? 'kalkulisanih' : 'PrePack'} marketa za dodavanje ili su već dodati.`, "info");
                 }
-            });
+            }
+
+            addCalculatedSpecialsButton.addEventListener('click', () => addSpecialsByType('calculated'));
+            addPrepackSpecialsButton.addEventListener('click', () => addSpecialsByType('prepack'));
+
 
             csvPreviewContent.addEventListener('click', e => {
                 if (e.target.classList.contains('remove-special-btn')) {
                     const index = parseInt(e.target.dataset.index, 10);
-                    specialsForPreview.splice(index, 1);
-                    renderPreview();
+                     if (index >= 0 && index < specialsForPreview.length) {
+                        specialsForPreview.splice(index, 1);
+                        renderPreview();
+                    }
                 }
             });
             
@@ -514,7 +666,17 @@
                 if (e.target.tagName === 'INPUT') {
                     const index = parseInt(e.target.dataset.index, 10);
                     const field = e.target.dataset.field; // "name" or "odds"
-                    specialsForPreview[index][field] = e.target.value;
+                    if (index >= 0 && index < specialsForPreview.length && (field === 'name' || field === 'odds')) { 
+                         specialsForPreview[index][field] = e.target.value;
+                         // Optional: Re-format odds if changed
+                         if (field === 'odds') {
+                            const numOdds = parseFloat(e.target.value);
+                             if (!isNaN(numOdds)) {
+                                 // Maybe re-apply rounding? Or just keep user input? 
+                                 // For now, keep user input directly.
+                             }
+                         }
+                    }
                 }
             });
             
@@ -525,21 +687,39 @@
                 let csvRows = [header];
 
                 const eventInfo = fetchedData.events[0];
+                 // Provera da li eventInfo postoji
+                if (!eventInfo) {
+                    logError("Nema informacija o događaju za generisanje CSV-a.", true);
+                    return;
+                }
                 const matchDate = new Date(eventInfo.start);
                 const datum = `${matchDate.getDate().toString().padStart(2, '0')}.${(matchDate.getMonth() + 1).toString().padStart(2, '0')}.${matchDate.getFullYear()}`;
                 const vreme = `${matchDate.getHours().toString().padStart(2, '0')}:${matchDate.getMinutes().toString().padStart(2, '0')}`;
                 
                 csvRows.push('MATCH_NAME:Xtip Specijal');
-                csvRows.push(`LEAGUE_NAME:${eventInfo.name}`);
+                csvRows.push(`LEAGUE_NAME:${eventInfo.name || 'Nepoznata Liga'}`);
                 
                 specialsForPreview.forEach(special => {
-                    // Koristi ažurirani 'special.name' i 'special.odds' iz niza
-                    const row = [datum, vreme, '', special.name, 'DA', special.odds, '', '', '', '', '', '', ''];
-                    csvRows.push(row.join(','));
+                     const finalOdds = parseFloat(special.odds);
+                     // Dodaj red samo ako je kvota validan broj veći ili jednak 1.01
+                    if (!isNaN(finalOdds) && finalOdds >= 1.01) {
+                         const row = [datum, vreme, '', special.name, 'DA', finalOdds.toFixed(2), '', '', '', '', '', '', ''];
+                        csvRows.push(row.join(','));
+                    } else {
+                         console.warn(`Preskačem red za "${special.name}" zbog nevalidne kvote: ${special.odds}`);
+                         showToast(`Kvota za "${special.name}" (${special.odds}) nije validna i biće preskočena u CSV-u.`, "error");
+                     }
                 });
+                
+                // Proveri da li je ostao samo header + MATCH_NAME + LEAGUE_NAME
+                if (csvRows.length <= 3) {
+                     showToast("Nema validnih specijala za izvoz u CSV.", "error");
+                     return;
+                 }
+
 
                 const csvContent = csvRows.join('\n');
-                const matchName = removeDiacritics(eventInfo.name).replace(/ /g, '_').replace(/vs/, '');
+                const matchName = removeDiacritics(eventInfo.name || 'nepoznat_mec').replace(/ /g, '_').replace(/vs/ig, ''); // Koristi 'ig' za case-insensitive zamenu
                 const fileName = `mec_specijal_${matchName}.csv`;
                 
                 const BOM = "\uFEFF";
@@ -553,6 +733,7 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+                 URL.revokeObjectURL(url); // Oslobodi memoriju
             });
 
         });
