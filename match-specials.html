@@ -16,6 +16,16 @@
             border-left-color: #09f;
             animation: spin 1s ease infinite;
         }
+        /* Style adjustments for better readability */
+        input[type="text"]:disabled {
+            background-color: #f3f4f6; /* Lighter gray for disabled inputs */
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+         button:disabled {
+             opacity: 0.5;
+             cursor: not-allowed;
+         }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -23,7 +33,7 @@
     <div class="container mx-auto p-4 md:p-8 max-w-4xl">
         <header class="bg-white rounded-lg shadow-md p-6 mb-6">
             <h1 class="text-3xl font-bold text-gray-800">Meč Specijal Generator</h1>
-            <p id="matchNameHeader" class="text-gray-600 mt-2">Loading match details...</p>
+            <p id="matchNameHeader" class="text-gray-600 mt-2">Učitavanje detalja meča...</p>
         </header>
 
         <main class="bg-white rounded-lg shadow-md p-6">
@@ -32,40 +42,51 @@
             </div>
 
             <div id="specialsContent" class="hidden">
+                <!-- Lista generisanih i PrePack specijala -->
                 <div id="specialsList" class="space-y-3">
-                    </div>
+                    <!-- Sadržaj se generiše skriptom -->
+                </div>
 
-                 <div class="mt-8 pt-6 border-t border-gray-200">
+                 <!-- Sekcija za pregled i generisanje CSV-a -->
+                 <div id="csvPreviewSectionContainer" class="mt-8 pt-6 border-t border-gray-200 hidden"> {/* Initially hidden */}
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-2xl font-bold text-indigo-800">Pregled Specijala za CSV</h2>
                         <div class="flex space-x-2">
-                            <button id="addCalculatedSpecialsButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg text-xs">
+                            <button id="addCalculatedSpecialsButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-200">
                                 Dodaj Kalkulisane
                             </button>
-                             <button id="addPrepackSpecialsButton" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-3 rounded-lg text-xs">
+                             <button id="addPrepackSpecialsButton" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-200">
                                 Dodaj PrePacks
                             </button>
                         </div>
                     </div>
-                     <div id="csvPreviewContent" class="space-y-6">
-                         </div>
+                     {/* Kontejner za redove pregleda */}
+                     <div id="csvPreviewContent" class="space-y-2 max-h-96 overflow-y-auto bg-gray-50 p-3 rounded-md border">
+                         {/* Sadržaj se generiše skriptom */}
+                          <p class="text-gray-500 italic text-center py-4">Nema dodatih specijala za pregled.</p> {/* Placeholder */}
+                     </div>
+                     {/* Dugme za generisanje finalnog CSV-a */}
                      <div class="mt-6 text-right">
-                         <button id="generateCsvButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
+                         <button id="generateCsvButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300 disabled:opacity-50" disabled> {/* Initially disabled */}
                              Generiši CSV za Meč Specijal
                          </button>
                      </div>
                 </div>
             </div>
-             <div id="errorContainer" class="hidden text-center text-red-500 p-4 bg-red-50 rounded-lg">
-                </div>
+             {/* Kontejner za greške */}
+             <div id="errorContainer" class="hidden text-center text-red-500 p-4 bg-red-100 rounded-lg border border-red-300">
+                {/* Poruke o greškama */}
+            </div>
         </main>
     </div>
 
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50"></div>
+    {/* Kontejner za Toast poruke */}
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
 
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
+            // DOM Elementi
             const loader = document.getElementById('loader');
             const specialsContent = document.getElementById('specialsContent');
             const errorContainer = document.getElementById('errorContainer');
@@ -75,10 +96,14 @@
             const generateCsvButton = document.getElementById('generateCsvButton');
             const addCalculatedSpecialsButton = document.getElementById('addCalculatedSpecialsButton');
             const addPrepackSpecialsButton = document.getElementById('addPrepackSpecialsButton');
+            const csvPreviewSectionContainer = document.getElementById('csvPreviewSectionContainer'); // Container for the whole preview section
 
-            let allMarkets = [];
-            let fetchedData = null;
-            let specialsForPreview = [];
+            // Stanje aplikacije
+            let allMarkets = []; // Svi marketi iz API-ja
+            let fetchedData = null; // Podaci dobijeni iz API-ja
+            let specialsForPreview = []; // Niz objekata {name: string, odds: string} za CSV pregled
+
+            // --- Pomoćne Funkcije ---
 
             function removeDiacritics(text) {
                  if (!text) return '';
@@ -87,9 +112,9 @@
             }
 
             function roundOdds(oddsStr) {
-                // Takes string or number, returns string formatted to 2 decimals, min 1.01
+                // Prima string ili broj, vraća string formatiran na 2 decimale, min 1.01, ili prazan string ako nije validan broj
                 const odd = parseFloat(oddsStr);
-                 if (isNaN(odd)) return '';
+                 if (isNaN(odd)) return ''; // Vrati prazan string ako nije broj
 
                 let roundedOdd;
                 if (odd > 5) {
@@ -97,31 +122,26 @@
                 } else if (odd > 3.5) {
                      roundedOdd = Math.round(odd / 0.05) * 0.05;
                 } else {
-                     roundedOdd = Math.round(odd * 100) / 100;
+                     roundedOdd = Math.round(odd * 100) / 100; // Zaokruži na dve decimale
                 }
+                 // Osiguraj minimum 1.01
                  roundedOdd = Math.max(1.01, roundedOdd);
-                 return roundedOdd.toFixed(2); // Vraća string
+                 return roundedOdd.toFixed(2); // Vrati kao string "X.XX"
             }
 
              function formatLineValue(lineValue, type = 'over') {
-                 // Vraća string formatiran kao "X+" ili "0-Y" ili originalnu vrednost ako nije .5
+                 // Formatira liniju kao "X+" ili "0-Y" za .5 vrednosti
                  if (lineValue === null || lineValue === undefined) return '';
                  const lineNum = parseFloat(lineValue);
                  if (isNaN(lineNum)) return '';
-
                  if (lineNum % 1 === 0.5) {
-                     if (type === 'over') {
-                         return `${Math.ceil(lineNum)}+`;
-                     } else { // type === 'under'
-                         return `0-${Math.floor(lineNum)}`;
-                     }
+                     return type === 'over' ? `${Math.ceil(lineNum)}+` : `0-${Math.floor(lineNum)}`;
                  }
-                 // Ako nije .5, vrati samo broj (možda dodati '+' za cele brojeve over?)
-                 // Za sada vraćamo samo broj za cele linije
-                 return lineNum.toString();
+                 return lineNum.toString(); // Vrati broj kao string ako nije .5
             }
 
             function translatePrepackLabel(label) {
+                 // Prevodi nazive marketa i linija na srpski
                  let originalLabel = label;
                 label = label.replace(/Player's shots on target \(Settled using Opta data\)/gi, "Šutevi u okvir gola");
                 label = label.replace(/Player's shots \(Settled using Opta data\)/gi, "Ukupno šuteva");
@@ -148,39 +168,50 @@
                 label = label.replace(/Full Time (.+)/gi, "$1 pobeđuje");
                 label = label.replace(/(Over|više)\s+([\d.]+)/gi, (match, p1, p2) => formatLineValue(p2, 'over'));
                 label = label.replace(/(Under|manje)\s+([\d.]+)/gi, (match, p1, p2) => formatLineValue(p2, 'under'));
-                return label.replace(/\s+/g, ' ').trim();
+                return label.replace(/\s+/g, ' ').trim(); // Očisti duple razmake
             }
 
             function logError(message) {
-                loader.style.display = 'none'; errorContainer.textContent = message; errorContainer.classList.remove('hidden');
+                // Prikazuje grešku korisniku
+                loader.style.display = 'none'; errorContainer.textContent = message; errorContainer.classList.remove('hidden'); specialsContent.classList.add('hidden');
             }
 
             function showToast(message, type = 'success') {
+                // Prikazuje kratku ("toast") poruku
                 const toastContainer = document.getElementById('toast-container');
                 const toast = document.createElement('div');
-                let bgColor = 'bg-green-500'; if (type === 'error') bgColor = 'bg-red-500'; if (type === 'info') bgColor = 'bg-blue-500';
-                toast.className = `${bgColor} text-white text-sm font-bold px-4 py-3 rounded-lg shadow-md animate-pulse`;
+                let bgColorClass = 'bg-green-500';
+                if (type === 'error') bgColorClass = 'bg-red-500'; if (type === 'info') bgColorClass = 'bg-blue-500';
+                toast.className = `${bgColorClass} text-white text-sm font-bold px-4 py-3 rounded-lg shadow-md mb-2 transition-opacity duration-300 ease-out`; // Added mb-2
                 toast.textContent = message; toastContainer.appendChild(toast);
+                // Fade out effect
+                setTimeout(() => { toast.style.opacity = '0'; }, 2200);
                 setTimeout(() => { toast.remove(); }, 2500);
             }
 
+            // --- Glavna Logika ---
+
+            // 1. Učitavanje podataka o meču
             const params = new URLSearchParams(window.location.search); const eventId = params.get('eventId');
             if (!eventId) { logError("Event ID nije pronađen."); return; }
             const storedData = sessionStorage.getItem(`event_${eventId}`);
             if (storedData) { fetchedData = JSON.parse(storedData); }
             else { logError("Podaci o meču nisu pronađeni."); return; }
 
+            // 2. Obrada podataka i prikaz
             try {
                 const eventName = fetchedData.events[0]?.name || "Nepoznat meč";
                 matchNameHeader.textContent = `Specijali za meč: ${eventName}`;
+                // Mapiranje svih kvota radi lakšeg pristupa
                 fetchedData.betOffers.forEach(offer => {
                     offer.outcomes.forEach(outcome => {
                         allMarkets.push({ betOfferId: offer.id, marketName: offer.criterion.label, line: (outcome.line !== undefined && outcome.line !== null) ? (outcome.line / 1000) : null, label: outcome.label, odds: (outcome.odds / 1000) });
                     });
                 });
-                calculateAndDisplaySpecials();
+                calculateAndDisplaySpecials(); // Izračunaj i prikaži specijale
             } catch (error) { logError(`Greška pri obradi podataka: ${error.message}`); return; }
 
+            // 3. Funkcija za pronalaženje kvote
             function getOdd(marketNameIdentifier, line, labelIdentifier) {
                  const marketNameLower = marketNameIdentifier.toLowerCase(); const labelLower = labelIdentifier.toLowerCase();
                  const marketTranslations = { "total goals": "ukupno golova", "total corners": "ukupno kornera", "total cards": "ukupno kartona", "both teams to score": "gg", "penalty kick awarded": "penalty kick awarded", "red card given": "red card given", "total shots on target (settled using opta data)": "total shots on target (settled using opta data)" };
@@ -192,6 +223,7 @@
                  const looserMatch = allMarkets.find(m => (m.marketName.toLowerCase().includes(translatedMarket) || m.marketName.toLowerCase().includes(marketNameLower)) && !m.marketName.toLowerCase().includes('1st half') && !m.marketName.toLowerCase().includes('2nd half') && !m.marketName.toLowerCase().includes('by team') && (participants?.length !== 2 || (!m.marketName.toLowerCase().includes(`by ${participants[0].name.toLowerCase()}`) && !m.marketName.toLowerCase().includes(`by ${participants[1].name.toLowerCase()}`))) && m.line === line && (m.label.toLowerCase() === translatedLabel || m.label.toLowerCase() === labelLower)); return looserMatch ? looserMatch.odds : null;
             }
 
+            // 4. Funkcija za izračunavanje lambda (očekivani golovi)
             function lambda_from_p_over(p_over, tol = 1e-8, maxiter = 50) {
                  if (p_over <= 0) return 0.1; if (p_over >= 1) return 20; let lam = 2.0;
                  for (let i = 0; i < maxiter; i++) {
@@ -201,6 +233,7 @@
                  } return lam > 0 ? lam : 0.1;
             }
 
+            // 5. Izračunavanje i prikazivanje specijala
             function calculateAndDisplaySpecials() {
                 const q_over_2_5 = getOdd("Total Goals", 2.5, "over"); const q_under_2_5 = getOdd("Total Goals", 2.5, "under"); let lam = 2.7;
                 if (q_over_2_5 && q_under_2_5) { const p_over_raw = 1.0 / q_over_2_5; const p_under_raw = 1.0 / q_under_2_5; const margin = p_over_raw + p_under_raw; if (margin > 0 && p_over_raw <= margin) { const p_over = p_over_raw / margin; lam = lambda_from_p_over(p_over); } else { logStatus(`Nevalidne kvote za Ukupno Golova 2.5: Više=${q_over_2_5}, Manje=${q_under_2_5}.`, true); } } else { logStatus("Nisu pronađene kvote za Ukupno Golova 2.5.", true); }
@@ -221,108 +254,135 @@
                     { nameTemplate: "{corners} kornera i {cards} kartona i GG", lineCorners: 8.5, lineCards: 3.5, components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Cards", 3.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
                     { nameTemplate: "{corners} kornera i GG", lineCorners: 7.5, components: [() => getOdd("Total Corners", 7.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
                     { nameTemplate: "Penal i crveni karton", components: [() => getOdd("Penalty Kick awarded", null, "yes"), () => getOdd("Red Card given", null, "yes")], multiplier: 0.8 },
-                    { nameTemplate: "Penal ili crveni karton", calculation: () => { const oP=getOdd("Penalty Kick awarded",null,"yes"), oR=getOdd("Red Card given",null,"yes"); if(!oP||!oR)return null; const pP=1/oP, pR=1/oR, pPR=(pP*pR)*1.2, pOr=pP+pR-pPR; return (pOr>0&&pOr<=1)?1/pOr:null; }}, // Calculation functions inline
+                    { nameTemplate: "Penal ili crveni karton", calculation: () => { const oP=getOdd("Penalty Kick awarded",null,"yes"), oR=getOdd("Red Card given",null,"yes"); if(!oP||!oR)return null; const pP=1/oP, pR=1/oR, pPR=(pP*pR)*1.2, pOr=pP+pR-pPR; return (pOr>0&&pOr<=1)?1/pOr:null; }},
                     { nameTemplate: "Izmena postize gol", calculation: () => { const lS=lam*0.15, p=1-Math.exp(-lS); return p>0?1/p:null; }},
                     { nameTemplate: "Gol glavom na mecu", calculation: () => { const lH=lam*0.17, p=1-Math.exp(-lH); return p>0?1/p:null; }},
                     { nameTemplate: "Gol izvan 16m", calculation: () => { const lO=lam*0.12, p=1-Math.exp(-lO); return p>0?1/p:null; }},
                     { nameTemplate: "Gol iz slobodnog udarca", calculation: () => { const lF=lam*0.05, p=1-Math.exp(-lF); return p>0?1/p:null; }},
                 ];
 
-                specialsList.innerHTML = '';
+                specialsList.innerHTML = ''; // Očisti prethodne specijale
 
+                // --- Prikaz Kalkulisanih Specijala ---
                 specialsToCalculate.forEach(specialDef => {
                     let finalName = specialDef.nameTemplate;
+                    // Zameni placeholdere sa formatiranim vrednostima linija
                     if (specialDef.lineCorners !== undefined) finalName = finalName.replace('{corners}', formatLineValue(specialDef.lineCorners, 'over'));
                     if (specialDef.lineGoals !== undefined) finalName = finalName.replace('{goals}', formatLineValue(specialDef.lineGoals, 'over'));
                     if (specialDef.lineCards !== undefined) finalName = finalName.replace('{cards}', formatLineValue(specialDef.lineCards, 'over'));
                     if (specialDef.lineShots !== undefined) finalName = finalName.replace('{shots}', formatLineValue(specialDef.lineShots, 'over'));
-                    finalName = finalName.replace(/\s+/g, ' ').trim();
+                    finalName = finalName.replace(/\s+/g, ' ').trim(); // Očisti duple razmake
 
-                    let calculatedOdd = null;
+                    let calculatedOdd = null; // Izračunata kvota pre zaokruživanja
                     try {
-                        if (specialDef.components) {
+                        if (specialDef.components) { // Ako se računa iz komponenti
                             const componentOdds = specialDef.components.map(fn => fn());
-                            if (componentOdds.every(o => o !== null && o > 1)) {
+                            if (componentOdds.every(o => o !== null && o > 1)) { // Proveri validnost komponenti
                                 calculatedOdd = componentOdds.reduce((acc, val) => acc * val, 1) * (specialDef.multiplier || 1);
-                                if (specialDef.reduceOdds) { calculatedOdd *= 0.9; }
+                                if (specialDef.reduceOdds) { calculatedOdd *= 0.9; } // Umanji kvotu ako je specificirano
                             }
-                        } else if (specialDef.calculation) { calculatedOdd = specialDef.calculation(); }
-                    } catch (calcError) { console.error(`Greška: ${finalName}: ${calcError}`); calculatedOdd = null; }
+                        } else if (specialDef.calculation) { // Ako postoji direktna funkcija za računanje
+                            calculatedOdd = specialDef.calculation();
+                        }
+                    } catch (calcError) { console.error(`Greška pri računanju '${finalName}': ${calcError}`); calculatedOdd = null; }
 
-                    const finalOddForDisplayString = roundOdds(calculatedOdd); // Returns string or ""
-                    const oddValue = finalOddForDisplayString;
-                    const inputId = `odds-input-${specialDef.nameTemplate.replace(/[^a-zA-Z0-9-{}]/g, '-')}`;
+                    // Zaokruži finalnu kvotu za prikaz (vraća string "X.XX" ili "")
+                    const finalOddForDisplayString = roundOdds(calculatedOdd);
+                    const oddValue = finalOddForDisplayString; // Koristi zaokruženu vrednost za prikaz
+                    const inputId = `odds-input-${specialDef.nameTemplate.replace(/[^a-zA-Z0-9-{}]/g, '-')}`; // Stabilan ID
 
+                    // Kreiraj HTML element za prikaz specijala
                     const div = document.createElement('div');
-                    div.setAttribute('data-special-type', 'calculated');
-                    div.className = 'flex justify-between items-center p-3 border rounded-lg';
+                    div.setAttribute('data-special-type', 'calculated'); // Oznaka tipa specijala
+                    div.className = 'flex justify-between items-center p-3 border rounded-lg shadow-sm'; // Dodat stil
                     div.innerHTML = `
-                        <span class="text-gray-800 flex-1">${finalName}</span>
-                        <div class="flex items-center gap-3 w-auto md:w-1/3">
-                            <input type="text" value="${oddValue}" class="odds-input w-24 p-1 border rounded text-center font-medium" placeholder="N/A" id="${inputId}" ${!oddValue ? 'disabled' : ''}>
-                            <button data-name="${finalName}" data-input-id="${inputId}" class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 ${!oddValue ? 'opacity-50 cursor-not-allowed' : ''}" ${!oddValue ? 'disabled' : ''}>+</button>
+                        <span class="text-gray-800 flex-1 mr-2">${finalName}</span>
+                        <div class="flex items-center gap-3 w-auto md:w-1/3 flex-shrink-0"> {/* Osiguraj da se ne smanjuje previše */}
+                            <input
+                                type="text"
+                                value="${oddValue}"
+                                class="odds-input w-20 p-1 border border-gray-300 rounded text-center font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="N/A"
+                                id="${inputId}"
+                                ${!oddValue ? 'disabled' : ''} /* Onemogući ako nema kvote */
+                            >
+                            <button
+                                data-name="${finalName}" /* Koristi finalno ime za dodavanje */
+                                data-input-id="${inputId}"
+                                class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 transition-colors duration-200 ${!oddValue ? 'opacity-50 cursor-not-allowed' : ''}"
+                                ${!oddValue ? 'disabled' : ''} /* Onemogući ako nema kvote */
+                            >+</button>
                         </div>`;
                     specialsList.appendChild(div);
                 });
 
+                // --- Prikaz PrePack Specijala ---
                 if (fetchedData.prePacks && fetchedData.prePacks.length > 0) {
-                     const separator = document.createElement('div'); separator.className = 'pt-4 mt-4 border-t border-gray-200'; separator.innerHTML = '<h3 class="text-lg font-semibold text-gray-700 mb-2">Pre-Pack Specijali</h3>'; specialsList.appendChild(separator);
+                     const separator = document.createElement('div'); separator.className = 'pt-4 mt-4 border-t border-gray-300'; separator.innerHTML = '<h3 class="text-lg font-semibold text-gray-700 mb-2">Pre-Pack Specijali</h3>'; specialsList.appendChild(separator);
                     fetchedData.prePacks.forEach(pack => {
                         pack.prePackSelections.forEach((selection, index) => {
-                            const odds = (selection.combinations[0].odds.decimal / 1000); if (odds < 1.01 || odds > 40) return;
+                            const odds = (selection.combinations[0].odds.decimal / 1000); if (odds < 1.01 || odds > 40) return; // Validacija kvote
                             const translatedLabels = selection.label.map(translatePrepackLabel); const marketName = translatedLabels.join(' I ');
-                            const finalOddForDisplayString = roundOdds(String(odds));
+                            const finalOddForDisplayString = roundOdds(String(odds)); // Zaokruži za prikaz
                             const oddValue = finalOddForDisplayString;
                             const inputId = `odds-input-prepack-${selection.selectionId || index}`;
-                            const div = document.createElement('div'); div.setAttribute('data-special-type', 'prepack'); div.className = 'flex justify-between items-center p-3 border rounded-lg bg-indigo-50';
+                            const div = document.createElement('div'); div.setAttribute('data-special-type', 'prepack'); div.className = 'flex justify-between items-center p-3 border rounded-lg bg-indigo-50 shadow-sm';
                             div.innerHTML = `
-                                <span class="text-gray-800 flex-1 text-sm">${marketName}</span>
-                                <div class="flex items-center gap-3 w-auto md:w-1/3">
-                                    <input type="text" value="${oddValue}" class="odds-input w-24 p-1 border rounded text-center font-medium" placeholder="N/A" id="${inputId}" ${!oddValue ? 'disabled' : ''}>
-                                    <button data-name="${marketName}" data-input-id="${inputId}" class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 ${!oddValue ? 'opacity-50 cursor-not-allowed' : ''}" ${!oddValue ? 'disabled' : ''}>+</button>
+                                <span class="text-gray-800 flex-1 text-sm mr-2">${marketName}</span>
+                                <div class="flex items-center gap-3 w-auto md:w-1/3 flex-shrink-0">
+                                    <input type="text" value="${oddValue}" class="odds-input w-20 p-1 border border-gray-300 rounded text-center font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500" placeholder="N/A" id="${inputId}" ${!oddValue ? 'disabled' : ''}>
+                                    <button data-name="${marketName}" data-input-id="${inputId}" class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 transition-colors duration-200 ${!oddValue ? 'opacity-50 cursor-not-allowed' : ''}" ${!oddValue ? 'disabled' : ''}>+</button>
                                 </div>`;
                             specialsList.appendChild(div);
                         });
                     });
                 }
+                // Sakrij loader i prikaži sadržaj
                 loader.style.display = 'none'; specialsContent.classList.remove('hidden');
             }
 
+            // 6. Renderovanje CSV pregleda
             function renderPreview() {
-                 const previewSectionContainer = csvPreviewContent.closest('div.mt-8.pt-6');
-                 if (specialsForPreview.length > 0) { if (previewSectionContainer) previewSectionContainer.classList.remove('hidden'); }
-                 else { if (previewSectionContainer) previewSectionContainer.classList.add('hidden'); }
-                 csvPreviewContent.innerHTML = '';
+                 if (specialsForPreview.length > 0) { csvPreviewSectionContainer.classList.remove('hidden'); generateCsvButton.disabled = false; } // Pokaži sekciju i omogući dugme
+                 else { csvPreviewSectionContainer.classList.add('hidden'); generateCsvButton.disabled = true; } // Sakrij sekciju i onemogući dugme
+                 csvPreviewContent.innerHTML = ''; // Očisti prethodni sadržaj
+                 if (specialsForPreview.length === 0) { // Prikaži placeholder ako je prazno
+                     csvPreviewContent.innerHTML = '<p class="text-gray-500 italic text-center py-4">Nema dodatih specijala za pregled.</p>';
+                     return;
+                 }
+                 // Generiši redove za pregled
                  specialsForPreview.forEach((special, index) => {
                      const div = document.createElement('div');
-                     div.className = 'grid grid-cols-[1fr,auto,auto] gap-4 items-center p-2 border-b';
+                     div.className = 'grid grid-cols-[1fr,auto,auto] gap-4 items-center p-2 border-b border-gray-200 last:border-b-0'; // Stil za redove
                      div.innerHTML = `
-                        <input type="text" value="${special.name}" class="w-full p-1 border rounded" data-index="${index}" data-field="name">
-                        <input type="text" value="${special.odds}" class="w-20 p-1 border rounded text-center" data-index="${index}" data-field="odds">
-                        <button class="remove-special-btn ml-4 text-red-500 font-bold" data-index="${index}">&times;</button>`;
+                        <input type="text" value="${special.name}" class="w-full p-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500" data-index="${index}" data-field="name">
+                        <input type="text" value="${special.odds}" class="w-20 p-1 border border-gray-300 rounded text-center focus:ring-1 focus:ring-blue-500 focus:border-blue-500" data-index="${index}" data-field="odds">
+                        <button class="remove-special-btn text-red-500 hover:text-red-700 font-bold text-lg leading-none" data-index="${index}" title="Ukloni">&times;</button>`;
                      csvPreviewContent.appendChild(div);
                  });
             }
 
-            // *** ISPRAVLJENO: Čitanje vrednosti iz input polja ***
+            // 7. Event Listeneri
+
+            // Dodavanje pojedinačnog specijala
             specialsList.addEventListener('click', e => {
                 if (e.target.classList.contains('add-special-btn')) {
                     const button = e.target; if (button.disabled) return;
                     const { name, inputId } = button.dataset;
                     const oddsInput = document.getElementById(inputId);
-                    const oddsValueFromInput = oddsInput.value; // Read the exact displayed value (string)
+                    const oddsValueFromInput = oddsInput.value; // Pročitaj tačnu VREDNOST iz input polja
 
                     if (!oddsValueFromInput || isNaN(parseFloat(oddsValueFromInput)) || parseFloat(oddsValueFromInput) < 1.01) {
                         showToast("Kvota u polju nije validna (min 1.01).", "error"); return;
                     }
                     if (!specialsForPreview.some(s => s.name === name)) {
-                        specialsForPreview.push({ name, odds: oddsValueFromInput }); // Store the exact string
-                        renderPreview(); showToast("Market dodat u CSV");
+                        specialsForPreview.push({ name, odds: oddsValueFromInput }); // Sačuvaj tačnu pročitanu vrednost
+                        renderPreview(); showToast(`Dodato: ${name}`);
                     } else { showToast("Market je već dodat.", "info"); }
                 }
             });
 
-            // *** ISPRAVLJENO: Čitanje vrednosti iz input polja ***
+            // Dodavanje grupe specijala (kalkulisani ili PrePack)
             function addSpecialsByType(type) {
                  let addedCount = 0;
                  const allSpecialElements = specialsList.querySelectorAll(`div[data-special-type="${type}"] .add-special-btn`);
@@ -330,28 +390,29 @@
                      if (btn.disabled) return;
                      const { name, inputId } = btn.dataset;
                      const oddsInput = document.getElementById(inputId);
-                     const oddsValueFromInput = oddsInput.value; // Read the exact displayed value (string)
+                     const oddsValueFromInput = oddsInput.value; // Pročitaj tačnu VREDNOST iz input polja
                      if (oddsValueFromInput && !isNaN(parseFloat(oddsValueFromInput)) && parseFloat(oddsValueFromInput) >= 1.01 && !specialsForPreview.some(s => s.name === name)) {
-                         specialsForPreview.push({ name, odds: oddsValueFromInput }); // Store the exact string
+                         specialsForPreview.push({ name, odds: oddsValueFromInput }); // Sačuvaj tačnu pročitanu vrednost
                          addedCount++;
                      }
                  });
                  if (addedCount > 0) { renderPreview(); showToast(`${addedCount} ${type === 'calculated' ? 'kalk.' : 'PrePack'} marketa dodato.`); }
                  else { showToast(`Nema novih ${type === 'calculated' ? 'kalk.' : 'PrePack'} marketa za dodavanje.`, "info"); }
             }
-            // *** KRAJ ISPRAVKE ***
-
             addCalculatedSpecialsButton.addEventListener('click', () => addSpecialsByType('calculated'));
             addPrepackSpecialsButton.addEventListener('click', () => addSpecialsByType('prepack'));
 
+            // Uklanjanje iz pregleda
             csvPreviewContent.addEventListener('click', e => {
                   if (e.target.classList.contains('remove-special-btn')) { const index = parseInt(e.target.dataset.index, 10); if (index >= 0 && index < specialsForPreview.length) { specialsForPreview.splice(index, 1); renderPreview(); } }
             });
 
+            // Ažuriranje vrednosti u pregledu
              csvPreviewContent.addEventListener('input', e => {
                  if (e.target.tagName === 'INPUT') { const index = parseInt(e.target.dataset.index, 10); const field = e.target.dataset.field; if (index >= 0 && index < specialsForPreview.length && (field === 'name' || field === 'odds')) { specialsForPreview[index][field] = e.target.value; } }
             });
 
+            // Generisanje finalnog CSV-a
             generateCsvButton.addEventListener('click', () => {
                  if (specialsForPreview.length === 0) return;
                  const header = "Datum,Vreme,Sifra,Domacin,Gost,1,X,2,GR,U,O,Yes,No"; let csvRows = [header];
@@ -362,8 +423,9 @@
                  csvRows.push('MATCH_NAME:Xtip Specijal'); csvRows.push(`LEAGUE_NAME:${eventInfo.name || 'Nepoznata Liga'}`);
 
                  specialsForPreview.forEach(special => {
-                     const finalOdds = parseFloat(special.odds);
+                     const finalOdds = parseFloat(special.odds); // Parsiraj sačuvanu/editovanu vrednost
                      if (!isNaN(finalOdds) && finalOdds >= 1.01) {
+                         // Formatiraj na dve decimale za CSV
                          const row = [datum, vreme, '', special.name, 'DA', finalOdds.toFixed(2), '', '', '', '', '', '', '']; csvRows.push(row.join(','));
                      } else {
                          console.warn(`Preskačem red za "${special.name}" zbog nevalidne kvote: ${special.odds}`);
@@ -379,6 +441,7 @@
                  const link = document.createElement('a'); const url = URL.createObjectURL(blob);
                  link.setAttribute('href', url); link.setAttribute('download', fileName); link.style.visibility = 'hidden';
                  document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+                 showToast("CSV fajl generisan.", "success"); // Add success message
             });
         });
     </script>
