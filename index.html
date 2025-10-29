@@ -471,9 +471,15 @@
             toggleRawDataButton.classList.add('hidden');
             rawDataContainer.classList.add('hidden');
             matchSpecialsButtonContainer.classList.add('hidden');
-            
-            const oddsUrl = `https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/betoffer/event/${eventId}.json?lang=en_GB&market=GB&client_id=2&channel_id=7&includeParticipants=true`;
 
+            let oddsUrl;
+            if (selectedLeagueName === "EFL Cup") {
+                oddsUrl = `https://eu1.offering-api.kambicdn.com/offering/v2018/kambi/betoffer/event/${eventId}.json?channel_id=7&client_id=2&includeParticipants=true&lang=en_GB&market=GB&range_size=1`;
+                logStatus("Using Kambi URL for EFL Cup.");
+            } else {
+                oddsUrl = `https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/betoffer/event/${eventId}.json?lang=en_GB&market=GB&client_id=2&channel_id=7&includeParticipants=true`;
+            }
+            
             try {
                 const response = await fetch(oddsUrl);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
