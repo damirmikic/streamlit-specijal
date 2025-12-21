@@ -476,7 +476,10 @@
             rawDataContainer.classList.add('hidden');
             matchSpecialsButtonContainer.classList.add('hidden');
             
-            const oddsUrl = `https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/betoffer/event/${eventId}.json?lang=en_GB&market=GB&client_id=2&channel_id=7&includeParticipants=true`;
+            // Use different API client for AFCON
+            const selectedLeague = leagueSelect.value;
+            const apiClient = selectedLeague === 'AFCON' ? 'kambi' : 'ilaniuswarl';
+            const oddsUrl = `https://eu1.offering-api.kambicdn.com/offering/v2018/${apiClient}/betoffer/event/${eventId}.json?lang=en_GB&market=GB&client_id=2&channel_id=7&includeParticipants=true`;
 
             try {
                 const response = await fetch(oddsUrl);
