@@ -478,7 +478,11 @@
             
             // Use different API client for AFCON
             const selectedLeague = leagueSelect.value;
-            const apiClient = selectedLeague === 'AFCON' | 'EFL Cup' ? 'kambi' : 'ilaniuswarl';
+            const apiClient =
+                (selectedLeague === 'AFCON' || selectedLeague === 'EFL Cup')
+                    ? 'kambi'
+                    : 'ilaniuswarl';
+
             const oddsUrl = `https://eu1.offering-api.kambicdn.com/offering/v2018/${apiClient}/betoffer/event/${eventId}.json?lang=en_GB&market=GB&client_id=2&channel_id=7&includeParticipants=true`;
 
             try {
