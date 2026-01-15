@@ -706,7 +706,7 @@
                 if (!selections || selections.length === 0) return { total: 0, overOdd: 0, underOdd: 0 };
                 let minDiff = Infinity;
                 let mainLine = { total: 0, overOdd: 0, underOdd: 0 };
-                
+
                 const totals = {};
                 selections.forEach(sel => {
                     const totalMatch = sel.params.match(/total=([\d.]+)/);
@@ -731,6 +731,57 @@
                     }
                 }
                 return mainLine;
+            }
+
+            function findMainHandicapData(selections) {
+                if (!selections || selections.length === 0) return { handicap: 0, homeOdd: 0, awayOdd: 0 };
+                let minDiff = Infinity;
+                let mainLine = { handicap: 0, homeOdd: 0, awayOdd: 0 };
+
+                const handicaps = {};
+                selections.forEach(sel => {
+                    const handicapMatch = sel.params.match(/handicap=([-\d.]+)/);
+                    if (handicapMatch) {
+                        const handicap = handicapMatch[1];
+                        if (!handicaps[handicap]) handicaps[handicap] = {};
+                        handicaps[handicap][sel.outcome] = sel.price;
+                    }
+                });
+
+                for (const handicap in handicaps) {
+                    if (handicaps[handicap].home && handicaps[handicap].away) {
+                        const diff = Math.abs(handicaps[handicap].home - handicaps[handicap].away);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            mainLine = {
+                                handicap: parseFloat(handicap),
+                                homeOdd: handicaps[handicap].home,
+                                awayOdd: handicaps[handicap].away
+                            };
+                        }
+                    }
+                }
+                return mainLine;
+            }
+
+            function calculateExpectedPointsFromHandicap(totalPoints, handicap) {
+                // Formula:
+                // Total = Home + Away
+                // Handicap = Home - Away (home team perspective)
+                // Solving: Home = (Total + Handicap) / 2, Away = (Total - Handicap) / 2
+                const expectedHomePoints = (totalPoints + handicap) / 2;
+                const expectedAwayPoints = (totalPoints - handicap) / 2;
+
+                // Points per minute (40 minutes per game)
+                const homePointsPerMinute = expectedHomePoints / 40;
+                const awayPointsPerMinute = expectedAwayPoints / 40;
+
+                return {
+                    expectedHomePoints,
+                    expectedAwayPoints,
+                    homePointsPerMinute,
+                    awayPointsPerMinute
+                };
             }
 
             function calculateAndDisplayOdds(marketType) {
@@ -767,6 +818,58 @@
                 let rawOdd = 0;
                 let margin = 10;
 
+                // Calculate expected points from handicap and total
+                const marketHandicap = selectedEvent.markets?.['basketball.handicap'];
+                let expectedHomePoints = 0;
+                let expectedAwayPoints = 0;
+                let lambda_home_1min = 0;
+                let lambda_away_1min = 0;
+
+                if (marketHandicap) {
+                    const handicapSelections = marketHandicap?.submarkets?.['period=ot&period=ft']?.selections;
+                    const mainHandicapData = findMainHandicapData(handicapSelections);
+
+                    if (mainHandicapData.handicap !== 0 || (mainHandicapData.homeOdd > 0 && mainHandicapData.awayOdd > 0)) {
+                        const expectedPoints = calculateExpectedPointsFromHandicap(totalPoints, mainHandicapData.handicap);
+                        expectedHomePoints = expectedPoints.expectedHomePoints;
+                        expectedAwayPoints = expectedPoints.expectedAwayPoints;
+                        lambda_home_1min = expectedPoints.homePointsPerMinute;
+                        lambda_away_1min = expectedPoints.awayPointsPerMinute;
+
+                        lambdaHomeDisplay.textContent = lambda_home_1min.toFixed(4);
+                        lambdaAwayDisplay.textContent = lambda_away_1min.toFixed(4);
+                    } else {
+                        lambdaHomeDisplay.textContent = 'N/A';
+                        lambdaAwayDisplay.textContent = 'N/A';
+                    }
+                } else {
+                    // Fallback: Try 1st half team total if handicap not available
+                    const market1H = selectedEvent.markets?.['basketball.1st_half_team_total'];
+                    if (market1H) {
+                        const homeSelections1H = market1H.submarkets?.['period=1h&period=q1&period=q2&team=home']?.selections;
+                        const awaySelections1H = market1H.submarkets?.['period=1h&period=q1&period=q2&team=away']?.selections;
+
+                        const homeTotal1H = findMainLineData(homeSelections1H).total;
+                        const awayTotal1H = findMainLineData(awaySelections1H).total;
+
+                        if (homeTotal1H > 0 && awayTotal1H > 0) {
+                            expectedHomePoints = homeTotal1H * 2;
+                            expectedAwayPoints = awayTotal1H * 2;
+                            lambda_home_1min = (homeTotal1H / 20) * 0.95;
+                            lambda_away_1min = (awayTotal1H / 20) * 0.95;
+
+                            lambdaHomeDisplay.textContent = lambda_home_1min.toFixed(4);
+                            lambdaAwayDisplay.textContent = lambda_away_1min.toFixed(4);
+                        } else {
+                            lambdaHomeDisplay.textContent = 'N/A';
+                            lambdaAwayDisplay.textContent = 'N/A';
+                        }
+                    } else {
+                        lambdaHomeDisplay.textContent = 'N/A';
+                        lambdaAwayDisplay.textContent = 'N/A';
+                    }
+                }
+
                 // Check if market uses logistic regression
                 if (logisticCoefficients[marketType]) {
                     const coeffs = logisticCoefficients[marketType];
@@ -780,37 +883,13 @@
                     return;
                 }
 
-                // For non-logistic regression markets, use old calculation
-                const market1H = selectedEvent.markets?.['basketball.1st_half_team_total'];
-                if (!market1H) {
-                    alert('Podaci za 1st half team total nisu dostupni za ovaj meč.');
-                    return;
-                }
-
-                const homeSelections1H = market1H.submarkets['period=1h&period=q1&period=q2&team=home']?.selections;
-                const awaySelections1H = market1H.submarkets['period=1h&period=q1&period=q2&team=away']?.selections;
-
-                const homeTotal1H = findMainLineData(homeSelections1H).total;
-                const awayTotal1H = findMainLineData(awaySelections1H).total;
-
-                if (homeTotal1H === 0 || awayTotal1H === 0) {
-                    lambdaHomeDisplay.textContent = 'N/A';
-                    lambdaAwayDisplay.textContent = 'N/A';
-                    return;
-                }
-
-                const lambda_home_1min = (homeTotal1H / 20) * 0.95;
-                const lambda_away_1min = (awayTotal1H / 20) * 0.95;
-
-                lambdaHomeDisplay.textContent = lambda_home_1min.toFixed(4);
-                lambdaAwayDisplay.textContent = lambda_away_1min.toFixed(4);
-
+                // For non-logistic regression markets, use calculated expected points
                 switch(marketType) {
                     case '1. min oba tima daju trojku':
-                        if (totalPoints > 0) {
+                        if (totalPoints > 0 && expectedHomePoints > 0 && expectedAwayPoints > 0) {
                             const total3P = (totalPoints * 0.34) / 3;
-                            const home3P_game = total3P * (homeTotal1H / (homeTotal1H + awayTotal1H));
-                            const away3P_game = total3P * (awayTotal1H / (homeTotal1H + awayTotal1H));
+                            const home3P_game = total3P * (expectedHomePoints / totalPoints);
+                            const away3P_game = total3P * (expectedAwayPoints / totalPoints);
                             const lambda_home_3p_min = home3P_game / 40;
                             const lambda_away_3p_min = away3P_game / 40;
                             const prob_home_3p = 1 - Math.exp(-lambda_home_3p_min);
