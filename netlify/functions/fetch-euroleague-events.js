@@ -8,10 +8,7 @@ exports.handler = async function(event, context) {
     };
   }
 
-  const nowInSeconds = Math.floor(Date.now() / 1000);
-  const sevenDaysFromNowInSeconds = nowInSeconds + (7 * 24 * 60 * 60);
-
-  const API_ENDPOINT = `https://sports-api.cloudbet.com/pub/v2/odds/competitions/basketball-international-euroleague?from=${nowInSeconds}&to=${sevenDaysFromNowInSeconds}&players=true&limit=100`;
+  const API_ENDPOINT = `https://www.cloudbet.com/sports-api/c/v6/sports/competitions/basketball-international-euroleague/events?include-pretrading=false&locale=en&markets=basketball.moneyline&markets=basketball.handicap&markets=basketball.totals`;
 
   try {
     const response = await fetch(API_ENDPOINT, {
