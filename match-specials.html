@@ -226,6 +226,9 @@
                                 if (specialDef.reduceOdds) { calculatedOdd *= 0.9; }
                             }
                         } else if (specialDef.calculation) { calculatedOdd = specialDef.calculation(); }
+                        if (calculatedOdd !== null) {
+                            calculatedOdd = calculatedOdd * 0.85;
+                        }
                     } catch (calcError) { console.error(`Greška: ${finalName}: ${calcError}`); calculatedOdd = null; }
 
                     const finalOddForDisplayString = roundOdds(calculatedOdd);
