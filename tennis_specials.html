@@ -155,7 +155,7 @@
                             <label for="tournament-select">Izaberi Turnir</label>
                             <div class="flex items-center gap-2">
                                 <select id="tournament-select" class="flex-1">
-                                    <option value="">Ucitavanje turnira...</option>
+                                    <option value="">-- Izaberi turnir --</option>
                                 </select>
                                 <div id="tournament-loader" class="spinner hidden"></div>
                             </div>
@@ -209,54 +209,57 @@
 
                     <!-- Tab Content -->
                     <div id="main-content" class="tab-panel">
-                        <div class="overflow-x-auto rounded-lg border border-slate-200">
+                        <div class="overflow-x-auto rounded-lg border border-slate-200 max-h-96 overflow-y-auto">
                             <table class="min-w-full">
-                                <thead class="bg-slate-50">
+                                <thead class="bg-slate-50 sticky top-0">
                                     <tr>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Trziste</th>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Izbor</th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Linija</th>
                                         <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Kvota</th>
                                         <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Dodaj</th>
                                     </tr>
                                 </thead>
                                 <tbody id="main-markets-body" class="bg-white divide-y divide-slate-100">
-                                    <tr><td colspan="4" class="text-center py-8 text-gray-500">Ucitaj kvote da vidis trzista.</td></tr>
+                                    <tr><td colspan="5" class="text-center py-8 text-gray-500">Ucitaj kvote da vidis trzista.</td></tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
 
                     <div id="games-content" class="tab-panel hidden">
-                        <div class="overflow-x-auto rounded-lg border border-slate-200">
+                        <div class="overflow-x-auto rounded-lg border border-slate-200 max-h-96 overflow-y-auto">
                             <table class="min-w-full">
-                                <thead class="bg-slate-50">
+                                <thead class="bg-slate-50 sticky top-0">
                                     <tr>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Trziste</th>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Izbor</th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Linija</th>
                                         <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Kvota</th>
                                         <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Dodaj</th>
                                     </tr>
                                 </thead>
                                 <tbody id="games-markets-body" class="bg-white divide-y divide-slate-100">
-                                    <tr><td colspan="4" class="text-center py-8 text-gray-500">Ucitaj kvote da vidis trzista.</td></tr>
+                                    <tr><td colspan="5" class="text-center py-8 text-gray-500">Ucitaj kvote da vidis trzista.</td></tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
 
                     <div id="sets-content" class="tab-panel hidden">
-                        <div class="overflow-x-auto rounded-lg border border-slate-200">
+                        <div class="overflow-x-auto rounded-lg border border-slate-200 max-h-96 overflow-y-auto">
                             <table class="min-w-full">
-                                <thead class="bg-slate-50">
+                                <thead class="bg-slate-50 sticky top-0">
                                     <tr>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Trziste</th>
                                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Izbor</th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Linija</th>
                                         <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Kvota</th>
                                         <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Dodaj</th>
                                     </tr>
                                 </thead>
                                 <tbody id="sets-markets-body" class="bg-white divide-y divide-slate-100">
-                                    <tr><td colspan="4" class="text-center py-8 text-gray-500">Ucitaj kvote da vidis trzista.</td></tr>
+                                    <tr><td colspan="5" class="text-center py-8 text-gray-500">Ucitaj kvote da vidis trzista.</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -357,15 +360,25 @@
             const tabPanels = document.querySelectorAll('.tab-panel');
 
             // State
-            let tournaments = [];
             let matches = [];
             let currentMatchData = null;
             let generatedBets = [];
 
-            // API Base URLs - using Netlify function proxy to avoid CORS
-            const PROXY_BASE = '/api/fetch-tennis?path=';
-            const TOURNAMENTS_PATH = '/api/sports/TENN/hot/trending/leagues/?req=s,stnf,c,mb';
-            const TOURNAMENTS_API = PROXY_BASE + encodeURIComponent(TOURNAMENTS_PATH);
+            // Tennis Tournament URLs (Kambi API - same as football)
+            const TOURNAMENT_URLS = {
+                "Australian Open": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/australian_open/all/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+                "ATP Melbourne": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/atp/melbourne/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+                "ATP Auckland": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/atp/auckland/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+                "ATP Adelaide": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/atp/adelaide/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+                "WTA Adelaide": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/wta/adelaide/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+                "WTA Auckland": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/wta/auckland/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+                "WTA Hobart": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/wta/hobart/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+                "ATP All Matches": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/atp/all/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+                "WTA All Matches": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/wta/all/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+                "ITF Men": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/itf_men/all/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+                "ITF Women": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/itf_women/all/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+                "Challenger": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/challenger/all/all/matches.json?lang=en_GB&market=GB&useCombined=true"
+            };
 
             // Utility functions
             function logStatus(message, isError = false) {
@@ -388,6 +401,18 @@
                 return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             }
 
+            // Initialize tournament dropdown
+            function initTournaments() {
+                tournamentSelect.innerHTML = '<option value="">-- Izaberi turnir --</option>';
+                for (const name in TOURNAMENT_URLS) {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    tournamentSelect.appendChild(option);
+                }
+                logStatus('Turniri ucitani. Izaberi turnir za prikaz meceva.');
+            }
+
             // Tab handling
             tabs.forEach(tab => {
                 tab.addEventListener('click', (e) => {
@@ -404,76 +429,56 @@
                 });
             });
 
-            // Fetch tournaments
-            async function fetchTournaments() {
-                showLoader(tournamentLoader);
-                logStatus('Ucitavanje turnira...');
-
-                try {
-                    const response = await fetch(TOURNAMENTS_API);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-                    const data = await response.json();
-                    tournaments = data || [];
-
-                    tournamentSelect.innerHTML = '<option value="">-- Izaberi turnir --</option>';
-                    tournaments.forEach((tournament, index) => {
-                        const option = document.createElement('option');
-                        option.value = index;
-                        option.textContent = `${tournament.name} (${tournament.regionName})`;
-                        tournamentSelect.appendChild(option);
-                    });
-
-                    logStatus(`Ucitano ${tournaments.length} turnira.`);
-                } catch (error) {
-                    logStatus(`Greska pri ucitavanju turnira: ${error.message}`, true);
-                    tournamentSelect.innerHTML = '<option value="">Greska pri ucitavanju</option>';
-                } finally {
-                    hideLoader(tournamentLoader);
-                }
-            }
-
             // Fetch matches for selected tournament
-            async function fetchMatches(tournamentIndex) {
-                if (tournamentIndex === '') {
+            async function fetchMatches(tournamentName) {
+                if (!tournamentName) {
                     matchSelect.innerHTML = '<option value="">-- Prvo izaberi turnir --</option>';
                     matchSelect.disabled = true;
                     fetchOddsBtn.disabled = true;
                     return;
                 }
 
-                const tournament = tournaments[tournamentIndex];
-                const matchesPath = `${tournament.url}?req=la,s,stnf,c,mb`;
-                const matchesUrl = PROXY_BASE + encodeURIComponent(matchesPath);
+                const url = TOURNAMENT_URLS[tournamentName];
+                if (!url) return;
 
                 showLoader(matchLoader);
                 matchSelect.disabled = true;
-                logStatus(`Ucitavanje meceva za ${tournament.name}...`);
+                logStatus(`Ucitavanje meceva za ${tournamentName}...`);
 
                 try {
-                    const response = await fetch(matchesUrl);
+                    const response = await fetch(url);
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
                     const data = await response.json();
                     matches = data.events || [];
 
                     matchSelect.innerHTML = '<option value="">-- Izaberi mec --</option>';
-                    matches.forEach((match, index) => {
-                        const option = document.createElement('option');
-                        option.value = index;
-                        const startTime = new Date(match.startTime);
-                        const timeStr = startTime.toLocaleString('sr-RS', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
+
+                    if (matches.length === 0) {
+                        matchSelect.innerHTML = '<option value="">Nema dostupnih meceva</option>';
+                        logStatus(`Nema dostupnih meceva za ${tournamentName}.`, true);
+                    } else {
+                        matches.forEach((matchItem, index) => {
+                            const event = matchItem.event;
+                            if (!event) return;
+
+                            const option = document.createElement('option');
+                            option.value = index;
+                            const startTime = new Date(event.start);
+                            const timeStr = startTime.toLocaleString('sr-RS', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                            const matchName = event.name || `${event.homeName} vs ${event.awayName}`;
+                            option.textContent = `${matchName} - ${timeStr}`;
+                            matchSelect.appendChild(option);
                         });
-                        option.textContent = `${match.name || match.shortName} - ${timeStr}`;
-                        matchSelect.appendChild(option);
-                    });
+                        logStatus(`Ucitano ${matches.length} meceva za ${tournamentName}.`);
+                    }
 
                     matchSelect.disabled = false;
-                    logStatus(`Ucitano ${matches.length} meceva za ${tournament.name}.`);
                 } catch (error) {
                     logStatus(`Greska pri ucitavanju meceva: ${error.message}`, true);
                     matchSelect.innerHTML = '<option value="">Greska pri ucitavanju</option>';
@@ -487,24 +492,30 @@
                 const matchIndex = matchSelect.value;
                 if (matchIndex === '') return;
 
-                const match = matches[matchIndex];
-                const oddsPath = `/api${match.url}?bt=2&req=la,s,stnf,c,mb`;
-                const oddsUrl = PROXY_BASE + encodeURIComponent(oddsPath);
+                const matchItem = matches[matchIndex];
+                const event = matchItem.event;
+                const eventId = event.id;
+
+                const oddsUrl = `https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/betoffer/event/${eventId}.json?lang=en_GB&market=GB&client_id=2&channel_id=7&includeParticipants=true`;
 
                 showLoader(oddsLoader);
                 fetchOddsBtn.disabled = true;
-                logStatus(`Ucitavanje kvota za ${match.name || match.shortName}...`);
+                logStatus(`Ucitavanje kvota za ${event.name || event.homeName + ' vs ' + event.awayName}...`);
 
                 try {
                     const response = await fetch(oddsUrl);
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
                     const data = await response.json();
-                    currentMatchData = data;
+                    currentMatchData = {
+                        ...data,
+                        event: event,
+                        tournamentName: tournamentSelect.value
+                    };
 
                     // Display match info
-                    matchNameDisplay.textContent = data.name || match.name || match.shortName;
-                    const startTime = new Date(data.startTime || match.startTime);
+                    matchNameDisplay.textContent = event.name || `${event.homeName} vs ${event.awayName}`;
+                    const startTime = new Date(event.start);
                     matchTimeDisplay.textContent = startTime.toLocaleString('sr-RS', {
                         weekday: 'long',
                         day: '2-digit',
@@ -513,14 +524,14 @@
                         hour: '2-digit',
                         minute: '2-digit'
                     });
-                    matchTournamentDisplay.textContent = data.leagueName || match.leagueName || '';
+                    matchTournamentDisplay.textContent = tournamentSelect.value;
                     matchInfoSection.classList.remove('hidden');
 
                     // Process and display markets
-                    displayMarkets(data.markets || []);
+                    displayMarkets(data.betOffers || []);
                     marketsSection.classList.remove('hidden');
 
-                    logStatus(`Ucitano ${(data.markets || []).length} trzista za mec.`);
+                    logStatus(`Ucitano ${(data.betOffers || []).length} trzista za mec.`);
                 } catch (error) {
                     logStatus(`Greska pri ucitavanju kvota: ${error.message}`, true);
                 } finally {
@@ -530,20 +541,20 @@
             }
 
             // Categorize and display markets
-            function displayMarkets(markets) {
+            function displayMarkets(betOffers) {
                 const mainMarkets = [];
                 const gamesMarkets = [];
                 const setsMarkets = [];
 
-                markets.forEach(market => {
-                    const marketName = (market.name || market.marketName || '').toLowerCase();
+                betOffers.forEach(offer => {
+                    const marketName = (offer.criterion?.label || '').toLowerCase();
 
                     if (marketName.includes('game') || marketName.includes('gem')) {
-                        gamesMarkets.push(market);
+                        gamesMarkets.push(offer);
                     } else if (marketName.includes('set')) {
-                        setsMarkets.push(market);
+                        setsMarkets.push(offer);
                     } else {
-                        mainMarkets.push(market);
+                        mainMarkets.push(offer);
                     }
                 });
 
@@ -552,33 +563,35 @@
                 renderMarketsTable(setsMarkets, setsMarketsBody);
             }
 
-            function renderMarketsTable(markets, tableBody) {
-                if (!markets || markets.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500">Nema dostupnih trzista u ovoj kategoriji.</td></tr>';
+            function renderMarketsTable(betOffers, tableBody) {
+                if (!betOffers || betOffers.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">Nema dostupnih trzista u ovoj kategoriji.</td></tr>';
                     return;
                 }
 
                 tableBody.innerHTML = '';
-                markets.forEach(market => {
-                    const marketName = market.name || market.marketName || 'N/A';
-                    const selections = market.selections || [];
+                betOffers.forEach(offer => {
+                    const marketName = offer.criterion?.label || 'N/A';
+                    const outcomes = offer.outcomes || [];
 
-                    selections.forEach(selection => {
-                        const selectionName = selection.name || selection.selectionName || 'N/A';
-                        const odds = selection.price || selection.odds || 'N/A';
-                        const oddsFormatted = typeof odds === 'number' ? odds.toFixed(2) : odds;
+                    outcomes.forEach(outcome => {
+                        const selectionName = outcome.label || 'N/A';
+                        const odds = outcome.odds ? (outcome.odds / 1000).toFixed(2) : 'N/A';
+                        const line = outcome.line ? (outcome.line / 1000).toFixed(1) : '';
 
                         const tr = document.createElement('tr');
                         tr.className = 'market-row hover:bg-green-50 transition-colors';
                         tr.innerHTML = `
                             <td class="px-4 py-3 text-sm text-slate-700">${marketName}</td>
                             <td class="px-4 py-3 text-sm text-slate-700">${selectionName}</td>
-                            <td class="px-4 py-3 text-sm text-center font-medium text-slate-800">${oddsFormatted}</td>
+                            <td class="px-4 py-3 text-sm text-center text-slate-600">${line}</td>
+                            <td class="px-4 py-3 text-sm text-center font-medium text-slate-800">${odds}</td>
                             <td class="px-4 py-3 text-center">
                                 <button class="add-to-preview-btn bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded-md text-sm font-medium transition-colors"
                                     data-market="${marketName}"
                                     data-selection="${selectionName}"
-                                    data-odds="${oddsFormatted}">
+                                    data-odds="${odds}"
+                                    data-line="${line}">
                                     +
                                 </button>
                             </td>
@@ -593,25 +606,27 @@
                         const market = btn.dataset.market;
                         const selection = btn.dataset.selection;
                         const odds = btn.dataset.odds;
-                        addBetToPreview(market, selection, odds);
+                        const line = btn.dataset.line;
+                        addBetToPreview(market, selection, odds, line);
                     });
                 });
             }
 
             // Add bet to preview
-            function addBetToPreview(market, selection, odds, isOver = true) {
-                if (!currentMatchData && !generatedBets.length) {
+            function addBetToPreview(market, selection, odds, line = '') {
+                if (!currentMatchData) {
                     logStatus('Molimo ucitaj kvote za mec prvo.', true);
                     return;
                 }
 
-                const matchName = currentMatchData ? (currentMatchData.name || 'Tenis Mec') : 'Tenis Mec';
-                const matchTime = currentMatchData ? new Date(currentMatchData.startTime) : new Date();
-                const leagueName = currentMatchData ? (currentMatchData.leagueName || 'Tenis') : 'Tenis';
+                const event = currentMatchData.event;
+                const matchName = event.name || `${event.homeName} vs ${event.awayName}`;
+                const matchTime = new Date(event.start);
 
-                // Parse handicap/line from selection if present
-                const lineMatch = selection.match(/([\d.]+)/);
-                const line = lineMatch ? lineMatch[1] : '';
+                // Determine if this is an over/under market
+                const selLower = selection.toLowerCase();
+                const isOver = selLower.includes('over') || selLower.includes('vise') || selLower.includes('+');
+                const isUnder = selLower.includes('under') || selLower.includes('manje') || selLower.includes('-');
 
                 const bet = {
                     matchName: 'Tenis',
@@ -620,9 +635,9 @@
                     gost: selection,
                     cutoffTime: matchTime,
                     gr: line,
-                    u: isOver ? '' : odds,
+                    u: isUnder ? odds : '',
                     o: isOver ? odds : '',
-                    '1': !line ? odds : ''
+                    '1': (!isOver && !isUnder) ? odds : ''
                 };
 
                 generatedBets.push(bet);
@@ -689,7 +704,17 @@
                     return;
                 }
 
-                addBetToPreview(market, selection, odds);
+                // Create a dummy currentMatchData if not exists
+                if (!currentMatchData) {
+                    currentMatchData = {
+                        event: {
+                            name: 'Tenis Mec',
+                            start: new Date().toISOString()
+                        }
+                    };
+                }
+
+                addBetToPreview(market, selection, odds, '');
 
                 // Clear inputs
                 manualMarketInput.value = '';
@@ -763,7 +788,7 @@
             downloadCsvBtn.addEventListener('click', downloadCsv);
 
             // Initialize
-            fetchTournaments();
+            initTournaments();
         });
     </script>
 </body>
