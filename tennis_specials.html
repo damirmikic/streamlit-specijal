@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Tenis Specijala</title>
+    <link rel="icon" type="image/png" href="merkur.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #475569;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background-color: #f9fafb;
+            color: #1f2937;
+        }
+        .input-group input:disabled, .input-group input:read-only {
+             background-color: #e5e7eb;
+             cursor: not-allowed;
+        }
+        .input-group select:disabled {
+            background-color: #e5e7eb;
+            cursor: not-allowed;
+        }
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+        }
+        .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            padding: 0.75rem 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            transition: all 0.2s ease-in-out;
+            transform: translateY(0);
+        }
+        .action-btn:hover {
+             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+             transform: translateY(-2px);
+        }
+        .action-btn.primary {
+            background-image: linear-gradient(to right, #10b981, #059669);
+            color: white;
+        }
+        .action-btn.secondary {
+            background-color: #4b5563;
+            color: white;
+        }
+        .action-btn.success {
+            background-image: linear-gradient(to right, #22c55e, #16a34a);
+            color: white;
+        }
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .remove-preview-row {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            border-radius: 9999px;
+            width: 1.5rem;
+            height: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .remove-preview-row:hover {
+            background-color: #ef4444;
+            color: white;
+            border-color: #ef4444;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border-left-color: #10b981;
+            animation: spin 1s ease infinite;
+        }
+        .market-row:hover {
+            background-color: #f0fdf4;
+        }
+        .tab-button.active {
+            border-color: #10b981;
+            color: #10b981;
+            background-color: #ecfdf5;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-slate-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="max-w-5xl mx-auto bg-white rounded-xl border border-slate-200 shadow-sm">
+            <header class="p-6 sm:p-8 flex items-center justify-between border-b border-slate-200">
+                <div class="flex items-center gap-4">
+                    <div class="bg-green-100 text-green-600 p-3 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M18 12c0-3.3-2.7-6-6-6s-6 2.7-6 6"/>
+                            <path d="M12 6v12"/>
+                            <path d="M6 12h12"/>
+                        </svg>
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-slate-800">Generator Tenis Specijala</h1>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="/index.html" class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg shadow-sm transition-all text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M19.13 5.09C15.22 9.14 10 10.44 2.25 10.94"/><path d="M21.75 12.84c-5.76-1.4-11.64-2.2-17.62-2.96"/><path d="M16.25 18.02c-3.55-3.84-6.7-8.44-7.75-12.82"/></svg>
+                        Fudbal
+                    </a>
+                    <a href="/euroleague_specials.html" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-lg shadow-sm transition-all text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M4.2 14.2c.627.442 1.346.734 2.14.868"/></svg>
+                        Kosarka
+                    </a>
+                </div>
+            </header>
+
+            <div class="p-6 sm:p-8">
+                <!-- Tournament & Match Selection -->
+                <section class="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4">1. Izbor Turnira i Meca</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="input-group">
+                            <label for="tournament-select">Izaberi Turnir</label>
+                            <div class="flex items-center gap-2">
+                                <select id="tournament-select" class="flex-1">
+                                    <option value="">Ucitavanje turnira...</option>
+                                </select>
+                                <div id="tournament-loader" class="spinner hidden"></div>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="match-select">Izaberi Mec</label>
+                            <div class="flex items-center gap-2">
+                                <select id="match-select" class="flex-1" disabled>
+                                    <option value="">-- Prvo izaberi turnir --</option>
+                                </select>
+                                <div id="match-loader" class="spinner hidden"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <button id="fetch-odds-btn" class="action-btn primary" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85 1 6.54 2.64"/><path d="M21 3v9h-9"/></svg>
+                            Ucitaj Kvote
+                        </button>
+                        <div id="odds-loader" class="spinner hidden"></div>
+                    </div>
+                </section>
+
+                <!-- Match Info Display -->
+                <section id="match-info-section" class="mb-8 p-6 bg-green-50 border border-green-200 rounded-lg hidden">
+                    <div class="text-center">
+                        <h2 id="match-name-display" class="text-xl font-bold text-slate-800 mb-2"></h2>
+                        <p id="match-time-display" class="text-slate-600"></p>
+                        <p id="match-tournament-display" class="text-sm text-green-600 mt-1"></p>
+                    </div>
+                </section>
+
+                <!-- Markets Display -->
+                <section id="markets-section" class="mb-8 hidden">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4">2. Dostupna Trzista</h3>
+
+                    <!-- Tabs -->
+                    <div class="border-b border-gray-200 mb-4">
+                        <nav class="-mb-px flex space-x-4" aria-label="Tabs">
+                            <button id="main-tab" class="tab-button active whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm">
+                                Glavna Trzista
+                            </button>
+                            <button id="games-tab" class="tab-button whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700">
+                                Gemovi
+                            </button>
+                            <button id="sets-tab" class="tab-button whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700">
+                                Setovi
+                            </button>
+                        </nav>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div id="main-content" class="tab-panel">
+                        <div class="overflow-x-auto rounded-lg border border-slate-200">
+                            <table class="min-w-full">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Trziste</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Izbor</th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Kvota</th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Dodaj</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="main-markets-body" class="bg-white divide-y divide-slate-100">
+                                    <tr><td colspan="4" class="text-center py-8 text-gray-500">Ucitaj kvote da vidis trzista.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="games-content" class="tab-panel hidden">
+                        <div class="overflow-x-auto rounded-lg border border-slate-200">
+                            <table class="min-w-full">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Trziste</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Izbor</th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Kvota</th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Dodaj</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="games-markets-body" class="bg-white divide-y divide-slate-100">
+                                    <tr><td colspan="4" class="text-center py-8 text-gray-500">Ucitaj kvote da vidis trzista.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="sets-content" class="tab-panel hidden">
+                        <div class="overflow-x-auto rounded-lg border border-slate-200">
+                            <table class="min-w-full">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Trziste</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Izbor</th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Kvota</th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Dodaj</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sets-markets-body" class="bg-white divide-y divide-slate-100">
+                                    <tr><td colspan="4" class="text-center py-8 text-gray-500">Ucitaj kvote da vidis trzista.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Manual Entry Section -->
+                <section class="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
+                    <h3 class="font-bold text-lg text-slate-800 mb-4">3. Rucni Unos Igre</h3>
+                    <div id="betting-form" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                        <div class="input-group md:col-span-2">
+                            <label for="manual-market">Naziv Igre</label>
+                            <input type="text" id="manual-market" placeholder="npr. Ukupno gemova">
+                        </div>
+                        <div class="input-group">
+                            <label for="manual-selection">Izbor</label>
+                            <input type="text" id="manual-selection" placeholder="npr. Vise 22.5">
+                        </div>
+                        <div class="input-group">
+                            <label for="manual-odds">Kvota</label>
+                            <input type="number" id="manual-odds" step="0.01" placeholder="npr. 1.85">
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="add-manual-btn" class="flex-1 action-btn secondary !py-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                                Dodaj
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Preview Section -->
+                <div id="preview-section" class="hidden">
+                    <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-6 text-center">4. Pregled Generisanih Igara</h2>
+                    <div class="overflow-x-auto rounded-lg border border-slate-200">
+                        <table class="min-w-full">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Domacin (Naziv Meca)</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Gost (Vrsta Igre)</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">GR</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">U</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">O</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">1</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Ukloni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="preview-table-body" class="bg-white"></tbody>
+                        </table>
+                    </div>
+                    <div class="flex justify-center mt-8">
+                        <button id="download-csv-btn" class="w-full md:w-auto action-btn success">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></svg>
+                            Preuzmi CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status Log -->
+                <div id="status-log" class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 h-32 overflow-y-auto">
+                    Izaberi turnir da pocnes.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const tournamentSelect = document.getElementById('tournament-select');
+            const matchSelect = document.getElementById('match-select');
+            const fetchOddsBtn = document.getElementById('fetch-odds-btn');
+            const tournamentLoader = document.getElementById('tournament-loader');
+            const matchLoader = document.getElementById('match-loader');
+            const oddsLoader = document.getElementById('odds-loader');
+            const statusLog = document.getElementById('status-log');
+
+            const matchInfoSection = document.getElementById('match-info-section');
+            const matchNameDisplay = document.getElementById('match-name-display');
+            const matchTimeDisplay = document.getElementById('match-time-display');
+            const matchTournamentDisplay = document.getElementById('match-tournament-display');
+
+            const marketsSection = document.getElementById('markets-section');
+            const mainMarketsBody = document.getElementById('main-markets-body');
+            const gamesMarketsBody = document.getElementById('games-markets-body');
+            const setsMarketsBody = document.getElementById('sets-markets-body');
+
+            const manualMarketInput = document.getElementById('manual-market');
+            const manualSelectionInput = document.getElementById('manual-selection');
+            const manualOddsInput = document.getElementById('manual-odds');
+            const addManualBtn = document.getElementById('add-manual-btn');
+
+            const previewSection = document.getElementById('preview-section');
+            const previewTableBody = document.getElementById('preview-table-body');
+            const downloadCsvBtn = document.getElementById('download-csv-btn');
+
+            const tabs = document.querySelectorAll('.tab-button');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+
+            // State
+            let tournaments = [];
+            let matches = [];
+            let currentMatchData = null;
+            let generatedBets = [];
+
+            // API Base URLs
+            const TOURNAMENTS_API = 'https://en.stoiximan.gr/api/sports/TENN/hot/trending/leagues/?req=s,stnf,c,mb';
+
+            // Utility functions
+            function logStatus(message, isError = false) {
+                const now = new Date().toLocaleTimeString();
+                const color = isError ? 'text-red-500' : 'text-gray-800';
+                statusLog.innerHTML = `<div class="${color}">[${now}] ${message}</div>` + statusLog.innerHTML;
+            }
+
+            function showLoader(loader) {
+                loader.classList.remove('hidden');
+            }
+
+            function hideLoader(loader) {
+                loader.classList.add('hidden');
+            }
+
+            function removeDiacritics(text) {
+                if (!text) return '';
+                text = text.replace(/đ/g, 'dj').replace(/Đ/g, 'Dj');
+                return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            }
+
+            // Tab handling
+            tabs.forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    tabs.forEach(t => {
+                        t.classList.remove('active');
+                        t.classList.add('text-gray-500');
+                    });
+                    e.target.classList.add('active');
+                    e.target.classList.remove('text-gray-500');
+
+                    tabPanels.forEach(panel => panel.classList.add('hidden'));
+                    const targetId = e.target.id.replace('-tab', '-content');
+                    document.getElementById(targetId).classList.remove('hidden');
+                });
+            });
+
+            // Fetch tournaments
+            async function fetchTournaments() {
+                showLoader(tournamentLoader);
+                logStatus('Ucitavanje turnira...');
+
+                try {
+                    const response = await fetch(TOURNAMENTS_API);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                    const data = await response.json();
+                    tournaments = data || [];
+
+                    tournamentSelect.innerHTML = '<option value="">-- Izaberi turnir --</option>';
+                    tournaments.forEach((tournament, index) => {
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = `${tournament.name} (${tournament.regionName})`;
+                        tournamentSelect.appendChild(option);
+                    });
+
+                    logStatus(`Ucitano ${tournaments.length} turnira.`);
+                } catch (error) {
+                    logStatus(`Greska pri ucitavanju turnira: ${error.message}`, true);
+                    tournamentSelect.innerHTML = '<option value="">Greska pri ucitavanju</option>';
+                } finally {
+                    hideLoader(tournamentLoader);
+                }
+            }
+
+            // Fetch matches for selected tournament
+            async function fetchMatches(tournamentIndex) {
+                if (tournamentIndex === '') {
+                    matchSelect.innerHTML = '<option value="">-- Prvo izaberi turnir --</option>';
+                    matchSelect.disabled = true;
+                    fetchOddsBtn.disabled = true;
+                    return;
+                }
+
+                const tournament = tournaments[tournamentIndex];
+                const matchesUrl = `https://en.stoiximan.gr${tournament.url}?req=la,s,stnf,c,mb`;
+
+                showLoader(matchLoader);
+                matchSelect.disabled = true;
+                logStatus(`Ucitavanje meceva za ${tournament.name}...`);
+
+                try {
+                    const response = await fetch(matchesUrl);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                    const data = await response.json();
+                    matches = data.events || [];
+
+                    matchSelect.innerHTML = '<option value="">-- Izaberi mec --</option>';
+                    matches.forEach((match, index) => {
+                        const option = document.createElement('option');
+                        option.value = index;
+                        const startTime = new Date(match.startTime);
+                        const timeStr = startTime.toLocaleString('sr-RS', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        option.textContent = `${match.name || match.shortName} - ${timeStr}`;
+                        matchSelect.appendChild(option);
+                    });
+
+                    matchSelect.disabled = false;
+                    logStatus(`Ucitano ${matches.length} meceva za ${tournament.name}.`);
+                } catch (error) {
+                    logStatus(`Greska pri ucitavanju meceva: ${error.message}`, true);
+                    matchSelect.innerHTML = '<option value="">Greska pri ucitavanju</option>';
+                } finally {
+                    hideLoader(matchLoader);
+                }
+            }
+
+            // Fetch odds for selected match
+            async function fetchOdds() {
+                const matchIndex = matchSelect.value;
+                if (matchIndex === '') return;
+
+                const match = matches[matchIndex];
+                const oddsUrl = `https://en.stoiximan.gr/api${match.url}?bt=2&req=la,s,stnf,c,mb`;
+
+                showLoader(oddsLoader);
+                fetchOddsBtn.disabled = true;
+                logStatus(`Ucitavanje kvota za ${match.name || match.shortName}...`);
+
+                try {
+                    const response = await fetch(oddsUrl);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                    const data = await response.json();
+                    currentMatchData = data;
+
+                    // Display match info
+                    matchNameDisplay.textContent = data.name || match.name || match.shortName;
+                    const startTime = new Date(data.startTime || match.startTime);
+                    matchTimeDisplay.textContent = startTime.toLocaleString('sr-RS', {
+                        weekday: 'long',
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    matchTournamentDisplay.textContent = data.leagueName || match.leagueName || '';
+                    matchInfoSection.classList.remove('hidden');
+
+                    // Process and display markets
+                    displayMarkets(data.markets || []);
+                    marketsSection.classList.remove('hidden');
+
+                    logStatus(`Ucitano ${(data.markets || []).length} trzista za mec.`);
+                } catch (error) {
+                    logStatus(`Greska pri ucitavanju kvota: ${error.message}`, true);
+                } finally {
+                    hideLoader(oddsLoader);
+                    fetchOddsBtn.disabled = false;
+                }
+            }
+
+            // Categorize and display markets
+            function displayMarkets(markets) {
+                const mainMarkets = [];
+                const gamesMarkets = [];
+                const setsMarkets = [];
+
+                markets.forEach(market => {
+                    const marketName = (market.name || market.marketName || '').toLowerCase();
+
+                    if (marketName.includes('game') || marketName.includes('gem')) {
+                        gamesMarkets.push(market);
+                    } else if (marketName.includes('set')) {
+                        setsMarkets.push(market);
+                    } else {
+                        mainMarkets.push(market);
+                    }
+                });
+
+                renderMarketsTable(mainMarkets, mainMarketsBody);
+                renderMarketsTable(gamesMarkets, gamesMarketsBody);
+                renderMarketsTable(setsMarkets, setsMarketsBody);
+            }
+
+            function renderMarketsTable(markets, tableBody) {
+                if (!markets || markets.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500">Nema dostupnih trzista u ovoj kategoriji.</td></tr>';
+                    return;
+                }
+
+                tableBody.innerHTML = '';
+                markets.forEach(market => {
+                    const marketName = market.name || market.marketName || 'N/A';
+                    const selections = market.selections || [];
+
+                    selections.forEach(selection => {
+                        const selectionName = selection.name || selection.selectionName || 'N/A';
+                        const odds = selection.price || selection.odds || 'N/A';
+                        const oddsFormatted = typeof odds === 'number' ? odds.toFixed(2) : odds;
+
+                        const tr = document.createElement('tr');
+                        tr.className = 'market-row hover:bg-green-50 transition-colors';
+                        tr.innerHTML = `
+                            <td class="px-4 py-3 text-sm text-slate-700">${marketName}</td>
+                            <td class="px-4 py-3 text-sm text-slate-700">${selectionName}</td>
+                            <td class="px-4 py-3 text-sm text-center font-medium text-slate-800">${oddsFormatted}</td>
+                            <td class="px-4 py-3 text-center">
+                                <button class="add-to-preview-btn bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded-md text-sm font-medium transition-colors"
+                                    data-market="${marketName}"
+                                    data-selection="${selectionName}"
+                                    data-odds="${oddsFormatted}">
+                                    +
+                                </button>
+                            </td>
+                        `;
+                        tableBody.appendChild(tr);
+                    });
+                });
+
+                // Add click handlers for add buttons
+                tableBody.querySelectorAll('.add-to-preview-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const market = btn.dataset.market;
+                        const selection = btn.dataset.selection;
+                        const odds = btn.dataset.odds;
+                        addBetToPreview(market, selection, odds);
+                    });
+                });
+            }
+
+            // Add bet to preview
+            function addBetToPreview(market, selection, odds, isOver = true) {
+                if (!currentMatchData && !generatedBets.length) {
+                    logStatus('Molimo ucitaj kvote za mec prvo.', true);
+                    return;
+                }
+
+                const matchName = currentMatchData ? (currentMatchData.name || 'Tenis Mec') : 'Tenis Mec';
+                const matchTime = currentMatchData ? new Date(currentMatchData.startTime) : new Date();
+                const leagueName = currentMatchData ? (currentMatchData.leagueName || 'Tenis') : 'Tenis';
+
+                // Parse handicap/line from selection if present
+                const lineMatch = selection.match(/([\d.]+)/);
+                const line = lineMatch ? lineMatch[1] : '';
+
+                const bet = {
+                    matchName: 'Tenis',
+                    leagueName: market,
+                    domacin: matchName,
+                    gost: selection,
+                    cutoffTime: matchTime,
+                    gr: line,
+                    u: isOver ? '' : odds,
+                    o: isOver ? odds : '',
+                    '1': !line ? odds : ''
+                };
+
+                generatedBets.push(bet);
+                renderPreviewTable();
+                logStatus(`Dodato: ${market} - ${selection} @ ${odds}`);
+            }
+
+            // Render preview table
+            function renderPreviewTable() {
+                previewTableBody.innerHTML = '';
+                if (generatedBets.length > 0) {
+                    previewSection.classList.remove('hidden');
+                } else {
+                    previewSection.classList.add('hidden');
+                    return;
+                }
+
+                generatedBets.forEach((bet, index) => {
+                    const row = previewTableBody.insertRow();
+                    row.className = 'bg-white even:bg-slate-50';
+                    row.innerHTML = `
+                        <td class="px-2 py-1"><input type="text" class="w-full bg-transparent rounded-md p-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-500" value="${bet.domacin}" data-index="${index}" data-field="domacin"></td>
+                        <td class="px-2 py-1"><input type="text" class="w-full bg-transparent rounded-md p-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-500" value="${bet.gost}" data-index="${index}" data-field="gost"></td>
+                        <td class="px-2 py-1"><input type="text" class="w-24 text-center bg-transparent rounded-md p-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-500" value="${bet.gr}" data-index="${index}" data-field="gr"></td>
+                        <td class="px-2 py-1"><input type="number" step="0.01" class="w-20 text-center bg-transparent rounded-md p-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-500" value="${bet.u}" data-index="${index}" data-field="u"></td>
+                        <td class="px-2 py-1"><input type="number" step="0.01" class="w-20 text-center bg-transparent rounded-md p-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-500" value="${bet.o}" data-index="${index}" data-field="o"></td>
+                        <td class="px-2 py-1"><input type="number" step="0.01" class="w-20 text-center bg-transparent rounded-md p-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-green-500" value="${bet['1']}" data-index="${index}" data-field="1"></td>
+                        <td class="px-4 py-4 text-center">
+                            <button type="button" class="remove-preview-row" data-index="${index}" title="Ukloni ovu igru">&times;</button>
+                        </td>
+                    `;
+                });
+            }
+
+            // Handle preview table edits
+            previewTableBody.addEventListener('input', function(e) {
+                if (e.target.tagName === 'INPUT') {
+                    const index = parseInt(e.target.dataset.index, 10);
+                    const field = e.target.dataset.field;
+                    if (generatedBets[index]) {
+                        generatedBets[index][field] = e.target.value;
+                    }
+                }
+            });
+
+            // Handle row removal
+            previewTableBody.addEventListener('click', function(e) {
+                if (e.target.classList.contains('remove-preview-row')) {
+                    const index = parseInt(e.target.dataset.index, 10);
+                    generatedBets.splice(index, 1);
+                    renderPreviewTable();
+                    logStatus('Igra uklonjena iz pregleda.');
+                }
+            });
+
+            // Manual entry
+            addManualBtn.addEventListener('click', () => {
+                const market = manualMarketInput.value.trim();
+                const selection = manualSelectionInput.value.trim();
+                const odds = manualOddsInput.value.trim();
+
+                if (!market || !selection || !odds) {
+                    logStatus('Molimo popuni sva polja za rucni unos.', true);
+                    return;
+                }
+
+                addBetToPreview(market, selection, odds);
+
+                // Clear inputs
+                manualMarketInput.value = '';
+                manualSelectionInput.value = '';
+                manualOddsInput.value = '';
+            });
+
+            // Download CSV
+            function downloadCsv() {
+                if (generatedBets.length === 0) {
+                    logStatus('Nema dodatih igara za preuzimanje.', true);
+                    return;
+                }
+
+                const header = "Datum,Vreme,Sifra,Domacin,Gost,1,X,2,GR,U,O,Yes,No\n";
+                let csvContent = header;
+
+                csvContent += `MATCH_NAME:${generatedBets[0].matchName},,,,,,,,,,,,\n`;
+
+                const groupedBets = generatedBets.reduce((acc, bet) => {
+                    if (!acc[bet.leagueName]) {
+                        acc[bet.leagueName] = [];
+                    }
+                    acc[bet.leagueName].push(bet);
+                    return acc;
+                }, {});
+
+                for (const leagueName in groupedBets) {
+                    csvContent += `LEAGUE_NAME:${removeDiacritics(leagueName)},,,,,,,,,,,,\n`;
+
+                    groupedBets[leagueName].forEach(bet => {
+                        const kickoff = new Date(bet.cutoffTime);
+                        const date = `${kickoff.getDate().toString().padStart(2, '0')}.${(kickoff.getMonth() + 1).toString().padStart(2, '0')}.${kickoff.getFullYear()}`;
+                        const time = `${kickoff.getHours().toString().padStart(2, '0')}:${kickoff.getMinutes().toString().padStart(2, '0')}`;
+
+                        const rowData = [
+                            date, time, '',
+                            removeDiacritics(bet.domacin),
+                            removeDiacritics(bet.gost),
+                            bet['1'], '', '', bet.gr, bet.u, bet.o, '', ''
+                        ];
+                        csvContent += rowData.join(',') + '\n';
+                    });
+                }
+
+                const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const matchName = generatedBets[0]?.domacin || 'tenis';
+                const fileName = `${matchName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_specials.csv`;
+                link.href = URL.createObjectURL(blob);
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                logStatus(`CSV fajl "${fileName}" je preuzet.`);
+            }
+
+            // Event Listeners
+            tournamentSelect.addEventListener('change', (e) => {
+                fetchMatches(e.target.value);
+                matchInfoSection.classList.add('hidden');
+                marketsSection.classList.add('hidden');
+            });
+
+            matchSelect.addEventListener('change', () => {
+                fetchOddsBtn.disabled = matchSelect.value === '';
+            });
+
+            fetchOddsBtn.addEventListener('click', fetchOdds);
+            downloadCsvBtn.addEventListener('click', downloadCsv);
+
+            // Initialize
+            fetchTournaments();
+        });
+    </script>
+</body>
+</html>
