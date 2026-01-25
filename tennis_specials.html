@@ -21,7 +21,7 @@
             font-weight: 500;
             font-size: 0.875rem;
         }
-        .input-group input, .input-group select {
+        .input-group input, .input-group select, .input-group textarea {
             width: 100%;
             padding: 0.625rem 0.875rem;
             border: 1px solid #d1d5db;
@@ -29,6 +29,10 @@
             transition: border-color 0.2s, box-shadow 0.2s;
             background-color: #f9fafb;
             color: #1f2937;
+        }
+        .input-group textarea {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.75rem;
         }
         .input-group input:disabled, .input-group input:read-only {
              background-color: #e5e7eb;
@@ -38,7 +42,7 @@
             background-color: #e5e7eb;
             cursor: not-allowed;
         }
-        .input-group input:focus, .input-group select:focus {
+        .input-group input:focus, .input-group select:focus, .input-group textarea:focus {
             outline: none;
             border-color: #10b981;
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
@@ -95,19 +99,6 @@
             color: white;
             border-color: #ef4444;
         }
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            border-left-color: #10b981;
-            animation: spin 1s ease infinite;
-        }
         .market-row:hover {
             background-color: #f0fdf4;
         }
@@ -116,12 +107,23 @@
             color: #10b981;
             background-color: #ecfdf5;
         }
+        .market-group {
+            margin-bottom: 1rem;
+        }
+        .market-group-title {
+            background-color: #e2e8f0;
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #334155;
+            border-radius: 0.375rem 0.375rem 0 0;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-slate-800">
 
     <div class="container mx-auto p-4 sm:p-6 lg:p-8">
-        <div class="max-w-5xl mx-auto bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div class="max-w-6xl mx-auto bg-white rounded-xl border border-slate-200 shadow-sm">
             <header class="p-6 sm:p-8 flex items-center justify-between border-b border-slate-200">
                 <div class="flex items-center gap-4">
                     <div class="bg-green-100 text-green-600 p-3 rounded-lg">
@@ -147,35 +149,26 @@
             </header>
 
             <div class="p-6 sm:p-8">
-                <!-- Tournament & Match Selection -->
+                <!-- JSON Input Section -->
                 <section class="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-lg">
-                    <h3 class="font-bold text-lg text-slate-800 mb-4">1. Izbor Turnira i Meca</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div class="input-group">
-                            <label for="tournament-select">Izaberi Turnir</label>
-                            <div class="flex items-center gap-2">
-                                <select id="tournament-select" class="flex-1">
-                                    <option value="">-- Izaberi turnir --</option>
-                                </select>
-                                <div id="tournament-loader" class="spinner hidden"></div>
-                            </div>
-                        </div>
-                        <div class="input-group">
-                            <label for="match-select">Izaberi Mec</label>
-                            <div class="flex items-center gap-2">
-                                <select id="match-select" class="flex-1" disabled>
-                                    <option value="">-- Prvo izaberi turnir --</option>
-                                </select>
-                                <div id="match-loader" class="spinner hidden"></div>
-                            </div>
-                        </div>
+                    <h3 class="font-bold text-lg text-slate-800 mb-4">1. Nalepi JSON Odgovor</h3>
+                    <p class="text-sm text-slate-600 mb-4">
+                        Kopiraj JSON odgovor sa Stoiximan stranice meca i nalepi ga ovde.
+                        JSON treba da sadrzi <code class="bg-slate-200 px-1 rounded">data.event.markets</code> strukturu.
+                    </p>
+                    <div class="input-group">
+                        <label for="json-input">JSON Podaci</label>
+                        <textarea id="json-input" rows="8" placeholder='{"data": {"event": {"name": "...", "markets": [...]}}}...'></textarea>
                     </div>
-                    <div class="flex gap-4">
-                        <button id="fetch-odds-btn" class="action-btn primary" disabled>
+                    <div class="flex gap-4 mt-4">
+                        <button id="parse-json-btn" class="action-btn primary">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85 1 6.54 2.64"/><path d="M21 3v9h-9"/></svg>
-                            Ucitaj Kvote
+                            Parsiraj JSON
                         </button>
-                        <div id="odds-loader" class="spinner hidden"></div>
+                        <button id="clear-json-btn" class="action-btn secondary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            Ocisti
+                        </button>
                     </div>
                 </section>
 
@@ -185,6 +178,7 @@
                         <h2 id="match-name-display" class="text-xl font-bold text-slate-800 mb-2"></h2>
                         <p id="match-time-display" class="text-slate-600"></p>
                         <p id="match-tournament-display" class="text-sm text-green-600 mt-1"></p>
+                        <p id="match-markets-count" class="text-sm text-slate-500 mt-2"></p>
                     </div>
                 </section>
 
@@ -192,77 +186,27 @@
                 <section id="markets-section" class="mb-8 hidden">
                     <h3 class="font-bold text-lg text-slate-800 mb-4">2. Dostupna Trzista</h3>
 
-                    <!-- Tabs -->
-                    <div class="border-b border-gray-200 mb-4">
-                        <nav class="-mb-px flex space-x-4" aria-label="Tabs">
-                            <button id="main-tab" class="tab-button active whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm">
-                                Glavna Trzista
-                            </button>
-                            <button id="games-tab" class="tab-button whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700">
-                                Gemovi
-                            </button>
-                            <button id="sets-tab" class="tab-button whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700">
-                                Setovi
-                            </button>
-                        </nav>
+                    <!-- Market Filter -->
+                    <div class="mb-4">
+                        <input type="text" id="market-filter" placeholder="Filtriraj trzista po nazivu..."
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
                     </div>
 
-                    <!-- Tab Content -->
-                    <div id="main-content" class="tab-panel">
-                        <div class="overflow-x-auto rounded-lg border border-slate-200 max-h-96 overflow-y-auto">
-                            <table class="min-w-full">
-                                <thead class="bg-slate-50 sticky top-0">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Trziste</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Izbor</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Linija</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Kvota</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Dodaj</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="main-markets-body" class="bg-white divide-y divide-slate-100">
-                                    <tr><td colspan="5" class="text-center py-8 text-gray-500">Ucitaj kvote da vidis trzista.</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div id="games-content" class="tab-panel hidden">
-                        <div class="overflow-x-auto rounded-lg border border-slate-200 max-h-96 overflow-y-auto">
-                            <table class="min-w-full">
-                                <thead class="bg-slate-50 sticky top-0">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Trziste</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Izbor</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Linija</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Kvota</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Dodaj</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="games-markets-body" class="bg-white divide-y divide-slate-100">
-                                    <tr><td colspan="5" class="text-center py-8 text-gray-500">Ucitaj kvote da vidis trzista.</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div id="sets-content" class="tab-panel hidden">
-                        <div class="overflow-x-auto rounded-lg border border-slate-200 max-h-96 overflow-y-auto">
-                            <table class="min-w-full">
-                                <thead class="bg-slate-50 sticky top-0">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Trziste</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Izbor</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Linija</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Kvota</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Dodaj</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="sets-markets-body" class="bg-white divide-y divide-slate-100">
-                                    <tr><td colspan="5" class="text-center py-8 text-gray-500">Ucitaj kvote da vidis trzista.</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    <div id="markets-container" class="overflow-x-auto rounded-lg border border-slate-200 max-h-[500px] overflow-y-auto">
+                        <table class="min-w-full">
+                            <thead class="bg-slate-100 sticky top-0">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Trziste</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Izbor</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Linija</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Kvota</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">Dodaj</th>
+                                </tr>
+                            </thead>
+                            <tbody id="markets-body" class="bg-white divide-y divide-slate-100">
+                                <tr><td colspan="5" class="text-center py-8 text-gray-500">Nalepi JSON da vidis trzista.</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </section>
 
@@ -320,7 +264,7 @@
 
                 <!-- Status Log -->
                 <div id="status-log" class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 h-32 overflow-y-auto">
-                    Izaberi turnir da pocnes.
+                    Nalepi JSON odgovor sa Stoiximan meca da pocnes.
                 </div>
             </div>
         </div>
@@ -329,23 +273,20 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // DOM Elements
-            const tournamentSelect = document.getElementById('tournament-select');
-            const matchSelect = document.getElementById('match-select');
-            const fetchOddsBtn = document.getElementById('fetch-odds-btn');
-            const tournamentLoader = document.getElementById('tournament-loader');
-            const matchLoader = document.getElementById('match-loader');
-            const oddsLoader = document.getElementById('odds-loader');
+            const jsonInput = document.getElementById('json-input');
+            const parseJsonBtn = document.getElementById('parse-json-btn');
+            const clearJsonBtn = document.getElementById('clear-json-btn');
             const statusLog = document.getElementById('status-log');
 
             const matchInfoSection = document.getElementById('match-info-section');
             const matchNameDisplay = document.getElementById('match-name-display');
             const matchTimeDisplay = document.getElementById('match-time-display');
             const matchTournamentDisplay = document.getElementById('match-tournament-display');
+            const matchMarketsCount = document.getElementById('match-markets-count');
 
             const marketsSection = document.getElementById('markets-section');
-            const mainMarketsBody = document.getElementById('main-markets-body');
-            const gamesMarketsBody = document.getElementById('games-markets-body');
-            const setsMarketsBody = document.getElementById('sets-markets-body');
+            const marketsBody = document.getElementById('markets-body');
+            const marketFilter = document.getElementById('market-filter');
 
             const manualMarketInput = document.getElementById('manual-market');
             const manualSelectionInput = document.getElementById('manual-selection');
@@ -356,29 +297,10 @@
             const previewTableBody = document.getElementById('preview-table-body');
             const downloadCsvBtn = document.getElementById('download-csv-btn');
 
-            const tabs = document.querySelectorAll('.tab-button');
-            const tabPanels = document.querySelectorAll('.tab-panel');
-
             // State
-            let matches = [];
             let currentMatchData = null;
+            let allMarketRows = [];
             let generatedBets = [];
-
-            // Tennis Tournament URLs (Kambi API - same as football)
-            const TOURNAMENT_URLS = {
-                "Australian Open": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/australian_open/all/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-                "ATP Melbourne": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/atp/melbourne/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-                "ATP Auckland": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/atp/auckland/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-                "ATP Adelaide": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/atp/adelaide/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-                "WTA Adelaide": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/wta/adelaide/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-                "WTA Auckland": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/wta/auckland/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-                "WTA Hobart": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/wta/hobart/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-                "ATP All Matches": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/atp/all/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-                "WTA All Matches": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/wta/all/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-                "ITF Men": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/itf_men/all/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-                "ITF Women": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/itf_women/all/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-                "Challenger": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/tennis/challenger/all/all/matches.json?lang=en_GB&market=GB&useCombined=true"
-            };
 
             // Utility functions
             function logStatus(message, isError = false) {
@@ -387,246 +309,195 @@
                 statusLog.innerHTML = `<div class="${color}">[${now}] ${message}</div>` + statusLog.innerHTML;
             }
 
-            function showLoader(loader) {
-                loader.classList.remove('hidden');
-            }
-
-            function hideLoader(loader) {
-                loader.classList.add('hidden');
-            }
-
             function removeDiacritics(text) {
                 if (!text) return '';
                 text = text.replace(/đ/g, 'dj').replace(/Đ/g, 'Dj');
                 return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             }
 
-            // Initialize tournament dropdown
-            function initTournaments() {
-                tournamentSelect.innerHTML = '<option value="">-- Izaberi turnir --</option>';
-                for (const name in TOURNAMENT_URLS) {
-                    const option = document.createElement('option');
-                    option.value = name;
-                    option.textContent = name;
-                    tournamentSelect.appendChild(option);
-                }
-                logStatus('Turniri ucitani. Izaberi turnir za prikaz meceva.');
-            }
-
-            // Tab handling
-            tabs.forEach(tab => {
-                tab.addEventListener('click', (e) => {
-                    tabs.forEach(t => {
-                        t.classList.remove('active');
-                        t.classList.add('text-gray-500');
-                    });
-                    e.target.classList.add('active');
-                    e.target.classList.remove('text-gray-500');
-
-                    tabPanels.forEach(panel => panel.classList.add('hidden'));
-                    const targetId = e.target.id.replace('-tab', '-content');
-                    document.getElementById(targetId).classList.remove('hidden');
-                });
-            });
-
-            // Fetch matches for selected tournament
-            async function fetchMatches(tournamentName) {
-                if (!tournamentName) {
-                    matchSelect.innerHTML = '<option value="">-- Prvo izaberi turnir --</option>';
-                    matchSelect.disabled = true;
-                    fetchOddsBtn.disabled = true;
+            // Parse JSON and extract markets
+            function parseJson() {
+                const jsonText = jsonInput.value.trim();
+                if (!jsonText) {
+                    logStatus('Molimo nalepi JSON podatke.', true);
                     return;
                 }
 
-                const url = TOURNAMENT_URLS[tournamentName];
-                if (!url) return;
-
-                showLoader(matchLoader);
-                matchSelect.disabled = true;
-                logStatus(`Ucitavanje meceva za ${tournamentName}...`);
-
                 try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const data = JSON.parse(jsonText);
 
-                    const data = await response.json();
-                    matches = data.events || [];
-
-                    matchSelect.innerHTML = '<option value="">-- Izaberi mec --</option>';
-
-                    if (matches.length === 0) {
-                        matchSelect.innerHTML = '<option value="">Nema dostupnih meceva</option>';
-                        logStatus(`Nema dostupnih meceva za ${tournamentName}.`, true);
-                    } else {
-                        matches.forEach((matchItem, index) => {
-                            const event = matchItem.event;
-                            if (!event) return;
-
-                            const option = document.createElement('option');
-                            option.value = index;
-                            const startTime = new Date(event.start);
-                            const timeStr = startTime.toLocaleString('sr-RS', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
-                            const matchName = event.name || `${event.homeName} vs ${event.awayName}`;
-                            option.textContent = `${matchName} - ${timeStr}`;
-                            matchSelect.appendChild(option);
-                        });
-                        logStatus(`Ucitano ${matches.length} meceva za ${tournamentName}.`);
+                    // Find event data - handle both direct and nested structures
+                    let eventData = null;
+                    if (data.data && data.data.event) {
+                        eventData = data.data.event;
+                    } else if (data.event) {
+                        eventData = data.event;
+                    } else if (data.name && data.markets) {
+                        eventData = data;
                     }
 
-                    matchSelect.disabled = false;
-                } catch (error) {
-                    logStatus(`Greska pri ucitavanju meceva: ${error.message}`, true);
-                    matchSelect.innerHTML = '<option value="">Greska pri ucitavanju</option>';
-                } finally {
-                    hideLoader(matchLoader);
-                }
-            }
+                    if (!eventData) {
+                        logStatus('JSON ne sadrzi ocekivanu strukturu (data.event ili event).', true);
+                        return;
+                    }
 
-            // Fetch odds for selected match
-            async function fetchOdds() {
-                const matchIndex = matchSelect.value;
-                if (matchIndex === '') return;
-
-                const matchItem = matches[matchIndex];
-                const event = matchItem.event;
-                const eventId = event.id;
-
-                const oddsUrl = `https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/betoffer/event/${eventId}.json?lang=en_GB&market=GB&client_id=2&channel_id=7&includeParticipants=true`;
-
-                showLoader(oddsLoader);
-                fetchOddsBtn.disabled = true;
-                logStatus(`Ucitavanje kvota za ${event.name || event.homeName + ' vs ' + event.awayName}...`);
-
-                try {
-                    const response = await fetch(oddsUrl);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-                    const data = await response.json();
-                    currentMatchData = {
-                        ...data,
-                        event: event,
-                        tournamentName: tournamentSelect.value
-                    };
+                    currentMatchData = eventData;
 
                     // Display match info
-                    matchNameDisplay.textContent = event.name || `${event.homeName} vs ${event.awayName}`;
-                    const startTime = new Date(event.start);
-                    matchTimeDisplay.textContent = startTime.toLocaleString('sr-RS', {
-                        weekday: 'long',
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                    matchTournamentDisplay.textContent = tournamentSelect.value;
+                    matchNameDisplay.textContent = eventData.name || eventData.shortName || 'Nepoznat mec';
+
+                    if (eventData.startTime) {
+                        const startTime = new Date(eventData.startTime);
+                        matchTimeDisplay.textContent = startTime.toLocaleString('sr-RS', {
+                            weekday: 'long',
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                    } else {
+                        matchTimeDisplay.textContent = '';
+                    }
+
+                    matchTournamentDisplay.textContent = eventData.leagueName || eventData.regionName || '';
+
+                    const markets = eventData.markets || [];
+                    matchMarketsCount.textContent = `Ukupno trzista: ${markets.length}`;
+
                     matchInfoSection.classList.remove('hidden');
 
                     // Process and display markets
-                    displayMarkets(data.betOffers || []);
+                    displayMarkets(markets);
                     marketsSection.classList.remove('hidden');
 
-                    logStatus(`Ucitano ${(data.betOffers || []).length} trzista za mec.`);
+                    logStatus(`Uspesno parsirano! Mec: ${eventData.name}, Trzista: ${markets.length}`);
                 } catch (error) {
-                    logStatus(`Greska pri ucitavanju kvota: ${error.message}`, true);
-                } finally {
-                    hideLoader(oddsLoader);
-                    fetchOddsBtn.disabled = false;
+                    logStatus(`Greska pri parsiranju JSON-a: ${error.message}`, true);
+                    console.error('JSON Parse Error:', error);
                 }
             }
 
-            // Categorize and display markets
-            function displayMarkets(betOffers) {
-                const mainMarkets = [];
-                const gamesMarkets = [];
-                const setsMarkets = [];
+            // Display markets in table
+            function displayMarkets(markets) {
+                allMarketRows = [];
+                marketsBody.innerHTML = '';
 
-                betOffers.forEach(offer => {
-                    const marketName = (offer.criterion?.label || '').toLowerCase();
+                if (!markets || markets.length === 0) {
+                    marketsBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">Nema dostupnih trzista.</td></tr>';
+                    return;
+                }
 
-                    if (marketName.includes('game') || marketName.includes('gem')) {
-                        gamesMarkets.push(offer);
-                    } else if (marketName.includes('set')) {
-                        setsMarkets.push(offer);
-                    } else {
-                        mainMarkets.push(offer);
+                markets.forEach(market => {
+                    const marketName = market.name || 'N/A';
+                    const selections = market.selections || [];
+
+                    // Handle regular selections
+                    selections.forEach(selection => {
+                        const selectionName = selection.name || 'N/A';
+                        const price = selection.price;
+                        const handicap = selection.handicap || market.handicap || '';
+
+                        if (price) {
+                            const rowData = {
+                                marketName,
+                                selectionName,
+                                handicap: handicap !== 0 ? handicap : '',
+                                price: parseFloat(price).toFixed(2)
+                            };
+                            allMarketRows.push(rowData);
+                        }
+                    });
+
+                    // Handle tableLayout (Race to X markets)
+                    if (market.tableLayout && market.tableLayout.rows) {
+                        const tableTitle = market.tableLayout.title || marketName;
+                        market.tableLayout.rows.forEach(row => {
+                            const rowTitle = row.title;
+                            if (row.groupSelections) {
+                                row.groupSelections.forEach(group => {
+                                    if (group.selections) {
+                                        group.selections.forEach(sel => {
+                                            if (sel.price) {
+                                                const rowData = {
+                                                    marketName: `${tableTitle} (${rowTitle})`,
+                                                    selectionName: sel.name,
+                                                    handicap: '',
+                                                    price: parseFloat(sel.price).toFixed(2)
+                                                };
+                                                allMarketRows.push(rowData);
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
                     }
                 });
 
-                renderMarketsTable(mainMarkets, mainMarketsBody);
-                renderMarketsTable(gamesMarkets, gamesMarketsBody);
-                renderMarketsTable(setsMarkets, setsMarketsBody);
+                renderMarketRows(allMarketRows);
             }
 
-            function renderMarketsTable(betOffers, tableBody) {
-                if (!betOffers || betOffers.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">Nema dostupnih trzista u ovoj kategoriji.</td></tr>';
+            function renderMarketRows(rows) {
+                marketsBody.innerHTML = '';
+
+                if (rows.length === 0) {
+                    marketsBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">Nema trzista koja odgovaraju filteru.</td></tr>';
                     return;
                 }
 
-                tableBody.innerHTML = '';
-                betOffers.forEach(offer => {
-                    const marketName = offer.criterion?.label || 'N/A';
-                    const outcomes = offer.outcomes || [];
-
-                    outcomes.forEach(outcome => {
-                        const selectionName = outcome.label || 'N/A';
-                        const odds = outcome.odds ? (outcome.odds / 1000).toFixed(2) : 'N/A';
-                        const line = outcome.line ? (outcome.line / 1000).toFixed(1) : '';
-
-                        const tr = document.createElement('tr');
-                        tr.className = 'market-row hover:bg-green-50 transition-colors';
-                        tr.innerHTML = `
-                            <td class="px-4 py-3 text-sm text-slate-700">${marketName}</td>
-                            <td class="px-4 py-3 text-sm text-slate-700">${selectionName}</td>
-                            <td class="px-4 py-3 text-sm text-center text-slate-600">${line}</td>
-                            <td class="px-4 py-3 text-sm text-center font-medium text-slate-800">${odds}</td>
-                            <td class="px-4 py-3 text-center">
-                                <button class="add-to-preview-btn bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded-md text-sm font-medium transition-colors"
-                                    data-market="${marketName}"
-                                    data-selection="${selectionName}"
-                                    data-odds="${odds}"
-                                    data-line="${line}">
-                                    +
-                                </button>
-                            </td>
-                        `;
-                        tableBody.appendChild(tr);
-                    });
+                rows.forEach((row, index) => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'market-row hover:bg-green-50 transition-colors';
+                    tr.innerHTML = `
+                        <td class="px-4 py-2 text-sm text-slate-700">${row.marketName}</td>
+                        <td class="px-4 py-2 text-sm text-slate-700">${row.selectionName}</td>
+                        <td class="px-4 py-2 text-sm text-center text-slate-600">${row.handicap}</td>
+                        <td class="px-4 py-2 text-sm text-center font-medium text-slate-800">${row.price}</td>
+                        <td class="px-4 py-2 text-center">
+                            <button class="add-to-preview-btn bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded-md text-sm font-medium transition-colors"
+                                data-index="${index}">
+                                +
+                            </button>
+                        </td>
+                    `;
+                    marketsBody.appendChild(tr);
                 });
 
-                // Add click handlers for add buttons
-                tableBody.querySelectorAll('.add-to-preview-btn').forEach(btn => {
+                // Add click handlers
+                marketsBody.querySelectorAll('.add-to-preview-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
-                        const market = btn.dataset.market;
-                        const selection = btn.dataset.selection;
-                        const odds = btn.dataset.odds;
-                        const line = btn.dataset.line;
-                        addBetToPreview(market, selection, odds, line);
+                        const idx = parseInt(btn.dataset.index);
+                        const row = rows[idx];
+                        addBetToPreview(row.marketName, row.selectionName, row.price, row.handicap);
                     });
                 });
             }
+
+            // Filter markets
+            marketFilter.addEventListener('input', () => {
+                const filterText = marketFilter.value.toLowerCase();
+                if (!filterText) {
+                    renderMarketRows(allMarketRows);
+                    return;
+                }
+
+                const filtered = allMarketRows.filter(row =>
+                    row.marketName.toLowerCase().includes(filterText) ||
+                    row.selectionName.toLowerCase().includes(filterText)
+                );
+                renderMarketRows(filtered);
+            });
 
             // Add bet to preview
             function addBetToPreview(market, selection, odds, line = '') {
-                if (!currentMatchData) {
-                    logStatus('Molimo ucitaj kvote za mec prvo.', true);
-                    return;
-                }
-
-                const event = currentMatchData.event;
-                const matchName = event.name || `${event.homeName} vs ${event.awayName}`;
-                const matchTime = new Date(event.start);
+                const matchName = currentMatchData ? (currentMatchData.name || currentMatchData.shortName || 'Tenis Mec') : 'Tenis Mec';
+                const matchTime = currentMatchData && currentMatchData.startTime ? new Date(currentMatchData.startTime) : new Date();
 
                 // Determine if this is an over/under market
                 const selLower = selection.toLowerCase();
-                const isOver = selLower.includes('over') || selLower.includes('vise') || selLower.includes('+');
-                const isUnder = selLower.includes('under') || selLower.includes('manje') || selLower.includes('-');
+                const isOver = selLower.includes('over') || selLower.includes('vise') || selLower.startsWith('+');
+                const isUnder = selLower.includes('under') || selLower.includes('manje');
 
                 const bet = {
                     matchName: 'Tenis',
@@ -704,16 +575,6 @@
                     return;
                 }
 
-                // Create a dummy currentMatchData if not exists
-                if (!currentMatchData) {
-                    currentMatchData = {
-                        event: {
-                            name: 'Tenis Mec',
-                            start: new Date().toISOString()
-                        }
-                    };
-                }
-
                 addBetToPreview(market, selection, odds, '');
 
                 // Clear inputs
@@ -773,22 +634,27 @@
                 logStatus(`CSV fajl "${fileName}" je preuzet.`);
             }
 
-            // Event Listeners
-            tournamentSelect.addEventListener('change', (e) => {
-                fetchMatches(e.target.value);
+            // Clear JSON input
+            clearJsonBtn.addEventListener('click', () => {
+                jsonInput.value = '';
+                currentMatchData = null;
+                allMarketRows = [];
                 matchInfoSection.classList.add('hidden');
                 marketsSection.classList.add('hidden');
+                marketsBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">Nalepi JSON da vidis trzista.</td></tr>';
+                logStatus('JSON podaci ocisceni.');
             });
 
-            matchSelect.addEventListener('change', () => {
-                fetchOddsBtn.disabled = matchSelect.value === '';
-            });
-
-            fetchOddsBtn.addEventListener('click', fetchOdds);
+            // Event Listeners
+            parseJsonBtn.addEventListener('click', parseJson);
             downloadCsvBtn.addEventListener('click', downloadCsv);
 
-            // Initialize
-            initTournaments();
+            // Allow parsing with Ctrl+Enter
+            jsonInput.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    parseJson();
+                }
+            });
         });
     </script>
 </body>
