@@ -362,8 +362,10 @@
             let currentMatchData = null;
             let generatedBets = [];
 
-            // API Base URLs
-            const TOURNAMENTS_API = 'https://en.stoiximan.gr/api/sports/TENN/hot/trending/leagues/?req=s,stnf,c,mb';
+            // API Base URLs - using Netlify function proxy to avoid CORS
+            const PROXY_BASE = '/api/fetch-tennis?path=';
+            const TOURNAMENTS_PATH = '/api/sports/TENN/hot/trending/leagues/?req=s,stnf,c,mb';
+            const TOURNAMENTS_API = PROXY_BASE + encodeURIComponent(TOURNAMENTS_PATH);
 
             // Utility functions
             function logStatus(message, isError = false) {
@@ -441,7 +443,8 @@
                 }
 
                 const tournament = tournaments[tournamentIndex];
-                const matchesUrl = `https://en.stoiximan.gr${tournament.url}?req=la,s,stnf,c,mb`;
+                const matchesPath = `${tournament.url}?req=la,s,stnf,c,mb`;
+                const matchesUrl = PROXY_BASE + encodeURIComponent(matchesPath);
 
                 showLoader(matchLoader);
                 matchSelect.disabled = true;
@@ -485,7 +488,8 @@
                 if (matchIndex === '') return;
 
                 const match = matches[matchIndex];
-                const oddsUrl = `https://en.stoiximan.gr/api${match.url}?bt=2&req=la,s,stnf,c,mb`;
+                const oddsPath = `/api${match.url}?bt=2&req=la,s,stnf,c,mb`;
+                const oddsUrl = PROXY_BASE + encodeURIComponent(oddsPath);
 
                 showLoader(oddsLoader);
                 fetchOddsBtn.disabled = true;

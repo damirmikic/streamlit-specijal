@@ -6,3 +6,8 @@
   from = "/api/euroleague-events"
   to = "/.netlify/functions/fetch-euroleague-events"
   status = 200
+
+[[redirects]]
+  from = "/api/fetch-tennis"
+  to = "/.netlify/functions/fetch-tennis"
+  status = 200
