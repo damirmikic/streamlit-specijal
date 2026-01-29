@@ -140,6 +140,20 @@
                             <option>Učitavanje mečeva...</option>
                         </select>
                     </div>
+                    <div id="team-select-container" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+                        <div class="input-group">
+                            <label for="home-team-select">Domaćin - Statistika</label>
+                            <select id="home-team-select">
+                                <option value="">-- Izaberite tim --</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="away-team-select">Gost - Statistika</label>
+                            <select id="away-team-select">
+                                <option value="">-- Izaberite tim --</option>
+                            </select>
+                        </div>
+                    </div>
                     <div id="team-stats-container" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
                     </div>
                     <div id="calculation-display" class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4 hidden">
@@ -275,6 +289,9 @@
             const lambdaHomeDisplay = document.getElementById('lambda-home-display');
             const lambdaAwayDisplay = document.getElementById('lambda-away-display');
             const teamStatsContainer = document.getElementById('team-stats-container');
+            const teamSelectContainer = document.getElementById('team-select-container');
+            const homeTeamSelect = document.getElementById('home-team-select');
+            const awayTeamSelect = document.getElementById('away-team-select');
             const applySuggestedBtn = document.getElementById('apply-suggested-btn');
             const expectedPointsDisplay = document.getElementById('expected-points-display');
 
@@ -367,12 +384,39 @@
                     }
                     const data = await response.json();
                     euroleagueTeamStats = data.teams;
+                    populateTeamDropdowns();
                     console.log('Euroleague team stats loaded successfully.');
                 } catch (error) {
                     console.error('Failed to fetch Euroleague team stats:', error);
                     teamStatsContainer.innerHTML = `<p class="text-red-500 text-center col-span-2">Could not load team stats.</p>`;
                     teamStatsContainer.classList.remove('hidden');
                 }
+            }
+
+            function populateTeamDropdowns() {
+                if (!euroleagueTeamStats) return;
+                const sortedTeams = [...euroleagueTeamStats].sort((a, b) => a.teamName.localeCompare(b.teamName));
+                const options = sortedTeams.map((team, idx) => {
+                    const origIdx = euroleagueTeamStats.indexOf(team);
+                    return `<option value="${origIdx}">${team.teamName}</option>`;
+                }).join('');
+                const defaultOpt = '<option value="">-- Izaberite tim --</option>';
+                homeTeamSelect.innerHTML = defaultOpt + options;
+                awayTeamSelect.innerHTML = defaultOpt + options;
+            }
+
+            function onTeamDropdownChange() {
+                const homeIdx = homeTeamSelect.value;
+                const awayIdx = awayTeamSelect.value;
+                if (homeIdx === "" || awayIdx === "") {
+                    teamStatsContainer.classList.add('hidden');
+                    applySuggestedBtn.classList.add('hidden');
+                    return;
+                }
+                const homeTeamStats = euroleagueTeamStats[parseInt(homeIdx)];
+                const awayTeamStats = euroleagueTeamStats[parseInt(awayIdx)];
+                displayTeamStats(homeTeamStats, awayTeamStats);
+                calculateAndSuggestDistribution(homeTeamStats, awayTeamStats);
             }
             
             function populatePlayerDropdown(matchIndex) {
@@ -1059,8 +1103,9 @@
             
             bballMatchSelect.addEventListener('change', (e) => {
                 const selectedIndex = e.target.value;
-                
+
                 if (selectedIndex === "") {
+                    teamSelectContainer.classList.add('hidden');
                     teamStatsContainer.classList.add('hidden');
                     applySuggestedBtn.classList.add('hidden');
                     calculationDisplay.classList.add('hidden');
@@ -1076,22 +1121,27 @@
                      return;
                 }
 
+                // Show team dropdowns and pre-select matching teams
+                teamSelectContainer.classList.remove('hidden');
+
                 const homeTeamName = selectedEvent.home.name;
                 const awayTeamName = selectedEvent.away.name;
 
-                const findTeamStats = (name) => {
+                const findTeamIndex = (name) => {
                     const mappedName = teamNameMapping[name] || name;
-                    return euroleagueTeamStats.find(team => 
-                        mappedName.toLowerCase().includes(team.shortName.toLowerCase()) || 
+                    return euroleagueTeamStats.findIndex(team =>
+                        mappedName.toLowerCase().includes(team.shortName.toLowerCase()) ||
                         team.teamName.toLowerCase().includes(mappedName.toLowerCase())
                     );
                 };
 
-                const homeTeamStats = findTeamStats(homeTeamName);
-                const awayTeamStats = findTeamStats(awayTeamName);
+                const homeIdx = findTeamIndex(homeTeamName);
+                const awayIdx = findTeamIndex(awayTeamName);
 
-                displayTeamStats(homeTeamStats, awayTeamStats);
-                calculateAndSuggestDistribution(homeTeamStats, awayTeamStats);
+                homeTeamSelect.value = homeIdx >= 0 ? homeIdx.toString() : "";
+                awayTeamSelect.value = awayIdx >= 0 ? awayIdx.toString() : "";
+
+                onTeamDropdownChange();
 
                 // Display expected points
                 const totalsMarket = selectedEvent.markets?.['basketball.totals']?.submarkets?.['period=ot&period=ft']?.selections;
@@ -1108,6 +1158,8 @@
                 }
             });
 
+            homeTeamSelect.addEventListener('change', onTeamDropdownChange);
+            awayTeamSelect.addEventListener('change', onTeamDropdownChange);
             betMarketSelect.addEventListener('change', handleMarketSelectionChange);
             addBetBtn.addEventListener('click', addBetToGenerator);
             resetBetBtn.addEventListener('click', resetBetForm);
