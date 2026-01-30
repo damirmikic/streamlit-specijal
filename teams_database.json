@@ -1,0 +1,32 @@
+{
+  "teams": [
+    {
+      "id": "team_001",
+      "name": "Manchester City",
+      "aliases": ["Man City", "Manchester C", "City"],
+      "league": "Premier League",
+      "country": "England",
+      "eloRating": 2050,
+      "kambiName": "Manchester City"
+    },
+    {
+      "id": "team_002",
+      "name": "Real Madrid",
+      "aliases": ["Real", "Madrid"],
+      "league": "La Liga",
+      "country": "Spain",
+      "eloRating": 2080,
+      "kambiName": "Real Madrid"
+    },
+    {
+      "id": "team_003",
+      "name": "Bayern Munich",
+      "aliases": ["Bayern", "Munich"],
+      "league": "Bundesliga",
+      "country": "Germany",
+      "eloRating": 2060,
+      "kambiName": "Bayern München"
+    }
+  ],
+  "lastUpdated": "2026-01-30T00:00:00Z"
+}

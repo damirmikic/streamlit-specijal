@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Match Calculator - Value Bet Scanner</title>
+    <link rel="icon" type="image/png" href="merkur.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s ease infinite;
+        }
+        .tab-button.active {
+            border-color: #3b82f6;
+            color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        .match-row:hover {
+            background-color: #f9fafb;
+        }
+        .positive-ev {
+            background-color: #d1fae5;
+        }
+        .negative-ev {
+            background-color: #fee2e2;
+        }
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: linear-gradient(to right, #ef4444 0%, #f59e0b 50%, #10b981 100%);
+            outline: none;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #1f2937;
+            cursor: pointer;
+        }
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #1f2937;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <header class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">Multi-Match Calculator</h1>
+                    <p class="text-gray-600 mt-2">Analyze league statistics and find value betting opportunities</p>
+                </div>
+                <div class="flex gap-2">
+                    <a href="index.html" class="whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
+                        Back to Home
+                    </a>
+                    <a href="admin.html" class="whitespace-nowrap bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
+                        Admin Panel
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="bg-white rounded-lg shadow-md mb-6">
+            <div class="border-b border-gray-200">
+                <nav class="flex -mb-px">
+                    <button class="tab-button px-6 py-3 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700" data-tab="single">
+                        Single Match Analysis
+                    </button>
+                    <button class="tab-button active px-6 py-3 border-b-2 font-medium text-sm" data-tab="multi">
+                        Multi-Match Calculator
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Single Match Analysis Tab (Placeholder) -->
+            <div id="single-tab" class="tab-content p-6 hidden">
+                <div class="text-center py-12 text-gray-500">
+                    <p class="text-lg">Single match analysis coming soon...</p>
+                    <p class="mt-2">Use the main <a href="index.html" class="text-blue-600 hover:underline">Merkur Specijali</a> page for detailed single match analysis.</p>
+                </div>
+            </div>
+
+            <!-- Multi-Match Calculator Tab -->
+            <div id="multi-tab" class="tab-content p-6">
+                <!-- League Selection -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select League</label>
+                    <select id="league-select" class="w-full md:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Choose a league...</option>
+                    </select>
+                </div>
+
+                <!-- League-Wide Stats -->
+                <div id="league-stats" class="mb-6 hidden">
+                    <button class="flex items-center justify-between w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors" id="toggle-stats">
+                        <div class="flex items-center">
+                            <span class="text-lg">📊</span>
+                            <span class="ml-2 font-medium">League-Wide Stats</span>
+                        </div>
+                        <svg class="h-5 w-5 transform transition-transform" id="stats-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <div id="stats-content" class="mt-4 bg-white p-6 rounded-lg border border-gray-200">
+                        <h3 class="text-xl font-semibold mb-4" id="league-name"></h3>
+
+                        <div class="grid md:grid-cols-3 gap-6">
+                            <div>
+                                <div class="text-sm text-gray-600 mb-1">Home Win</div>
+                                <div class="text-3xl font-bold text-gray-800" id="home-win-rate"></div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600 mb-1">Draw</div>
+                                <div class="text-3xl font-bold text-gray-800" id="draw-rate"></div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600 mb-1">Away Win</div>
+                                <div class="text-3xl font-bold text-gray-800" id="away-win-rate"></div>
+                            </div>
+                        </div>
+
+                        <div class="grid md:grid-cols-3 gap-6 mt-6">
+                            <div>
+                                <div class="text-sm text-gray-600 mb-1">Avg Goals</div>
+                                <div class="text-3xl font-bold text-gray-800" id="avg-goals"></div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600 mb-1">Avg HG</div>
+                                <div class="text-3xl font-bold text-gray-800" id="avg-hg"></div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600 mb-1">Avg AG</div>
+                                <div class="text-3xl font-bold text-gray-800" id="avg-ag"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Value Bet Scanner -->
+                <div id="value-bet-scanner" class="mb-6 hidden">
+                    <div class="bg-gradient-to-r from-yellow-50 to-green-50 p-6 rounded-lg border border-yellow-200">
+                        <div class="flex items-center mb-4">
+                            <span class="text-2xl mr-2">💰</span>
+                            <h2 class="text-xl font-bold text-gray-800">Upcoming Matches - Value Bet Scanner</h2>
+                        </div>
+
+                        <p class="text-gray-600 mb-4">Automatically fetches upcoming matches from Kambi and identifies value betting opportunities</p>
+
+                        <!-- Filter Controls -->
+                        <div class="bg-white p-4 rounded-lg mb-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <label class="text-sm font-medium text-gray-700">Filter: Show EV above:</label>
+                                    <button class="text-gray-400 hover:text-gray-600" title="Expected Value filter - shows only matches where the calculated probability exceeds the bookmaker's implied probability">
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="apply-ev-filter" class="mr-2">
+                                        <span class="text-sm">Apply EV filter</span>
+                                        <button class="ml-1 text-gray-400 hover:text-gray-600" title="When enabled, only matches with positive expected value will be shown">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </button>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="include-live" class="mr-2">
+                                        <span class="text-sm">Include live matches</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-4">
+                                <span class="text-sm font-medium text-red-600" id="ev-min-label">-20.0%</span>
+                                <input type="range" id="ev-slider" min="-20" max="20" value="-20" step="0.1" class="slider flex-1">
+                                <span class="text-sm font-medium text-green-600" id="ev-max-label">20.0%</span>
+                            </div>
+                        </div>
+
+                        <!-- Scan Button -->
+                        <button id="scan-matches-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                            🔍 Scan for Value Bets
+                        </button>
+
+                        <!-- Loading Indicator -->
+                        <div id="scanning-loader" class="hidden mt-4 text-center">
+                            <div class="spinner mx-auto mb-2"></div>
+                            <p class="text-gray-600">Scanning matches...</p>
+                        </div>
+
+                        <!-- Results Count -->
+                        <div id="results-count" class="hidden mt-4 p-3 bg-green-100 border border-green-400 rounded-lg">
+                            <p class="text-green-800 font-medium">✓ <span id="match-count">0</span> upcoming match(es) found</p>
+                        </div>
+
+                        <!-- No Elo Ratings Warning -->
+                        <div id="no-elo-warning" class="hidden mt-4 p-3 bg-blue-100 border border-blue-400 rounded-lg">
+                            <p class="text-blue-800">No matches with Elo ratings found. Teams may not be in the ratings database.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Matches Table -->
+                <div id="matches-container" class="hidden">
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-800">Found Matches</h3>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date/Time</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Home Team</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Away Team</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Elo (H/A)</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Odds (1-X-2)</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fair Odds</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EV %</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recommendation</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="matches-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Matches will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="text-center py-12 text-gray-500">
+                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    <p class="text-lg">Select a league to start analyzing matches</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="multi-match.js"></script>
+</body>
+</html>
