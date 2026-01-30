@@ -1,0 +1,85 @@
+{
+  "leagues": [
+    {
+      "id": "league_001",
+      "name": "Premier League",
+      "country": "England",
+      "kambiUrl": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/england/premier_league/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+      "apiClient": "ilaniuswarl",
+      "totalGames": 104,
+      "stats": {
+        "homeWinRate": 0.44,
+        "drawRate": 0.27,
+        "awayWinRate": 0.29,
+        "avgGoals": 2.58,
+        "avgHomeGoals": 1.47,
+        "avgAwayGoals": 1.11
+      }
+    },
+    {
+      "id": "league_002",
+      "name": "La Liga",
+      "country": "Spain",
+      "kambiUrl": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/spain/la_liga/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+      "apiClient": "ilaniuswarl",
+      "totalGames": 98,
+      "stats": {
+        "homeWinRate": 0.46,
+        "drawRate": 0.26,
+        "awayWinRate": 0.28,
+        "avgGoals": 2.65,
+        "avgHomeGoals": 1.52,
+        "avgAwayGoals": 1.13
+      }
+    },
+    {
+      "id": "league_003",
+      "name": "Belgium - Pro League",
+      "country": "Belgium",
+      "kambiUrl": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/belgium/pro_league/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+      "apiClient": "ilaniuswarl",
+      "totalGames": 104,
+      "stats": {
+        "homeWinRate": 0.44,
+        "drawRate": 0.27,
+        "awayWinRate": 0.29,
+        "avgGoals": 2.58,
+        "avgHomeGoals": 1.47,
+        "avgAwayGoals": 1.11
+      }
+    },
+    {
+      "id": "league_004",
+      "name": "Champions League",
+      "country": "International",
+      "kambiUrl": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/champions_league/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+      "apiClient": "ilaniuswarl",
+      "totalGames": 125,
+      "stats": {
+        "homeWinRate": 0.47,
+        "drawRate": 0.25,
+        "awayWinRate": 0.28,
+        "avgGoals": 2.89,
+        "avgHomeGoals": 1.63,
+        "avgAwayGoals": 1.26
+      }
+    },
+    {
+      "id": "league_005",
+      "name": "Bundesliga",
+      "country": "Germany",
+      "kambiUrl": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/germany/bundesliga/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+      "apiClient": "ilaniuswarl",
+      "totalGames": 102,
+      "stats": {
+        "homeWinRate": 0.43,
+        "drawRate": 0.24,
+        "awayWinRate": 0.33,
+        "avgGoals": 3.02,
+        "avgHomeGoals": 1.71,
+        "avgAwayGoals": 1.31
+      }
+    }
+  ],
+  "lastUpdated": "2026-01-30T00:00:00Z"
+}
