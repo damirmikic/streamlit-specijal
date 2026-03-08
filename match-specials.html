@@ -191,7 +191,6 @@
                     { nameTemplate: "{goals} golova i {corners} kornera", lineGoals: 2.5, lineCorners: 7.5, components: [() => getOdd("Total Goals", 2.5, "over"), () => getOdd("Total Corners", 7.5, "over")] },
                     { nameTemplate: "{shots} suteva u okvir i GG", lineShots: 8.5, components: [() => getOdd("Total Shots on Target (Settled using Opta data)", 8.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
                     { nameTemplate: "{corners} kornera i GG", lineCorners: 11.5, components: [() => getOdd("Total Corners", 11.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
-                    { nameTemplate: "{corners} kornera i {cards} kartona i GG", lineCorners: 8.5, lineCards: 2.5, components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Cards", 2.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
                     { nameTemplate: "{corners} kornera i {cards} kartona i GG", lineCorners: 8.5, lineCards: 3.5, components: [() => getOdd("Total Corners", 8.5, "over"), () => getOdd("Total Cards", 3.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
                     { nameTemplate: "{corners} kornera i GG", lineCorners: 7.5, components: [() => getOdd("Total Corners", 7.5, "over"), () => getOdd("Both Teams To Score", null, "yes")] },
                     { nameTemplate: "Penal i crveni karton", components: [() => getOdd("Penalty Kick awarded", null, "yes"), () => getOdd("Red Card given", null, "yes")], multiplier: 0.8 },
