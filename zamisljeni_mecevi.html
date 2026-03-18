@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zamišljeni mečevi | Merkur Specijali</title>
+    <link rel="icon" type="image/png" href="merkur.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 font-sans text-slate-900 min-h-screen">
+    <div class="max-w-6xl mx-auto p-4 md:p-8">
+        <header class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-indigo-700">Zamišljeni mečevi</h1>
+                    <p class="text-slate-500 text-sm mt-1">Derive Poisson lambdas and simulate 1X2 / O-U outcomes.</p>
+                </div>
+                <a href="index.html" class="inline-block bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-4 rounded-lg">← Nazad na Merkur Specijali</a>
+            </div>
+        </header>
+
+        <main class="grid md:grid-cols-2 gap-6 items-start">
+            <section class="space-y-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <h2 class="text-xl font-semibold border-b pb-2">1. Add Team Data</h2>
+
+                    <div class="flex gap-1 p-1 bg-slate-100 rounded-lg">
+                        <button id="mode-paste" class="mode-btn flex-1 py-1 text-xs rounded-md transition capitalize bg-white shadow-sm font-bold text-indigo-600">Quick Paste</button>
+                        <button id="mode-odds" class="mode-btn flex-1 py-1 text-xs rounded-md transition capitalize text-slate-500">Manual Odds</button>
+                        <button id="mode-supremacy" class="mode-btn flex-1 py-1 text-xs rounded-md transition capitalize text-slate-500">Manual Sup</button>
+                    </div>
+
+                    <div id="pane-paste" class="space-y-2">
+                        <textarea id="paste-data" placeholder="Paste match data here...&#10;Zenit vs Spartak&#10;sup/exp: -0.25 / 2.50" class="w-full h-32 p-3 text-sm border rounded-md font-mono focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+                        <button id="parse-add" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition font-bold text-sm">Parse & Add Match</button>
+                    </div>
+
+                    <div id="pane-manual" class="space-y-3 hidden">
+                        <input id="team-name" type="text" placeholder="Team Name" class="w-full p-2 border rounded-md text-sm">
+
+                        <div id="odds-fields" class="grid grid-cols-3 gap-2">
+                            <input id="odds-home" type="number" placeholder="1" class="p-2 border rounded text-center text-sm">
+                            <input id="odds-draw" type="number" placeholder="X" class="p-2 border rounded text-center text-sm">
+                            <input id="odds-away" type="number" placeholder="2" class="p-2 border rounded text-center text-sm">
+                            <button id="add-odds" class="col-span-3 bg-indigo-600 text-white py-2 rounded-lg text-sm font-bold">Add Data</button>
+                        </div>
+
+                        <div id="sup-fields" class="space-y-3 hidden">
+                            <div class="flex gap-2">
+                                <input id="sup" type="number" placeholder="Sup (- means Favorite)" class="flex-1 p-2 border rounded text-sm">
+                                <input id="exp" type="number" placeholder="Exp (Total)" class="flex-1 p-2 border rounded text-sm">
+                            </div>
+                            <p id="warning" class="text-[10px] text-amber-600 font-bold bg-amber-50 p-2 rounded border border-amber-100 italic hidden">Warning: Absolute Supremacy &gt; Expectancy. Values will be clamped at 0.01.</p>
+                            <button id="add-sup" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm font-bold">Add Data</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Team Database</h3>
+                        <button id="clear-teams" class="text-[10px] text-red-400 hover:underline">Clear</button>
+                    </div>
+                    <div id="team-list" class="max-h-72 overflow-y-auto space-y-2 pr-2"></div>
+                </div>
+            </section>
+
+            <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-6 min-h-[520px]">
+                <h2 class="text-xl font-semibold border-b pb-2">2. Simulate Matchup</h2>
+                <div class="space-y-4">
+                    <div class="space-y-1">
+                        <label for="team-a" class="text-xs font-bold text-slate-500 uppercase tracking-wider">Team A (Home)</label>
+                        <select id="team-a" class="w-full p-3 border rounded-md text-sm bg-slate-50">
+                            <option value="">Select...</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label for="team-b" class="text-xs font-bold text-slate-500 uppercase tracking-wider">Team B (Away)</label>
+                        <select id="team-b" class="w-full p-3 border rounded-md text-sm bg-slate-50">
+                            <option value="">Select...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="empty" class="h-48 flex items-center justify-center border-2 border-dashed rounded-2xl text-slate-300 text-sm p-8 text-center bg-slate-50/50 italic">Select teams to run projection</div>
+
+                <div id="simulation" class="hidden bg-indigo-600 p-5 rounded-2xl shadow-lg shadow-indigo-200 text-white">
+                    <div class="grid grid-cols-2 gap-4 text-center mb-6">
+                        <div class="p-2 bg-white/10 rounded-lg">
+                            <div class="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Supremacy (A-B)</div>
+                            <div id="result-sup" class="text-xl font-black"></div>
+                        </div>
+                        <div class="p-2 bg-white/10 rounded-lg">
+                            <div class="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Expectancy</div>
+                            <div id="result-exp" class="text-xl font-black"></div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="text-[10px] font-bold text-indigo-200 mb-2 uppercase tracking-widest text-center">Projected 1X2 Odds</div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div class="bg-white text-indigo-900 p-2 rounded-lg text-center shadow-inner"><div class="text-[9px] font-bold text-indigo-400 uppercase">1</div><div id="result-o1" class="font-bold"></div></div>
+                                <div class="bg-white text-indigo-900 p-2 rounded-lg text-center shadow-inner"><div class="text-[9px] font-bold text-indigo-400 uppercase">X</div><div id="result-ox" class="font-bold"></div></div>
+                                <div class="bg-white text-indigo-900 p-2 rounded-lg text-center shadow-inner"><div class="text-[9px] font-bold text-indigo-400 uppercase">2</div><div id="result-o2" class="font-bold"></div></div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 pt-2">
+                            <div class="bg-indigo-700 p-3 rounded-lg border border-indigo-500">
+                                <div class="text-[9px] font-bold text-indigo-300 uppercase tracking-widest">Over 2.5</div>
+                                <div id="result-ov" class="text-lg font-bold"></div>
+                            </div>
+                            <div class="bg-indigo-700 p-3 rounded-lg border border-indigo-500">
+                                <div class="text-[9px] font-bold text-indigo-300 uppercase tracking-widest">Under 2.5</div>
+                                <div id="result-u" class="text-lg font-bold"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const modeButtons = document.querySelectorAll('.mode-btn');
+        const panePaste = document.getElementById('pane-paste');
+        const paneManual = document.getElementById('pane-manual');
+        const oddsFields = document.getElementById('odds-fields');
+        const supFields = document.getElementById('sup-fields');
+        const pasteData = document.getElementById('paste-data');
+        const parseAdd = document.getElementById('parse-add');
+        const teamName = document.getElementById('team-name');
+        const oddsHome = document.getElementById('odds-home');
+        const oddsAway = document.getElementById('odds-away');
+        const sup = document.getElementById('sup');
+        const exp = document.getElementById('exp');
+        const warning = document.getElementById('warning');
+        const addOdds = document.getElementById('add-odds');
+        const addSup = document.getElementById('add-sup');
+        const clearTeams = document.getElementById('clear-teams');
+        const teamList = document.getElementById('team-list');
+        const teamA = document.getElementById('team-a');
+        const teamB = document.getElementById('team-b');
+        const empty = document.getElementById('empty');
+        const simulation = document.getElementById('simulation');
+
+        let calcMode = 'paste';
+        let teams = [
+            { id: 1, name: 'Alaves', lambda: 1.05 },
+            { id: 2, name: 'Villarreal', lambda: 1.45 },
+            { id: 3, name: 'Wrexham', lambda: 1.28 },
+            { id: 4, name: 'Swansea', lambda: 1.02 }
+        ];
+
+        function poisson(k, lambda) {
+            let factorial = 1;
+            for (let i = 2; i <= k; i++) factorial *= i;
+            if (k === 0) return Math.exp(-lambda);
+            return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial;
+        }
+
+        function clampLambda(val) {
+            return Math.max(0.01, val);
+        }
+
+        function updateModeUI() {
+            modeButtons.forEach(btn => {
+                const mode = btn.id.replace('mode-', '');
+                const active = mode === calcMode;
+                btn.classList.toggle('bg-white', active);
+                btn.classList.toggle('shadow-sm', active);
+                btn.classList.toggle('font-bold', active);
+                btn.classList.toggle('text-indigo-600', active);
+                btn.classList.toggle('text-slate-500', !active);
+            });
+
+            panePaste.classList.toggle('hidden', calcMode !== 'paste');
+            paneManual.classList.toggle('hidden', calcMode === 'paste');
+            oddsFields.classList.toggle('hidden', calcMode !== 'odds');
+            supFields.classList.toggle('hidden', calcMode !== 'supremacy');
+        }
+
+        function updateWarning() {
+            const supVal = parseFloat(sup.value);
+            const expVal = parseFloat(exp.value);
+            const show = !Number.isNaN(supVal) && !Number.isNaN(expVal) && Math.abs(supVal) > expVal;
+            warning.classList.toggle('hidden', !show);
+        }
+
+        function addTeamsFromSup(nameH, nameA, supVal, expVal) {
+            const lambdaH = clampLambda((expVal - supVal) / 2);
+            const lambdaA = clampLambda(expVal - lambdaH);
+            teams.push(
+                { id: Date.now(), name: nameH, lambda: parseFloat(lambdaH.toFixed(2)) },
+                { id: Date.now() + 1, name: nameA, lambda: parseFloat(lambdaA.toFixed(2)) }
+            );
+            renderTeams();
+        }
+
+        function addTeamsFromOdds(nameH, nameA, hOdds, aOdds, totalExp) {
+            const h = 1 / hOdds;
+            const a = 1 / aOdds;
+            const ratio = h / a;
+            const lambdaH = clampLambda((totalExp * ratio) / (1 + ratio));
+            const lambdaA = clampLambda(totalExp - lambdaH);
+            teams.push(
+                { id: Date.now(), name: nameH, lambda: parseFloat(lambdaH.toFixed(2)) },
+                { id: Date.now() + 1, name: nameA, lambda: parseFloat(lambdaA.toFixed(2)) }
+            );
+            renderTeams();
+        }
+
+        function resetManualInputs() {
+            teamName.value = '';
+            oddsHome.value = '';
+            oddsAway.value = '';
+            sup.value = '';
+            exp.value = '';
+            updateWarning();
+        }
+
+        function handleQuickPaste() {
+            if (!pasteData.value.trim()) return;
+            const lines = pasteData.value.split('\n').map(l => l.trim()).filter(Boolean);
+            let homeTeam = 'Home Team';
+            let awayTeam = 'Away Team';
+
+            const vsLineIndex = lines.findIndex(l => l.toLowerCase().includes('vs'));
+            if (vsLineIndex !== -1) {
+                const parts = lines[vsLineIndex].split(/vs/i);
+                homeTeam = parts[0]?.trim() || homeTeam;
+                awayTeam = (parts[1]?.trim() || lines[vsLineIndex + 1]?.trim()) || awayTeam;
+            }
+
+            const supExpLine = lines.find(l => l.toLowerCase().includes('sup/exp') || l.includes('/'));
+            if (supExpLine) {
+                const numbers = supExpLine.match(/[-+]?\d*\.?\d+/g);
+                if (numbers && numbers.length >= 2) {
+                    addTeamsFromSup(homeTeam, awayTeam, parseFloat(numbers[0]), parseFloat(numbers[1]));
+                    pasteData.value = '';
+                    return;
+                }
+            }
+
+            const oneXTwoLine = lines.find(l => l.includes('1X2') || /\d\.\d+\s+\d\.\d+\s+\d\.\d+/.test(l));
+            const ouLine = lines.find(l => l.toLowerCase().includes('o/u') || l.toLowerCase().includes('2.50'));
+
+            if (oneXTwoLine) {
+                const oddsNums = oneXTwoLine.match(/\d*\.?\d+/g);
+                const ouNums = ouLine ? ouLine.match(/\d*\.?\d+/g) : null;
+                if (oddsNums && oddsNums.length >= 3) {
+                    let totalExp = 2.5;
+                    if (ouNums && ouNums.length >= 2) {
+                        const overOdd = parseFloat(ouNums[ouNums.length - 2]);
+                        const underOdd = parseFloat(ouNums[ouNums.length - 1]);
+                        totalExp = overOdd < underOdd ? 2.8 : 2.2;
+                    }
+                    addTeamsFromOdds(homeTeam, awayTeam, parseFloat(oddsNums[0]), parseFloat(oddsNums[2]), totalExp);
+                    pasteData.value = '';
+                }
+            }
+        }
+
+        function renderTeams() {
+            if (teams.length === 0) {
+                teamList.innerHTML = '<div class="text-sm text-slate-400 italic">No teams added yet.</div>';
+            } else {
+                teamList.innerHTML = teams.map(team => `
+                    <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <span class="text-sm font-medium">${team.name}</span>
+                        <div class="flex items-center gap-3">
+                            <span class="px-2 py-0.5 rounded text-xs font-mono font-bold border ${parseFloat(team.lambda) <= 0.01 ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-white text-indigo-700 border-indigo-100'}">${team.lambda}</span>
+                            <button class="text-red-300 hover:text-red-500" onclick="removeTeam(${team.id})">×</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            const options = ['<option value="">Select...</option>', ...teams.map(t => `<option value="${t.id}">${t.name}</option>`)].join('');
+            const prevA = teamA.value;
+            const prevB = teamB.value;
+            teamA.innerHTML = options;
+            teamB.innerHTML = options;
+            if (teams.some(t => String(t.id) === prevA)) teamA.value = prevA;
+            if (teams.some(t => String(t.id) === prevB)) teamB.value = prevB;
+            updateSimulation();
+        }
+
+        window.removeTeam = function removeTeam(teamId) {
+            teams = teams.filter(t => t.id !== teamId);
+            renderTeams();
+        };
+
+        function updateSimulation() {
+            const tA = teams.find(t => String(t.id) === teamA.value);
+            const tB = teams.find(t => String(t.id) === teamB.value);
+
+            if (!tA || !tB) {
+                simulation.classList.add('hidden');
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            const lA = parseFloat(tA.lambda);
+            const lB = parseFloat(tB.lambda);
+            let pA = 0;
+            let pD = 0;
+            let pB = 0;
+            let pU = 0;
+            const max = 10;
+
+            for (let i = 0; i <= max; i++) {
+                for (let j = 0; j <= max; j++) {
+                    const p = poisson(i, lA) * poisson(j, lB);
+                    if (i > j) pA += p;
+                    else if (i === j) pD += p;
+                    else pB += p;
+                    if (i + j < 2.5) pU += p;
+                }
+            }
+
+            document.getElementById('result-sup').textContent = (lB - lA).toFixed(2);
+            document.getElementById('result-exp').textContent = (lA + lB).toFixed(2);
+            document.getElementById('result-o1').textContent = (1 / pA).toFixed(2);
+            document.getElementById('result-ox').textContent = (1 / pD).toFixed(2);
+            document.getElementById('result-o2').textContent = (1 / pB).toFixed(2);
+            document.getElementById('result-u').textContent = (1 / pU).toFixed(2);
+            document.getElementById('result-ov').textContent = (1 / (1 - pU)).toFixed(2);
+
+            empty.classList.add('hidden');
+            simulation.classList.remove('hidden');
+        }
+
+        modeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                calcMode = btn.id.replace('mode-', '');
+                updateModeUI();
+            });
+        });
+
+        parseAdd.addEventListener('click', handleQuickPaste);
+
+        addOdds.addEventListener('click', () => {
+            if (!teamName.value || !oddsHome.value || !oddsAway.value) return;
+            addTeamsFromOdds(`${teamName.value} (H)`, `${teamName.value} (A)`, parseFloat(oddsHome.value), parseFloat(oddsAway.value), 2.5);
+            resetManualInputs();
+        });
+
+        addSup.addEventListener('click', () => {
+            if (!teamName.value || !sup.value || !exp.value) return;
+            addTeamsFromSup(`${teamName.value} (H)`, `${teamName.value} (A)`, parseFloat(sup.value), parseFloat(exp.value));
+            resetManualInputs();
+        });
+
+        sup.addEventListener('input', updateWarning);
+        exp.addEventListener('input', updateWarning);
+        clearTeams.addEventListener('click', () => {
+            teams = [];
+            renderTeams();
+        });
+        teamA.addEventListener('change', updateSimulation);
+        teamB.addEventListener('change', updateSimulation);
+
+        updateModeUI();
+        renderTeams();
+    </script>
+</body>
+</html>
