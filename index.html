@@ -896,7 +896,15 @@
                     // Categorization Logic
                     if (isPlayerProp) {
                         category = 'Player Props';
-                    } else if (marketNameLower.includes('corners') || marketNameLower.includes('cards') || marketNameLower.includes('shots')) {
+                    } else if (
+                        marketNameLower.includes('corners') ||
+                        marketNameLower.includes('cards') ||
+                        marketNameLower.includes('card') ||
+                        marketNameLower.includes('shots') ||
+                        marketNameLower.includes('foul') ||
+                        marketNameLower.includes('offside') ||
+                        marketNameLower.includes('penalty')
+                    ) {
                         category = 'Stat Markets';
                     } else {
                         category = 'Main Markets';
@@ -947,6 +955,22 @@
                         allMarketDataForCSV.push(marketData);
                     });
                 });
+
+                const sortMarketsByName = (markets) => {
+                    markets.sort((a, b) => {
+                        const marketCompare = a.Market.localeCompare(b.Market, undefined, { sensitivity: 'base' });
+                        if (marketCompare !== 0) return marketCompare;
+
+                        const selectionCompare = a.Selection.localeCompare(b.Selection, undefined, { sensitivity: 'base' });
+                        if (selectionCompare !== 0) return selectionCompare;
+
+                        return parseFloat(a.Odds) - parseFloat(b.Odds);
+                    });
+                };
+
+                sortMarketsByName(mainMarkets);
+                sortMarketsByName(statMarkets);
+                sortMarketsByName(playerMarkets);
                 
                 populateTable(mainMarkets, mainTableBody);
                 populateTable(statMarkets, statsTableBody, { selectable: true });
