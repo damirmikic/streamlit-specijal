@@ -6,8 +6,8 @@
     <title>Merkur Specijal Feed</title>
     <!-- FAVICON - Ovde unesite link do vaše ikonice na GitHub-u -->
     <link rel="icon" type="image/png" href="merkur.png">
-    <!-- Tailwind CSS for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS (precompiled stylesheet for production usage) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
     <style>
         /* A simple spinning animation for the loader */
         @keyframes spin {
@@ -417,6 +417,7 @@
         };
         
         let allMarketDataForCSV = [];
+        let statsMarketsCache = [];
         let fetchedMarketData = null; // Store fetched data
         let selectedPlayersForCSV = []; // Store players for special CSV
         let previewData = []; // Data for the CSV preview, can be edited
@@ -757,6 +758,7 @@
             resetTables();
             playerCsvGeneratorSection.classList.add('hidden');
             allMarketDataForCSV = [];
+            statsMarketsCache = [];
             fetchedMarketData = null;
             toggleRawDataButton.classList.add('hidden');
             rawDataContainer.classList.add('hidden');
@@ -971,6 +973,7 @@
                 sortMarketsByName(mainMarkets);
                 sortMarketsByName(statMarkets);
                 sortMarketsByName(playerMarkets);
+                statsMarketsCache = [...statMarkets];
                 
                 populateTable(mainMarkets, mainTableBody);
                 populateTable(statMarkets, statsTableBody, { selectable: true });
@@ -1073,7 +1076,7 @@
             };
 
             const findOppositeOdd = (marketName, line, wantedSide) => {
-                const found = statMarkets.find(row => {
+                const found = statsMarketsCache.find(row => {
                     if (row.Market !== marketName) return false;
                     const parsed = parseOverUnderSelection(row.Selection);
                     return parsed && parsed.side === wantedSide && parsed.line === line;
