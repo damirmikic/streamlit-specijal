@@ -222,15 +222,21 @@
                         <table class="min-w-full bg-white">
                             <thead class="bg-gray-100">
                                 <tr>
+                                    <th class="py-2 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CSV</th>
                                     <th class="py-2 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Market</th>
                                     <th class="py-2 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Selection</th>
                                     <th class="py-2 px-4 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Odds</th>
                                 </tr>
                             </thead>
                             <tbody id="statsTableBody">
-                               <tr><td colspan="3" class="text-center py-4 text-gray-500">No data fetched yet.</td></tr>
+                               <tr><td colspan="4" class="text-center py-4 text-gray-500">No data fetched yet.</td></tr>
                             </tbody>
                         </table>
+                    </div>
+                    <div class="mt-4 flex justify-end">
+                        <button id="generateStatsCsvButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
+                            Generiši Stat Markets CSV
+                        </button>
                     </div>
                 </div>
                 <!-- Player Props Table -->
@@ -445,6 +451,7 @@
         const csvPreviewSection = document.getElementById('csvPreviewSection');
         const csvPreviewContent = document.getElementById('csvPreviewContent');
         const generateFinalCsvButton = document.getElementById('generateFinalCsvButton');
+        const generateStatsCsvButton = document.getElementById('generateStatsCsvButton');
         const loadFromJsonButton = document.getElementById('loadFromJsonButton');
         
         const openMatchSpecialsButton = document.getElementById('openMatchSpecialsButton');
@@ -728,7 +735,7 @@
         function resetTables() {
             const placeholder = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Select a match to see markets.</td></tr>';
             mainTableBody.innerHTML = placeholder;
-            statsTableBody.innerHTML = placeholder;
+            statsTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">Select a match to see markets.</td></tr>';
             homePlayerTableBody.innerHTML = placeholder;
             awayPlayerTableBody.innerHTML = placeholder;
             homeTeamHeader.textContent = '';
@@ -802,7 +809,7 @@
             toggleLoading(true);
             fetchMarketsButton.disabled = true;
             mainTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Fetching markets...</td></tr>';
-            statsTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Fetching markets...</td></tr>';
+            statsTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">Fetching markets...</td></tr>';
             homePlayerTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Fetching markets...</td></tr>';
             awayPlayerTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Fetching markets...</td></tr>';
             playerCsvGeneratorSection.classList.add('hidden');
@@ -942,7 +949,7 @@
                 });
                 
                 populateTable(mainMarkets, mainTableBody);
-                populateTable(statMarkets, statsTableBody);
+                populateTable(statMarkets, statsTableBody, { selectable: true });
                 
                 // Populate player tables separately by team
                 if(homeTeam && awayTeam) {
@@ -973,8 +980,10 @@
         }
 
         // 4. Populate a specific table with data
-        function populateTable(data, tableBodyElement) {
-            const emptyMessage = '<tr><td colspan="3" class="text-center py-4 text-gray-500">No markets of this type were found.</td></tr>';
+        function populateTable(data, tableBodyElement, options = {}) {
+            const { selectable = false } = options;
+            const emptyCols = selectable ? 4 : 3;
+            const emptyMessage = `<tr><td colspan="${emptyCols}" class="text-center py-4 text-gray-500">No markets of this type were found.</td></tr>`;
             if (!data || data.length === 0) {
                  tableBodyElement.innerHTML = emptyMessage;
                  return;
@@ -983,13 +992,64 @@
             data.forEach(row => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-gray-50';
+                const checkboxCell = selectable
+                    ? `<td class="py-3 px-4 border-b border-gray-200 text-sm">
+                            <input type="checkbox" class="stat-market-checkbox h-4 w-4" data-market="${encodeURIComponent(row.Market)}" data-selection="${encodeURIComponent(row.Selection)}" data-odds="${row.Odds}">
+                       </td>`
+                    : '';
                 tr.innerHTML = `
+                    ${checkboxCell}
                     <td class="py-3 px-4 border-b border-gray-200 text-sm">${row.Market}</td>
                     <td class="py-3 px-4 border-b border-gray-200 text-sm">${row.Selection}</td>
                     <td class="py-3 px-4 border-b border-gray-200 text-sm font-medium">${row.Odds}</td>
                 `;
                 tableBodyElement.appendChild(tr);
             });
+        }
+
+        function generateStatsMarketsCSV() {
+            const checkedMarkets = Array.from(document.querySelectorAll('.stat-market-checkbox:checked')).map(checkbox => ({
+                market: decodeURIComponent(checkbox.dataset.market || ''),
+                selection: decodeURIComponent(checkbox.dataset.selection || ''),
+                odds: checkbox.dataset.odds || ''
+            }));
+
+            if (checkedMarkets.length === 0) {
+                logStatus('Izaberite bar jedno Stat Market tržište za CSV.', true);
+                return;
+            }
+
+            if (!fetchedMarketData?.events?.[0]) {
+                logStatus('Podaci o meču nisu dostupni za generisanje CSV-a.', true);
+                return;
+            }
+
+            const eventInfo = fetchedMarketData.events[0];
+            const matchDate = new Date(eventInfo.start);
+            const datum = `${matchDate.getDate().toString().padStart(2, '0')}.${(matchDate.getMonth() + 1).toString().padStart(2, '0')}.${matchDate.getFullYear()}`;
+            const vreme = `${matchDate.getHours().toString().padStart(2, '0')}:${matchDate.getMinutes().toString().padStart(2, '0')}`;
+
+            const header = "Datum,Vreme,Sifra,Domacin,Gost,1,X,2,GR,U,O,Yes,No";
+            const csvRows = [header];
+
+            const selectedLeagueName = leagueSelect.value || 'Unknown League';
+            const selectedMatchName = matchSelect.options[matchSelect.selectedIndex]?.text || eventInfo.name || 'Unknown Match';
+
+            // Requested swap:
+            // MATCH_NAME should contain league name, LEAGUE_NAME should contain match name.
+            csvRows.push(`MATCH_NAME:${removeDiacritics(selectedLeagueName)}`);
+            csvRows.push(`LEAGUE_NAME:${removeDiacritics(selectedMatchName)}`);
+
+            checkedMarkets.forEach(item => {
+                const row = [datum, vreme, '', item.market, item.selection, item.odds, '', '', '', '', '', '', ''];
+                csvRows.push(row.join(','));
+            });
+
+            const csvContent = csvRows.join('\n');
+            const safeMatchName = selectedMatchName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const fileName = `${safeMatchName}_stats_specijal.csv`;
+            downloadCSV(csvContent, fileName);
+            logStatus(`Stat Markets CSV generated with ${checkedMarkets.length} selected marketa.`);
         }
 
         // 5. Generate and trigger CSV download
@@ -1628,6 +1688,7 @@
             addPlayerButton.addEventListener('click', handleAddPlayer);
             previewPlayerCsvButton.addEventListener('click', showCsvPreview);
             generateFinalCsvButton.addEventListener('click', generateFinalPlayerPropsCSV);
+            generateStatsCsvButton.addEventListener('click', generateStatsMarketsCSV);
             clearPlayersButton.addEventListener('click', handleClearPlayers);
             loadFromJsonButton.addEventListener('click', loadPlayersFromJson);
 
