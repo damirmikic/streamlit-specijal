@@ -944,8 +944,13 @@
                             const formattedLine = parseFloat(lineValue).toString();
                             selectionName = `${selectionName} ${formattedLine}`;
                         }
-                        
-                        const translatedMarketName = isPlayerProp ? (serbianTranslations[marketName] || marketName) : marketName;
+
+                        if (category === 'Stat Markets') {
+                            if (selectionName === 'Yes') selectionName = 'Da';
+                            else if (selectionName === 'No') selectionName = 'Ne';
+                        }
+
+                        const translatedMarketName = isPlayerProp ? (serbianTranslations[marketName] || marketName) : (category === 'Stat Markets' ? translateStatMarketName(marketName) : marketName);
 
                         const marketData = {
                             Category: category,
@@ -1016,6 +1021,22 @@
         }
 
         // 4. Populate a specific table with data
+        function translateStatMarketName(name) {
+            let n = name;
+            n = n.replace(/Total Shots on Target \(Settled using Opta data\)/gi, "ukupno suteva u okvir gola");
+            n = n.replace(/Total Shots by (.+?) \(Settled using Opta data\)/gi, "ukupno suteva $1");
+            n = n.replace(/Total Shots \(Settled using Opta data\)/gi, "ukupno suteva");
+            n = n.replace(/Total Fouls conceded \(Settled using Opta data\)/gi, "ukupno faulova");
+            n = n.replace(/Total Offsides \(Settled using Opta data\)/gi, "ukupno ofsajda");
+            n = n.replace(/Total Cards/gi, "ukupno kartona");
+            n = n.replace(/Total Corners/gi, "ukupno kornera");
+            n = n.replace(/given a Red Card/gi, "dobija crveni karton");
+            n = n.replace(/to score from a penalty/gi, "daje gol iz penala");
+            n = n.replace(/Penalty Kick awarded/gi, "dosudjen penal");
+            n = n.replace(/Red Card given/gi, "crveni karton na mecu");
+            return n;
+        }
+
         function populateTable(data, tableBodyElement, options = {}) {
             const { selectable = false } = options;
             const emptyCols = selectable ? 4 : 3;
