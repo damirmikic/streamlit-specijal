@@ -700,6 +700,15 @@
             return oddsStr;
         }
 
+        function parseOverUnderSelection(selectionText = '') {
+            const match = selectionText.match(/\b(over|under)\s+(\d+(?:[.,]\d+)?)\b/i);
+            if (!match) return null;
+            return {
+                side: match[1].toLowerCase(),
+                line: match[2].replace(',', '.')
+            };
+        }
+
         /**
          * Converts an array of objects to a CSV string.
          * @param {Array<Object>} data - The array of objects to convert.
@@ -1034,6 +1043,36 @@
             });
         }
 
+        function syncOppositeStatMarketSelection(changedCheckbox) {
+            const market = decodeURIComponent(changedCheckbox.dataset.market || '');
+            const selection = decodeURIComponent(changedCheckbox.dataset.selection || '');
+            const parsed = parseOverUnderSelection(selection);
+            if (!parsed) return;
+
+            const oppositeSide = parsed.side === 'over' ? 'under' : parsed.side === 'under' ? 'over' : '';
+            if (!oppositeSide) return;
+
+            const allStatCheckboxes = Array.from(document.querySelectorAll('.stat-market-checkbox'));
+            const oppositeCheckbox = allStatCheckboxes.find(cb => {
+                if (cb === changedCheckbox) return false;
+                const cbMarket = decodeURIComponent(cb.dataset.market || '');
+                if (cbMarket !== market) return false;
+                const cbSelection = decodeURIComponent(cb.dataset.selection || '');
+                const cbParsed = parseOverUnderSelection(cbSelection);
+                return cbParsed && cbParsed.side === oppositeSide && cbParsed.line === parsed.line;
+            });
+
+            if (oppositeCheckbox) {
+                oppositeCheckbox.checked = changedCheckbox.checked;
+            }
+        }
+
+        statsTableBody.addEventListener('change', (e) => {
+            if (e.target.classList.contains('stat-market-checkbox')) {
+                syncOppositeStatMarketSelection(e.target);
+            }
+        });
+
         function generateStatsMarketsCSV() {
             const checkedMarkets = Array.from(document.querySelectorAll('.stat-market-checkbox:checked')).map(checkbox => ({
                 market: decodeURIComponent(checkbox.dataset.market || ''),
@@ -1066,14 +1105,6 @@
             // MATCH_NAME should contain league name, LEAGUE_NAME should contain match name.
             csvRows.push(`MATCH_NAME:${removeDiacritics(selectedLeagueName)}`);
             csvRows.push(`LEAGUE_NAME:${removeDiacritics(selectedMatchName)}`);
-
-            const parseOverUnderSelection = (selectionText = '') => {
-                const match = selectionText.match(/\b(over|under)\s+(\d+(?:[.,]\d+)?)\b/i);
-                if (!match) return null;
-                const side = match[1].toLowerCase();
-                const line = match[2].replace(',', '.');
-                return { side, line };
-            };
 
             const findOppositeOdd = (marketName, line, wantedSide) => {
                 const found = statsMarketsCache.find(row => {
