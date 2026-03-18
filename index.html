@@ -1064,7 +1064,61 @@
             csvRows.push(`MATCH_NAME:${removeDiacritics(selectedLeagueName)}`);
             csvRows.push(`LEAGUE_NAME:${removeDiacritics(selectedMatchName)}`);
 
+            const parseOverUnderSelection = (selectionText = '') => {
+                const match = selectionText.match(/\b(over|under)\s+(\d+(?:[.,]\d+)?)\b/i);
+                if (!match) return null;
+                const side = match[1].toLowerCase();
+                const line = match[2].replace(',', '.');
+                return { side, line };
+            };
+
+            const findOppositeOdd = (marketName, line, wantedSide) => {
+                const found = statMarkets.find(row => {
+                    if (row.Market !== marketName) return false;
+                    const parsed = parseOverUnderSelection(row.Selection);
+                    return parsed && parsed.side === wantedSide && parsed.line === line;
+                });
+                return found ? found.Odds : '';
+            };
+
+            const groupedOverUnderRows = new Map();
+            const regularRows = [];
+
             checkedMarkets.forEach(item => {
+                const parsed = parseOverUnderSelection(item.selection);
+                if (!parsed) {
+                    regularRows.push(item);
+                    return;
+                }
+
+                const groupKey = `${item.market}__${parsed.line}`;
+                if (!groupedOverUnderRows.has(groupKey)) {
+                    groupedOverUnderRows.set(groupKey, {
+                        market: item.market,
+                        line: parsed.line,
+                        underOdd: '',
+                        overOdd: ''
+                    });
+                }
+
+                const grouped = groupedOverUnderRows.get(groupKey);
+                if (parsed.side === 'under') {
+                    grouped.underOdd = item.odds;
+                } else if (parsed.side === 'over') {
+                    grouped.overOdd = item.odds;
+                    // Ako korisnik izabere "Over", automatski popuni "Under" za istu granicu iz dostupnih tržišta.
+                    if (!grouped.underOdd) {
+                        grouped.underOdd = findOppositeOdd(item.market, parsed.line, 'under');
+                    }
+                }
+            });
+
+            groupedOverUnderRows.forEach(grouped => {
+                const row = [datum, vreme, '', grouped.market, '', '', '', '', grouped.line, grouped.underOdd, grouped.overOdd, '', ''];
+                csvRows.push(row.join(','));
+            });
+
+            regularRows.forEach(item => {
                 const row = [datum, vreme, '', item.market, item.selection, item.odds, '', '', '', '', '', '', ''];
                 csvRows.push(row.join(','));
             });
