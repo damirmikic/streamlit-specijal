@@ -422,6 +422,7 @@
         
         let allMarketDataForCSV = [];
         let statsMarketsCache = [];
+        let selectedStatRowIds = new Set();
         let fetchedMarketData = null; // Store fetched data
         let selectedPlayersForCSV = []; // Store players for special CSV
         let previewData = []; // Data for the CSV preview, can be edited
@@ -714,6 +715,109 @@
             };
         }
 
+        function normalizeStatText(value = '') {
+            return removeDiacritics(String(value)).toLowerCase().replace(/\s+/g, ' ').trim();
+        }
+
+        function getMostBalancedLineRowIds(statsRows, marketMatcher) {
+            const groupedByLine = new Map();
+            statsRows.forEach(row => {
+                if (!marketMatcher(row)) return;
+                const parsed = parseOverUnderSelection(row.Selection);
+                if (!parsed) return;
+                if (!groupedByLine.has(parsed.line)) {
+                    groupedByLine.set(parsed.line, { over: null, under: null });
+                }
+                groupedByLine.get(parsed.line)[parsed.side] = row;
+            });
+
+            let best = null;
+            groupedByLine.forEach((pair, line) => {
+                if (!pair.over || !pair.under) return;
+                const overOdd = parseFloat(pair.over.Odds);
+                const underOdd = parseFloat(pair.under.Odds);
+                if (!isFinite(overOdd) || !isFinite(underOdd)) return;
+                const gap = Math.abs(overOdd - underOdd);
+                const evenDistance = Math.abs(overOdd - 2) + Math.abs(underOdd - 2);
+                if (!best || gap < best.gap || (gap === best.gap && evenDistance < best.evenDistance)) {
+                    best = { line, gap, evenDistance, over: pair.over, under: pair.under };
+                }
+            });
+
+            return best ? [best.over.RowId, best.under.RowId] : [];
+        }
+
+        function getDefaultStatRowIds(statsRows) {
+            const defaults = new Set();
+            const homeTeam = fetchedMarketData?.events?.[0]?.participants?.find(p => p.home)?.name || '';
+            const awayTeam = fetchedMarketData?.events?.[0]?.participants?.find(p => !p.home)?.name || '';
+            const homeNorm = normalizeStatText(homeTeam);
+            const awayNorm = normalizeStatText(awayTeam);
+
+            const addByMarketAndSelection = (marketNeedle, selectionNeedle) => {
+                const marketNeedleNorm = normalizeStatText(marketNeedle);
+                const selectionNeedleNorm = normalizeStatText(selectionNeedle);
+                statsRows.forEach(row => {
+                    const rowMarket = normalizeStatText(row.Market);
+                    const rowSelection = normalizeStatText(row.Selection);
+                    if (rowMarket.includes(marketNeedleNorm) && rowSelection === selectionNeedleNorm) {
+                        defaults.add(row.RowId);
+                    }
+                });
+            };
+
+            addByMarketAndSelection('crveni karton na mecu', 'Da');
+            addByMarketAndSelection('crveni karton na mecu', 'Ne');
+            addByMarketAndSelection('dosudjen penal', 'Da');
+            addByMarketAndSelection('dosudjen penal', 'Ne');
+
+            statsRows.forEach(row => {
+                const rowMarket = normalizeStatText(row.Market);
+                const rowSelection = normalizeStatText(row.Selection);
+                if (rowSelection !== 'da') return;
+                if (homeNorm && rowMarket.includes(homeNorm) && rowMarket.includes('daje gol iz penala')) defaults.add(row.RowId);
+                if (awayNorm && rowMarket.includes(awayNorm) && rowMarket.includes('daje gol iz penala')) defaults.add(row.RowId);
+                if (homeNorm && rowMarket.includes(homeNorm) && rowMarket.includes('dobija crveni karton')) defaults.add(row.RowId);
+                if (awayNorm && rowMarket.includes(awayNorm) && rowMarket.includes('dobija crveni karton')) defaults.add(row.RowId);
+            });
+
+            const balancedMarkets = [
+                'ukupno kartona',
+                'ukupno kornera',
+                'ukupno suteva',
+                'ukupno suteva u okvir gola',
+                'ukupno ofsajda',
+                'ukupno faulova'
+            ];
+
+            balancedMarkets.forEach(marketNeedle => {
+                getMostBalancedLineRowIds(statsRows, row => {
+                    const rowMarket = normalizeStatText(row.Market);
+                    return rowMarket === normalizeStatText(marketNeedle);
+                }).forEach(rowId => defaults.add(rowId));
+            });
+
+            if (homeNorm) {
+                getMostBalancedLineRowIds(statsRows, row => {
+                    const rowMarket = normalizeStatText(row.Market);
+                    return rowMarket.includes('ukupno suteva') &&
+                        rowMarket.includes(homeNorm) &&
+                        !rowMarket.includes('u okvir gola');
+                }).forEach(rowId => defaults.add(rowId));
+            }
+
+            if (awayNorm) {
+                getMostBalancedLineRowIds(statsRows, row => {
+                    const rowMarket = normalizeStatText(row.Market);
+                    return rowMarket.includes('ukupno suteva') &&
+                        rowMarket.includes(awayNorm) &&
+                        !rowMarket.includes('u okvir gola');
+                }).forEach(rowId => defaults.add(rowId));
+            }
+
+            return defaults;
+        }
+
         /**
          * Converts an array of objects to a CSV string.
          * @param {Array<Object>} data - The array of objects to convert.
@@ -756,6 +860,7 @@
             homeTeamHeader.textContent = '';
             awayTeamHeader.textContent = '';
             csvPreviewSection.classList.add('hidden');
+            selectedStatRowIds = new Set();
         }
 
         // 2. Fetch matches when a league is selected
@@ -1004,9 +1109,10 @@
                 sortMarketsByName(statMarkets);
                 sortMarketsByName(playerMarkets);
                 statsMarketsCache = [...statMarkets];
+                selectedStatRowIds = getDefaultStatRowIds(statsMarketsCache);
                 
                 populateTable(mainMarkets, mainTableBody);
-                populateTable(statMarkets, statsTableBody, { selectable: true });
+                populateTable(statMarkets, statsTableBody, { selectable: true, selectedIds: selectedStatRowIds });
                 
                 // Populate player tables separately by team
                 if(homeTeam && awayTeam) {
@@ -1114,7 +1220,8 @@
                 row.Selection = replaceTeamNamesInText(baseSelection, teamNameMap);
             });
 
-            populateTable(statsMarketsCache, statsTableBody, { selectable: true });
+            selectedStatRowIds = checkedIds;
+            populateTable(statsMarketsCache, statsTableBody, { selectable: true, selectedIds: selectedStatRowIds });
 
             if (checkedIds.size > 0) {
                 document.querySelectorAll('.stat-market-checkbox').forEach(cb => {
@@ -1124,7 +1231,7 @@
         }
 
         function populateTable(data, tableBodyElement, options = {}) {
-            const { selectable = false } = options;
+            const { selectable = false, selectedIds = new Set() } = options;
             const emptyCols = selectable ? 4 : 3;
             const emptyMessage = `<tr><td colspan="${emptyCols}" class="text-center py-4 text-gray-500">No markets of this type were found.</td></tr>`;
             if (!data || data.length === 0) {
@@ -1137,7 +1244,7 @@
                 tr.className = 'hover:bg-gray-50';
                 const checkboxCell = selectable
                     ? `<td class="py-3 px-4 border-b border-gray-200 text-sm">
-                            <input type="checkbox" class="stat-market-checkbox h-4 w-4" data-row-id="${row.RowId || ''}" data-market="${encodeURIComponent(row.Market)}" data-selection="${encodeURIComponent(row.Selection)}" data-odds="${row.Odds}">
+                            <input type="checkbox" class="stat-market-checkbox h-4 w-4" data-row-id="${row.RowId || ''}" data-market="${encodeURIComponent(row.Market)}" data-selection="${encodeURIComponent(row.Selection)}" data-odds="${row.Odds}" ${selectedIds.has(row.RowId) ? 'checked' : ''}>
                        </td>`
                     : '';
                 tr.innerHTML = `
@@ -1177,6 +1284,9 @@
         statsTableBody.addEventListener('change', (e) => {
             if (e.target.classList.contains('stat-market-checkbox')) {
                 syncOppositeStatMarketSelection(e.target);
+                selectedStatRowIds = new Set(
+                    Array.from(document.querySelectorAll('.stat-market-checkbox:checked')).map(cb => cb.dataset.rowId)
+                );
             }
         });
 
