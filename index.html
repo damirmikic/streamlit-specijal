@@ -1070,12 +1070,13 @@
 
         function parseEditedMatchTeams(editedMatchName) {
             if (!editedMatchName) return null;
-            const delimiters = [' - ', ' vs ', ' v ', ' – ', '—'];
-            for (const delimiter of delimiters) {
-                if (editedMatchName.includes(delimiter)) {
-                    const [home, away] = editedMatchName.split(delimiter).map(name => name.trim()).filter(Boolean);
-                    if (home && away) return { home, away };
-                }
+            const separatorsRegex = /\s*(?:vs\.?|v\.?|-|–|—)\s*/i;
+            const parts = editedMatchName
+                .split(separatorsRegex)
+                .map(name => name.trim())
+                .filter(Boolean);
+            if (parts.length >= 2) {
+                return { home: parts[0], away: parts[1] };
             }
             return null;
         }
