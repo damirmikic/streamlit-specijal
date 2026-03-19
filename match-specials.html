@@ -46,7 +46,7 @@
             </div>
 
             <div id="specialsContent" class="hidden">
-                <!-- Lista generisanih i PrePack specijala -->
+                <!-- Lista generisanih specijala -->
                  <div id="specialsList">
                    
                     <div id="calculatedSpecialsContainer" class="space-y-3"></div>
@@ -54,8 +54,6 @@
                     <div id="calculatedButtonContainer" class="mt-4"></div>
 
                     
-                    <div id="prepackSpecialsContainer" class="mt-6 space-y-3"></div>
-                    <div id="prepackButtonContainer" class="mt-4"></div>
                  </div>
 
 
@@ -100,13 +98,10 @@
             const specialsList = document.getElementById('specialsList'); // Main container
             const calculatedSpecialsContainer = document.getElementById('calculatedSpecialsContainer');
             const calculatedButtonContainer = document.getElementById('calculatedButtonContainer');
-            const prepackSpecialsContainer = document.getElementById('prepackSpecialsContainer');
-            const prepackButtonContainer = document.getElementById('prepackButtonContainer');
             const csvPreviewContent = document.getElementById('csvPreviewContent');
             const generateCsvButton = document.getElementById('generateCsvButton');
             // Buttons created dynamically now
             let addCalculatedSpecialsButton = null;
-            let addPrepackSpecialsButton = null;
             const csvPreviewSectionContainer = document.getElementById('csvPreviewSectionContainer');
 
             // Stanje aplikacije
@@ -128,11 +123,6 @@
 
              function formatLineValue(lineValue, type = 'over') {
                  if (lineValue === null || lineValue === undefined) return ''; const lineNum = parseFloat(lineValue); if (isNaN(lineNum)) return ''; if (lineNum % 1 === 0.5) { return type === 'over' ? `${Math.ceil(lineNum)}+` : `0-${Math.floor(lineNum)}`; } return lineNum.toString();
-            }
-
-            function translatePrepackLabel(label) {
-                 let originalLabel = label;
-                label = label.replace(/Player's shots on target \(Settled using Opta data\)/gi, "Šutevi u okvir gola"); label = label.replace(/Player's shots \(Settled using Opta data\)/gi, "Ukupno šuteva"); label = label.replace(/Player's fouls conceded \(Settled using Opta data\)/gi, "Načinjenih faulova"); label = label.replace(/To Score Or Assist \(Settled using Opta data\)/gi, "Gol ili asistencija"); label = label.replace(/To score or get an assist/gi, "Gol ili asistencija"); label = label.replace(/To Score or Assist/gi, "Gol ili asistencija"); label = label.replace(/To Assist \(Settled using Opta data\)/gi, "Asistencija"); label = label.replace(/To score at least 2 goals/gi, "Daje 2+ gola"); label = label.replace(/To score at least 3 goals/gi, "Daje 3+ gola (Het-trik)"); label = label.replace(/To score from a header/gi, "Daje gol glavom"); label = label.replace(/To score from outside the penalty box/gi, "Daje gol izvan šesnaesterca"); label = label.replace(/Yes Both Teams To Score/gi, "GG"); label = label.replace(/No Both Teams To Score/gi, "NG"); label = label.replace(/Both Teams To Score/gi, "GG"); label = label.replace(/Total Shots on Target \(Settled using Opta data\)/gi, "ukupno suteva u okvir gola"); label = label.replace(/Total Shots by (.+?) \(Settled using Opta data\)/gi, "ukupno suteva $1"); label = label.replace(/Total Shots \(Settled using Opta data\)/gi, "ukupno suteva"); label = label.replace(/Total Fouls conceded \(Settled using Opta data\)/gi, "ukupno faulova"); label = label.replace(/Total Offsides \(Settled using Opta data\)/gi, "ukupno ofsajda"); label = label.replace(/given a Red Card/gi, "dobija crveni karton"); label = label.replace(/to score from a penalty/gi, "daje gol iz penala"); label = label.replace(/Penalty Kick awarded/gi, "dosudjen penal"); label = label.replace(/Red Card given/gi, "crveni karton na mecu"); label = label.replace(/Total Corners/gi, "ukupno kornera"); label = label.replace(/Total Cards/gi, "ukupno kartona"); label = label.replace(/Total Goals/gi, "ukupno golova"); label = label.replace(/Most Corners/gi, "više kornera"); label = label.replace(/Most Cards/gi, "više kartona"); label = label.replace(/To Score/gi, "Daje gol"); label = label.replace(/To Get a Card/gi, "Dobija karton"); label = label.replace(/To Get a Red Card/gi, "Dobija crveni karton"); label = label.replace(/Full Time (.+)/gi, "$1 pobeđuje"); label = label.replace(/(Over|više)\s+([\d.]+)/gi, (match, p1, p2) => formatLineValue(p2, 'over')); label = label.replace(/(Under|manje)\s+([\d.]+)/gi, (match, p1, p2) => formatLineValue(p2, 'under')); label = label.replace(/\bYes\b/g, "Da"); label = label.replace(/\bNo\b/g, "Ne"); return label.replace(/\s+/g, ' ').trim();
             }
 
             function escapeRegExp(str) {
@@ -287,9 +277,7 @@
                 ];
 
                 calculatedSpecialsContainer.innerHTML = ''; // Clear previous calculated specials
-                prepackSpecialsContainer.innerHTML = ''; // Clear previous prepacks
                 calculatedButtonContainer.innerHTML = ''; // Clear buttons
-                prepackButtonContainer.innerHTML = '';
 
                 // --- Prikaz Kalkulisanih Specijala ---
                 let hasCalculated = false;
@@ -344,45 +332,6 @@
                      calculatedButtonContainer.appendChild(addCalculatedSpecialsButton);
                 }
 
-
-                // --- Prikaz PrePack Specijala ---
-                let hasPrepacks = false;
-                if (fetchedData.prePacks && fetchedData.prePacks.length > 0) {
-                     const separator = document.createElement('div'); separator.className = 'pt-4 mt-6 border-t border-gray-300'; separator.innerHTML = '<h3 class="text-lg font-semibold text-gray-700 mb-2">Pre-Pack Specijali</h3>';
-                     prepackSpecialsContainer.appendChild(separator); // Add separator to prepack container
-
-                    fetchedData.prePacks.forEach((pack, packIndex) => { // Added packIndex
-                        pack.prePackSelections.forEach((selection, index) => {
-                            const odds = (selection.combinations[0].odds.decimal / 1000); if (odds < 1.01 || odds > 40) return;
-                            const translatedLabels = selection.label.map(translatePrepackLabel); const marketName = translatedLabels.join(' I ');
-                            const finalOddForDisplayString = roundOdds(String(odds));
-                            const oddValue = finalOddForDisplayString;
-                            // Generate a more unique ID using packIndex and index
-                            const inputId = `odds-input-prepack-${packIndex}-${index}-${(selection.selectionId || 'noId')}`;
-                            const escapedBaseName = escapeHtmlAttribute(marketName);
-
-                            const div = document.createElement('div'); div.setAttribute('data-special-type', 'prepack'); div.className = 'flex justify-between items-center p-3 border rounded-lg bg-indigo-50 shadow-sm';
-                            div.innerHTML = `
-                                <span class="text-gray-800 flex-1 text-sm mr-2" data-base-name="${escapedBaseName}">${getEffectiveSpecialName(marketName)}</span>
-                                <div class="flex items-center gap-3 w-auto md:w-1/3 flex-shrink-0">
-                                    <input type="text" value="${oddValue}" class="odds-input w-20 p-1 border border-gray-300 rounded text-center font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500" placeholder="N/A" id="${inputId}" ${!oddValue ? 'disabled' : ''}>
-                                    <button data-base-name="${escapedBaseName}" data-input-id="${inputId}" class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 transition-colors duration-200 ${!oddValue ? 'opacity-50 cursor-not-allowed' : ''}" ${!oddValue ? 'disabled' : ''}>+</button>
-                                </div>`;
-                            prepackSpecialsContainer.appendChild(div); // Add prepack to its container
-                             if(oddValue) hasPrepacks = true; // Mark that at least one prepack was displayed
-                        });
-                    });
-
-                    // Add "Add PrePacks" button if there were any prepacks
-                    if (hasPrepacks) {
-                        addPrepackSpecialsButton = document.createElement('button');
-                        addPrepackSpecialsButton.id = 'addPrepackSpecialsButton';
-                        addPrepackSpecialsButton.className = 'bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors duration-200';
-                        addPrepackSpecialsButton.textContent = 'Dodaj PrePacks u Pregled';
-                        addPrepackSpecialsButton.onclick = () => addSpecialsByType('prepack');
-                        prepackButtonContainer.appendChild(addPrepackSpecialsButton);
-                    }
-                }
 
                 loader.style.display = 'none'; specialsContent.classList.remove('hidden');
                 appendDefaultStatMarketsToPreview();
@@ -457,7 +406,7 @@
             function addSpecialsByType(type) {
                  let addedCount = 0;
                  // Selektuj SVE add-special-btn unutar kontejnera za dati tip
-                 const container = type === 'calculated' ? calculatedSpecialsContainer : prepackSpecialsContainer;
+                 const container = calculatedSpecialsContainer;
                  const allSpecialButtons = container.querySelectorAll(`.add-special-btn`);
 
                  allSpecialButtons.forEach(btn => {
@@ -476,8 +425,8 @@
                      }
                  });
 
-                 if (addedCount > 0) { renderPreview(); showToast(`${addedCount} ${type === 'calculated' ? 'kalk.' : 'PrePack'} marketa dodato.`); }
-                 else { showToast(`Nema novih ${type === 'calculated' ? 'kalk.' : 'PrePack'} marketa za dodavanje.`, "info"); }
+                 if (addedCount > 0) { renderPreview(); showToast(`${addedCount} kalk. marketa dodato.`); }
+                 else { showToast(`Nema novih kalk. marketa za dodavanje.`, "info"); }
             }
             // Listeneri se dodaju dinamički kada se dugmad kreiraju
 
