@@ -218,6 +218,10 @@
                 </div>
                 <!-- Stats Markets Table -->
                 <div id="stats-content" class="tab-panel hidden">
+                    <div class="mb-4">
+                        <label for="statsLeagueNameInput" class="block text-sm font-medium text-gray-700">LEAGUE_NAME (event name)</label>
+                        <input type="text" id="statsLeagueNameInput" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Match / Event name">
+                    </div>
                      <div class="overflow-x-auto">
                         <table class="min-w-full bg-white">
                             <thead class="bg-gray-100">
@@ -453,6 +457,7 @@
         const csvPreviewContent = document.getElementById('csvPreviewContent');
         const generateFinalCsvButton = document.getElementById('generateFinalCsvButton');
         const generateStatsCsvButton = document.getElementById('generateStatsCsvButton');
+        const statsLeagueNameInput = document.getElementById('statsLeagueNameInput');
         const loadFromJsonButton = document.getElementById('loadFromJsonButton');
         
         const openMatchSpecialsButton = document.getElementById('openMatchSpecialsButton');
@@ -1121,11 +1126,12 @@
 
             const selectedLeagueName = leagueSelect.value || 'Unknown League';
             const selectedMatchName = matchSelect.options[matchSelect.selectedIndex]?.text || eventInfo.name || 'Unknown Match';
+            const editedEventName = statsLeagueNameInput.value.trim() || selectedMatchName;
 
             // Requested swap:
             // MATCH_NAME should contain league name, LEAGUE_NAME should contain match name.
             csvRows.push(`MATCH_NAME:${removeDiacritics(selectedLeagueName)}`);
-            csvRows.push(`LEAGUE_NAME:${removeDiacritics(selectedMatchName)}`);
+            csvRows.push(`LEAGUE_NAME:${removeDiacritics(editedEventName)}`);
 
             const findOppositeOdd = (marketName, line, wantedSide) => {
                 const found = statsMarketsCache.find(row => {
@@ -1777,6 +1783,7 @@
                 fetchMarketsButton.disabled = !matchSelect.value;
                 loadFromJsonButton.disabled = !matchSelect.value;
                 matchSpecialsButtonContainer.classList.add('hidden');
+                statsLeagueNameInput.value = matchSelect.options[matchSelect.selectedIndex]?.text || '';
                 resetTables();
                 mainTableBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-gray-500">Click "Fetch Markets" to see data.</td></tr>';
                 playerCsvGeneratorSection.classList.add('hidden');
