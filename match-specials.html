@@ -34,6 +34,10 @@
         <header class="bg-white rounded-lg shadow-md p-6 mb-6">
             <h1 class="text-3xl font-bold text-gray-800">Meč Specijal Generator</h1>
             <p id="matchNameHeader" class="text-gray-600 mt-2">Učitavanje detalja meča...</p>
+            <div class="mt-4">
+                <label for="editedMatchNameInput" class="block text-sm font-medium text-gray-700">Specijali za meč</label>
+                <input id="editedMatchNameInput" type="text" class="mt-1 block w-full max-w-md py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Naziv meča">
+            </div>
         </header>
 
         <main class="bg-white rounded-lg shadow-md p-6">
@@ -92,6 +96,7 @@
             const specialsContent = document.getElementById('specialsContent');
             const errorContainer = document.getElementById('errorContainer');
             const matchNameHeader = document.getElementById('matchNameHeader');
+            const editedMatchNameInput = document.getElementById('editedMatchNameInput');
             const specialsList = document.getElementById('specialsList'); // Main container
             const calculatedSpecialsContainer = document.getElementById('calculatedSpecialsContainer');
             const calculatedButtonContainer = document.getElementById('calculatedButtonContainer');
@@ -108,6 +113,8 @@
             let allMarkets = [];
             let fetchedData = null;
             let specialsForPreview = [];
+            let originalMatchName = '';
+            let matchSpecialsContext = null;
 
             // --- Pomoćne Funkcije ---
 
@@ -128,6 +135,81 @@
                 label = label.replace(/Player's shots on target \(Settled using Opta data\)/gi, "Šutevi u okvir gola"); label = label.replace(/Player's shots \(Settled using Opta data\)/gi, "Ukupno šuteva"); label = label.replace(/Player's fouls conceded \(Settled using Opta data\)/gi, "Načinjenih faulova"); label = label.replace(/To Score Or Assist \(Settled using Opta data\)/gi, "Gol ili asistencija"); label = label.replace(/To score or get an assist/gi, "Gol ili asistencija"); label = label.replace(/To Score or Assist/gi, "Gol ili asistencija"); label = label.replace(/To Assist \(Settled using Opta data\)/gi, "Asistencija"); label = label.replace(/To score at least 2 goals/gi, "Daje 2+ gola"); label = label.replace(/To score at least 3 goals/gi, "Daje 3+ gola (Het-trik)"); label = label.replace(/To score from a header/gi, "Daje gol glavom"); label = label.replace(/To score from outside the penalty box/gi, "Daje gol izvan šesnaesterca"); label = label.replace(/Yes Both Teams To Score/gi, "GG"); label = label.replace(/No Both Teams To Score/gi, "NG"); label = label.replace(/Both Teams To Score/gi, "GG"); label = label.replace(/Total Shots on Target \(Settled using Opta data\)/gi, "ukupno suteva u okvir gola"); label = label.replace(/Total Shots by (.+?) \(Settled using Opta data\)/gi, "ukupno suteva $1"); label = label.replace(/Total Shots \(Settled using Opta data\)/gi, "ukupno suteva"); label = label.replace(/Total Fouls conceded \(Settled using Opta data\)/gi, "ukupno faulova"); label = label.replace(/Total Offsides \(Settled using Opta data\)/gi, "ukupno ofsajda"); label = label.replace(/given a Red Card/gi, "dobija crveni karton"); label = label.replace(/to score from a penalty/gi, "daje gol iz penala"); label = label.replace(/Penalty Kick awarded/gi, "dosudjen penal"); label = label.replace(/Red Card given/gi, "crveni karton na mecu"); label = label.replace(/Total Corners/gi, "ukupno kornera"); label = label.replace(/Total Cards/gi, "ukupno kartona"); label = label.replace(/Total Goals/gi, "ukupno golova"); label = label.replace(/Most Corners/gi, "više kornera"); label = label.replace(/Most Cards/gi, "više kartona"); label = label.replace(/To Score/gi, "Daje gol"); label = label.replace(/To Get a Card/gi, "Dobija karton"); label = label.replace(/To Get a Red Card/gi, "Dobija crveni karton"); label = label.replace(/Full Time (.+)/gi, "$1 pobeđuje"); label = label.replace(/(Over|više)\s+([\d.]+)/gi, (match, p1, p2) => formatLineValue(p2, 'over')); label = label.replace(/(Under|manje)\s+([\d.]+)/gi, (match, p1, p2) => formatLineValue(p2, 'under')); label = label.replace(/\bYes\b/g, "Da"); label = label.replace(/\bNo\b/g, "Ne"); return label.replace(/\s+/g, ' ').trim();
             }
 
+            function escapeRegExp(str) {
+                return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+
+            function escapeHtmlAttribute(value = '') {
+                return String(value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+            }
+
+            function parseEditedMatchTeams(editedMatchName) {
+                if (!editedMatchName) return null;
+                const separatorsRegex = /\s*(?:vs\.?|v\.?|-|–|—)\s*/i;
+                const parts = editedMatchName
+                    .split(separatorsRegex)
+                    .map(name => name.trim())
+                    .filter(Boolean);
+                if (parts.length >= 2) {
+                    return { home: parts[0], away: parts[1] };
+                }
+                return null;
+            }
+
+            function buildTeamNameMap() {
+                const participants = fetchedData?.events?.[0]?.participants || [];
+                if (participants.length < 2) return new Map();
+
+                const home = participants.find(p => p.home) || participants[0];
+                const away = participants.find(p => !p.home) || participants[1];
+                const parsed = parseEditedMatchTeams((editedMatchNameInput.value || '').trim());
+                if (!parsed) return new Map();
+
+                const map = new Map();
+                map.set(home?.name || '', parsed.home);
+                map.set(away?.name || '', parsed.away);
+                return map;
+            }
+
+            function replaceTeamNamesInText(text, teamNameMap) {
+                if (!text || !teamNameMap || teamNameMap.size === 0) return text;
+                let updatedText = text;
+                teamNameMap.forEach((editedName, originalName) => {
+                    if (!originalName || !editedName || originalName === editedName) return;
+                    const regex = new RegExp(`\\b${escapeRegExp(originalName)}\\b`, 'gi');
+                    updatedText = updatedText.replace(regex, editedName);
+                });
+                return updatedText;
+            }
+
+            function getEffectiveSpecialName(baseName) {
+                return replaceTeamNamesInText(baseName, buildTeamNameMap());
+            }
+
+            function updateMatchHeaderText() {
+                const effectiveMatchName = (editedMatchNameInput.value || '').trim() || originalMatchName || "Nepoznat meč";
+                matchNameHeader.textContent = `Specijali za meč: ${effectiveMatchName}`;
+            }
+
+            function applyMatchNameOverrides() {
+                updateMatchHeaderText();
+                document.querySelectorAll('[data-base-name]').forEach(element => {
+                    const baseName = element.dataset.baseName;
+                    if (!baseName) return;
+                    element.textContent = getEffectiveSpecialName(baseName);
+                });
+                specialsForPreview.forEach(special => {
+                    if (special.baseName) {
+                        special.name = getEffectiveSpecialName(special.baseName);
+                    }
+                });
+                renderPreview();
+            }
+
             function logError(message) {
                 loader.style.display = 'none'; errorContainer.textContent = message; errorContainer.classList.remove('hidden'); specialsContent.classList.add('hidden');
             }
@@ -141,12 +223,15 @@
             const params = new URLSearchParams(window.location.search); const eventId = params.get('eventId');
             if (!eventId) { logError("Event ID nije pronađen."); return; }
             const storedData = sessionStorage.getItem(`event_${eventId}`);
+            const storedContext = sessionStorage.getItem(`event_${eventId}_match_specials_context`);
             if (storedData) { fetchedData = JSON.parse(storedData); }
             else { logError("Podaci o meču nisu pronađeni."); return; }
+            if (storedContext) { matchSpecialsContext = JSON.parse(storedContext); }
 
             try {
-                const eventName = fetchedData.events[0]?.name || "Nepoznat meč";
-                matchNameHeader.textContent = `Specijali za meč: ${eventName}`;
+                originalMatchName = fetchedData.events[0]?.name || "Nepoznat meč";
+                editedMatchNameInput.value = (matchSpecialsContext?.editedMatchName || '').trim() || originalMatchName;
+                updateMatchHeaderText();
                 fetchedData.betOffers.forEach(offer => {
                     offer.outcomes.forEach(outcome => {
                         allMarkets.push({ betOfferId: offer.id, marketName: offer.criterion.label, line: (outcome.line !== undefined && outcome.line !== null) ? (outcome.line / 1000) : null, label: outcome.label, odds: (outcome.odds / 1000) });
@@ -234,15 +319,16 @@
                     const oddValue = finalOddForDisplayString;
                      // Generate a more unique ID using index
                     const inputId = `odds-input-calc-${index}-${finalName.replace(/[^a-zA-Z0-9]/g, '-')}`;
+                    const escapedBaseName = escapeHtmlAttribute(finalName);
 
                     const div = document.createElement('div');
                     div.setAttribute('data-special-type', 'calculated');
                     div.className = 'flex justify-between items-center p-3 border rounded-lg shadow-sm';
                     div.innerHTML = `
-                        <span class="text-gray-800 flex-1 mr-2">${finalName}</span>
+                        <span class="text-gray-800 flex-1 mr-2" data-base-name="${escapedBaseName}">${getEffectiveSpecialName(finalName)}</span>
                         <div class="flex items-center gap-3 w-auto md:w-1/3 flex-shrink-0">
                             <input type="text" value="${oddValue}" class="odds-input w-20 p-1 border border-gray-300 rounded text-center font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500" placeholder="N/A" id="${inputId}" ${!oddValue ? 'disabled' : ''}>
-                            <button data-name="${finalName}" data-input-id="${inputId}" class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 transition-colors duration-200 ${!oddValue ? 'opacity-50 cursor-not-allowed' : ''}" ${!oddValue ? 'disabled' : ''}>+</button>
+                            <button data-base-name="${escapedBaseName}" data-input-id="${inputId}" class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 transition-colors duration-200 ${!oddValue ? 'opacity-50 cursor-not-allowed' : ''}" ${!oddValue ? 'disabled' : ''}>+</button>
                         </div>`;
                     calculatedSpecialsContainer.appendChild(div);
                     if (oddValue) hasCalculated = true; // Mark that at least one calculated special was displayed
@@ -273,13 +359,14 @@
                             const oddValue = finalOddForDisplayString;
                             // Generate a more unique ID using packIndex and index
                             const inputId = `odds-input-prepack-${packIndex}-${index}-${(selection.selectionId || 'noId')}`;
+                            const escapedBaseName = escapeHtmlAttribute(marketName);
 
                             const div = document.createElement('div'); div.setAttribute('data-special-type', 'prepack'); div.className = 'flex justify-between items-center p-3 border rounded-lg bg-indigo-50 shadow-sm';
                             div.innerHTML = `
-                                <span class="text-gray-800 flex-1 text-sm mr-2">${marketName}</span>
+                                <span class="text-gray-800 flex-1 text-sm mr-2" data-base-name="${escapedBaseName}">${getEffectiveSpecialName(marketName)}</span>
                                 <div class="flex items-center gap-3 w-auto md:w-1/3 flex-shrink-0">
                                     <input type="text" value="${oddValue}" class="odds-input w-20 p-1 border border-gray-300 rounded text-center font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500" placeholder="N/A" id="${inputId}" ${!oddValue ? 'disabled' : ''}>
-                                    <button data-name="${marketName}" data-input-id="${inputId}" class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 transition-colors duration-200 ${!oddValue ? 'opacity-50 cursor-not-allowed' : ''}" ${!oddValue ? 'disabled' : ''}>+</button>
+                                    <button data-base-name="${escapedBaseName}" data-input-id="${inputId}" class="add-special-btn bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 transition-colors duration-200 ${!oddValue ? 'opacity-50 cursor-not-allowed' : ''}" ${!oddValue ? 'disabled' : ''}>+</button>
                                 </div>`;
                             prepackSpecialsContainer.appendChild(div); // Add prepack to its container
                              if(oddValue) hasPrepacks = true; // Mark that at least one prepack was displayed
@@ -298,6 +385,28 @@
                 }
 
                 loader.style.display = 'none'; specialsContent.classList.remove('hidden');
+                appendDefaultStatMarketsToPreview();
+            }
+
+            function appendDefaultStatMarketsToPreview() {
+                const defaults = Array.isArray(matchSpecialsContext?.defaultStatMarkets) ? matchSpecialsContext.defaultStatMarkets : [];
+                let added = 0;
+                defaults.forEach(item => {
+                    if (!item?.market || !item?.selection || !item?.odds) return;
+                    const baseName = `${item.market} - ${item.selection}`;
+                    if (!specialsForPreview.some(s => s.baseName === baseName)) {
+                        specialsForPreview.push({
+                            baseName,
+                            name: getEffectiveSpecialName(baseName),
+                            odds: item.odds
+                        });
+                        added++;
+                    }
+                });
+                if (added > 0) {
+                    renderPreview();
+                    showToast(`Dodato ${added} podrazumevanih Stat marketa.`, "info");
+                }
             }
 
             // 6. Renderovanje CSV pregleda
@@ -324,7 +433,8 @@
             specialsList.addEventListener('click', e => {
                 if (e.target.classList.contains('add-special-btn')) {
                     const button = e.target; if (button.disabled) return;
-                    const { name, inputId } = button.dataset;
+                    const { baseName, inputId } = button.dataset;
+                    const name = getEffectiveSpecialName(baseName || '');
                     const oddsInput = document.getElementById(inputId);
                     // Pročitaj VREDNOST DIREKTNO IZ INPUT POLJA U TRENUTKU KLIKA
                     const oddsValueFromInput = oddsInput.value;
@@ -335,9 +445,9 @@
                     }
 
                     // Provera da li već postoji
-                    if (!specialsForPreview.some(s => s.name === name)) {
+                    if (!specialsForPreview.some(s => s.baseName === baseName)) {
                         // Sačuvaj tačno pročitanu vrednost (string)
-                        specialsForPreview.push({ name, odds: oddsValueFromInput });
+                        specialsForPreview.push({ baseName, name, odds: oddsValueFromInput });
                         renderPreview(); showToast(`Dodato: ${name} (${oddsValueFromInput})`);
                     } else { showToast("Market je već dodat.", "info"); }
                 }
@@ -352,15 +462,16 @@
 
                  allSpecialButtons.forEach(btn => {
                      if (btn.disabled) return; // Preskoči ako je dugme onemogućeno
-                     const { name, inputId } = btn.dataset;
+                     const { baseName, inputId } = btn.dataset;
+                     const name = getEffectiveSpecialName(baseName || '');
                      const oddsInput = document.getElementById(inputId);
                       // Pročitaj VREDNOST DIREKTNO IZ INPUT POLJA U TRENUTKU KLIKA
                      const oddsValueFromInput = oddsInput.value;
 
                      // Validacija pročitane vrednosti i provera duplikata
-                     if (oddsValueFromInput && !isNaN(parseFloat(oddsValueFromInput)) && parseFloat(oddsValueFromInput) >= 1.01 && !specialsForPreview.some(s => s.name === name)) {
+                     if (oddsValueFromInput && !isNaN(parseFloat(oddsValueFromInput)) && parseFloat(oddsValueFromInput) >= 1.01 && !specialsForPreview.some(s => s.baseName === baseName)) {
                          // Sačuvaj tačno pročitanu vrednost (string)
-                         specialsForPreview.push({ name, odds: oddsValueFromInput });
+                         specialsForPreview.push({ baseName, name, odds: oddsValueFromInput });
                          addedCount++;
                      }
                  });
@@ -377,7 +488,16 @@
 
             // Ažuriranje vrednosti u pregledu
              csvPreviewContent.addEventListener('input', e => {
-                 if (e.target.tagName === 'INPUT') { const index = parseInt(e.target.dataset.index, 10); const field = e.target.dataset.field; if (index >= 0 && index < specialsForPreview.length && (field === 'name' || field === 'odds')) { specialsForPreview[index][field] = e.target.value; } }
+                 if (e.target.tagName === 'INPUT') {
+                    const index = parseInt(e.target.dataset.index, 10);
+                    const field = e.target.dataset.field;
+                    if (index >= 0 && index < specialsForPreview.length && (field === 'name' || field === 'odds')) {
+                        specialsForPreview[index][field] = e.target.value;
+                        if (field === 'name') {
+                            specialsForPreview[index].baseName = e.target.value;
+                        }
+                    }
+                 }
             });
 
             // Generisanje finalnog CSV-a
@@ -388,7 +508,8 @@
                  const matchDate = new Date(eventInfo.start);
                  const datum = `${matchDate.getDate().toString().padStart(2, '0')}.${(matchDate.getMonth() + 1).toString().padStart(2, '0')}.${matchDate.getFullYear()}`;
                  const vreme = `${matchDate.getHours().toString().padStart(2, '0')}:${matchDate.getMinutes().toString().padStart(2, '0')}`;
-                 csvRows.push('MATCH_NAME:Xtip Specijal'); csvRows.push(`LEAGUE_NAME:${eventInfo.name || 'Nepoznata Liga'}`);
+                 const editedMatchName = (editedMatchNameInput.value || '').trim() || originalMatchName || eventInfo.name || 'Nepoznata Liga';
+                 csvRows.push('MATCH_NAME:Xtip Specijal'); csvRows.push(`LEAGUE_NAME:${editedMatchName}`);
 
                  specialsForPreview.forEach(special => {
                      const finalOdds = parseFloat(special.odds); // Parsiraj sačuvanu/editovanu vrednost
@@ -409,6 +530,8 @@
                  document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
                  showToast("CSV fajl generisan.", "success");
             });
+
+            editedMatchNameInput.addEventListener('input', applyMatchNameOverrides);
         });
     </script>
 </body>

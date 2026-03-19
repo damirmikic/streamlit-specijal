@@ -1063,6 +1063,20 @@
             logStatus(`Stat Markets CSV generated with ${checkedMarkets.length} selected marketa.`);
         }
 
+        function buildDefaultStatMarketsForMatchSpecials() {
+            if (!statsMarketsCache || statsMarketsCache.length === 0) return [];
+
+            applyStatTeamNameOverrides();
+            const defaultRowIds = getDefaultStatRowIds(statsMarketsCache);
+            return statsMarketsCache
+                .filter(row => defaultRowIds.has(row.RowId))
+                .map(row => ({
+                    market: row.Market,
+                    selection: row.Selection,
+                    odds: row.Odds
+                }));
+        }
+
         // 5. Generate and trigger CSV download
         function downloadCSV(csvContent, fileName) {
             // Add BOM for UTF-8 encoding to support special characters in Excel
@@ -1679,8 +1693,14 @@
              openMatchSpecialsButton.addEventListener('click', () => {
                 const eventId = matchSelect.value;
                 if(eventId && fetchedMarketData) {
+                    const editedMatchName = (statsLeagueNameInput.value || '').trim();
+                    const defaultStatMarkets = buildDefaultStatMarketsForMatchSpecials();
                     // Save data to sessionStorage to pass to the next page
                     sessionStorage.setItem(`event_${eventId}`, JSON.stringify(fetchedMarketData));
+                    sessionStorage.setItem(`event_${eventId}_match_specials_context`, JSON.stringify({
+                        editedMatchName,
+                        defaultStatMarkets
+                    }));
                     window.open(`match-specials.html?eventId=${eventId}`, '_blank');
                 } else if (eventId) {
                     logStatus("Molimo prvo kliknite na 'Fetch Markets' da učitate podatke za meč.", true);
