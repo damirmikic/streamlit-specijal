@@ -901,6 +901,8 @@
                 let statMarkets = [];
                 let playerMarkets = [];
                 allMarketDataForCSV = [];
+                const statTeamNameMap = buildStatTeamNameMap();
+                let statRowIdCounter = 0;
 
                 allBetOffers.forEach(offer => {
                     const marketName = offer.criterion.label;
@@ -956,17 +958,26 @@
                         }
 
                         const translatedMarketName = isPlayerProp ? (serbianTranslations[marketName] || marketName) : (category === 'Stat Markets' ? translateStatMarketName(marketName) : marketName);
+                        const finalMarketName = category === 'Stat Markets'
+                            ? replaceTeamNamesInText(translatedMarketName, statTeamNameMap)
+                            : translatedMarketName;
+                        const finalSelectionName = category === 'Stat Markets'
+                            ? replaceTeamNamesInText(selectionName, statTeamNameMap)
+                            : selectionName;
 
                         const marketData = {
                             Category: category,
-                            Market: translatedMarketName,
+                            Market: finalMarketName,
                             OriginalMarket: marketName,
-                            Selection: selectionName,
+                            Selection: finalSelectionName,
                             Odds: (outcome.odds / 1000).toFixed(2),
                             Team: teamNameForPlayer,
                             PlayerName: isPlayerProp ? outcome.participant : null,
                             Line: lineValue,
-                            Label: outcome.label
+                            Label: outcome.label,
+                            BaseMarket: translatedMarketName,
+                            BaseSelection: selectionName,
+                            RowId: `stat-${statRowIdCounter++}`
                         };
 
                         if (category === 'Main Markets') mainMarkets.push(marketData);
@@ -1042,6 +1053,76 @@
             return n;
         }
 
+        function escapeRegExp(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function replaceTeamNamesInText(text, teamNameMap) {
+            if (!text || !teamNameMap || teamNameMap.size === 0) return text;
+            let updatedText = text;
+            teamNameMap.forEach((editedName, originalName) => {
+                if (!originalName || !editedName || originalName === editedName) return;
+                const regex = new RegExp(`\\b${escapeRegExp(originalName)}\\b`, 'gi');
+                updatedText = updatedText.replace(regex, editedName);
+            });
+            return updatedText;
+        }
+
+        function parseEditedMatchTeams(editedMatchName) {
+            if (!editedMatchName) return null;
+            const separatorsRegex = /\s*(?:vs\.?|v\.?|-|–|—)\s*/i;
+            const parts = editedMatchName
+                .split(separatorsRegex)
+                .map(name => name.trim())
+                .filter(Boolean);
+            if (parts.length >= 2) {
+                return { home: parts[0], away: parts[1] };
+            }
+            return null;
+        }
+
+        function buildStatTeamNameMap() {
+            const participants = fetchedMarketData?.events?.[0]?.participants || [];
+            if (participants.length < 2) return new Map();
+
+            const home = participants.find(p => p.home) || participants[0];
+            const away = participants.find(p => !p.home) || participants[1];
+
+            const selectedMatchName = matchSelect.options[matchSelect.selectedIndex]?.text || fetchedMarketData?.events?.[0]?.name || '';
+            const editedEventName = (statsLeagueNameInput.value || '').trim() || selectedMatchName;
+            const parsedEditedTeams = parseEditedMatchTeams(editedEventName);
+            if (!parsedEditedTeams) return new Map();
+
+            const map = new Map();
+            map.set(home?.name || '', parsedEditedTeams.home);
+            map.set(away?.name || '', parsedEditedTeams.away);
+            return map;
+        }
+
+        function applyStatTeamNameOverrides() {
+            if (!statsMarketsCache || statsMarketsCache.length === 0) return;
+
+            const checkedIds = new Set(
+                Array.from(document.querySelectorAll('.stat-market-checkbox:checked')).map(cb => cb.dataset.rowId)
+            );
+            const teamNameMap = buildStatTeamNameMap();
+
+            statsMarketsCache.forEach(row => {
+                const baseMarket = row.BaseMarket || row.Market;
+                const baseSelection = row.BaseSelection || row.Selection;
+                row.Market = replaceTeamNamesInText(baseMarket, teamNameMap);
+                row.Selection = replaceTeamNamesInText(baseSelection, teamNameMap);
+            });
+
+            populateTable(statsMarketsCache, statsTableBody, { selectable: true });
+
+            if (checkedIds.size > 0) {
+                document.querySelectorAll('.stat-market-checkbox').forEach(cb => {
+                    if (checkedIds.has(cb.dataset.rowId)) cb.checked = true;
+                });
+            }
+        }
+
         function populateTable(data, tableBodyElement, options = {}) {
             const { selectable = false } = options;
             const emptyCols = selectable ? 4 : 3;
@@ -1056,7 +1137,7 @@
                 tr.className = 'hover:bg-gray-50';
                 const checkboxCell = selectable
                     ? `<td class="py-3 px-4 border-b border-gray-200 text-sm">
-                            <input type="checkbox" class="stat-market-checkbox h-4 w-4" data-market="${encodeURIComponent(row.Market)}" data-selection="${encodeURIComponent(row.Selection)}" data-odds="${row.Odds}">
+                            <input type="checkbox" class="stat-market-checkbox h-4 w-4" data-row-id="${row.RowId || ''}" data-market="${encodeURIComponent(row.Market)}" data-selection="${encodeURIComponent(row.Selection)}" data-odds="${row.Odds}">
                        </td>`
                     : '';
                 tr.innerHTML = `
@@ -1100,6 +1181,8 @@
         });
 
         function generateStatsMarketsCSV() {
+            applyStatTeamNameOverrides();
+
             const checkedMarkets = Array.from(document.querySelectorAll('.stat-market-checkbox:checked')).map(checkbox => ({
                 market: decodeURIComponent(checkbox.dataset.market || ''),
                 selection: decodeURIComponent(checkbox.dataset.selection || ''),
@@ -1820,6 +1903,7 @@
             });
             calcTeamA.addEventListener('change', updateCalcSimulation);
             calcTeamB.addEventListener('change', updateCalcSimulation);
+            statsLeagueNameInput.addEventListener('input', applyStatTeamNameOverrides);
 
             teamSelect.addEventListener('change', (e) => populatePlayersForTeam(e.target.value));
             playerSelect.addEventListener('change', () => {
