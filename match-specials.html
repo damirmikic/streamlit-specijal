@@ -137,6 +137,17 @@
                     .replace(/>/g, '&gt;');
             }
 
+            function parseOverUnderSelection(selectionText = '') {
+                const match = selectionText.match(/\b(over|under|vise|vi[šs]e|manje)\s+(\d+(?:[.,]\d+)?)\b/i);
+                if (!match) return null;
+                const sideRaw = removeDiacritics(match[1]).toLowerCase();
+                const side = (sideRaw === 'under' || sideRaw === 'manje') ? 'under' : 'over';
+                return {
+                    side,
+                    line: match[2].replace(',', '.')
+                };
+            }
+
             function parseEditedMatchTeams(editedMatchName) {
                 if (!editedMatchName) return null;
                 const separatorsRegex = /\s*(?:vs\.?|v\.?|-|–|—)\s*/i;
@@ -459,14 +470,55 @@
                  const vreme = `${matchDate.getHours().toString().padStart(2, '0')}:${matchDate.getMinutes().toString().padStart(2, '0')}`;
                  const editedMatchName = (editedMatchNameInput.value || '').trim() || originalMatchName || eventInfo.name || 'Nepoznata Liga';
                  csvRows.push('MATCH_NAME:Xtip Specijal'); csvRows.push(`LEAGUE_NAME:${editedMatchName}`);
+                 const groupedOverUnderRows = new Map();
+                 const regularRows = [];
 
                  specialsForPreview.forEach(special => {
-                     const finalOdds = parseFloat(special.odds); // Parsiraj sačuvanu/editovanu vrednost
-                     if (!isNaN(finalOdds) && finalOdds >= 1.01) {
-                         const row = [datum, vreme, '', special.name, 'DA', finalOdds.toFixed(2), '', '', '', '', '', '', '']; csvRows.push(row.join(','));
-                     } else {
+                     const finalOdds = parseFloat(special.odds);
+                     if (isNaN(finalOdds) || finalOdds < 1.01) {
                          console.warn(`Preskačem red za "${special.name}" zbog nevalidne kvote: ${special.odds}`); showToast(`Kvota za "${special.name}" (${special.odds}) nije validna (min 1.01) i biće preskočena.`, "error");
+                         return;
                      }
+
+                     const nameParts = String(special.name || '').split(' - ');
+                     if (nameParts.length >= 2) {
+                         const marketName = nameParts.slice(0, -1).join(' - ').trim();
+                         const selectionName = nameParts[nameParts.length - 1].trim();
+                         const parsedOu = parseOverUnderSelection(selectionName);
+
+                         if (parsedOu) {
+                             const groupKey = `${marketName}__${parsedOu.line}`;
+                             if (!groupedOverUnderRows.has(groupKey)) {
+                                 groupedOverUnderRows.set(groupKey, {
+                                     market: marketName,
+                                     line: parsedOu.line,
+                                     underOdd: '',
+                                     overOdd: ''
+                                 });
+                             }
+                             const grouped = groupedOverUnderRows.get(groupKey);
+                             if (parsedOu.side === 'under') grouped.underOdd = finalOdds.toFixed(2);
+                             if (parsedOu.side === 'over') grouped.overOdd = finalOdds.toFixed(2);
+                             return;
+                         }
+
+                         const normalizedSelection = removeDiacritics(selectionName).toLowerCase();
+                         if (normalizedSelection === 'da' || normalizedSelection === 'ne') {
+                             regularRows.push([datum, vreme, '', marketName, selectionName, finalOdds.toFixed(2), '', '', '', '', '', '', '']);
+                             return;
+                         }
+                     }
+
+                     regularRows.push([datum, vreme, '', special.name, 'DA', finalOdds.toFixed(2), '', '', '', '', '', '', '']);
+                 });
+
+                 groupedOverUnderRows.forEach(grouped => {
+                    const row = [datum, vreme, '', grouped.market, '', '', '', '', grouped.line, grouped.underOdd, grouped.overOdd, '', ''];
+                    csvRows.push(row.join(','));
+                 });
+
+                 regularRows.forEach(row => {
+                    csvRows.push(row.join(','));
                  });
 
                  if (csvRows.length <= 3) { showToast("Nema validnih specijala za izvoz.", "error"); return; }
