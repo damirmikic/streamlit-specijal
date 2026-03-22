@@ -398,6 +398,71 @@
             return removeDiacritics(String(value)).toLowerCase().replace(/\s+/g, ' ').trim();
         }
 
+        function isFoulsOrOffsidesStatMarket(marketName = '') {
+            const normalized = normalizeStatText(marketName);
+            return normalized === 'ukupno faulova' || normalized === 'ukupno ofsajda';
+        }
+
+        function calculateUnderOddFromOverWithMargin(overOdd, margin = 1.09) {
+            const over = parseFloat(overOdd);
+            if (!isFinite(over) || over <= 1) return '';
+
+            const impliedOver = 1 / over;
+            const impliedUnder = margin - impliedOver;
+            if (!isFinite(impliedUnder) || impliedUnder <= 0) return '';
+
+            const under = 1 / impliedUnder;
+            if (!isFinite(under) || under <= 1) return '';
+            return roundOdds(under.toFixed(2));
+        }
+
+        function augmentStatMarketsWithCalculatedUnders(statsRows, margin = 1.09) {
+            if (!Array.isArray(statsRows) || statsRows.length === 0) return statsRows;
+
+            const existingKey = new Set();
+            let maxRowId = -1;
+
+            statsRows.forEach(row => {
+                const parsed = parseOverUnderSelection(row.Selection);
+                if (parsed) {
+                    existingKey.add(`${row.Market}__${parsed.line}__${parsed.side}`);
+                }
+                const rowIdNumber = parseInt(String(row.RowId || '').replace('stat-', ''), 10);
+                if (isFinite(rowIdNumber) && rowIdNumber > maxRowId) maxRowId = rowIdNumber;
+            });
+
+            const syntheticRows = [];
+            statsRows.forEach(row => {
+                if (!isFoulsOrOffsidesStatMarket(row.Market)) return;
+
+                const parsed = parseOverUnderSelection(row.Selection);
+                if (!parsed || parsed.side !== 'over') return;
+
+                const underKey = `${row.Market}__${parsed.line}__under`;
+                if (existingKey.has(underKey)) return;
+
+                const calculatedUnder = calculateUnderOddFromOverWithMargin(row.Odds, margin);
+                if (!calculatedUnder) return;
+
+                maxRowId += 1;
+                syntheticRows.push({
+                    ...row,
+                    Selection: `Under ${parsed.line}`,
+                    Odds: calculatedUnder,
+                    Label: 'Under',
+                    BaseSelection: `Under ${parsed.line}`,
+                    RowId: `stat-${maxRowId}`
+                });
+                existingKey.add(underKey);
+            });
+
+            if (syntheticRows.length > 0) {
+                logStatus(`Dodate su izračunate Under kvote (109% margina) za ukupno faulova/ofsajda: ${syntheticRows.length}.`);
+            }
+
+            return [...statsRows, ...syntheticRows];
+        }
+
         function getMostBalancedLineRowIds(statsRows, marketMatcher) {
             const groupedByLine = new Map();
             statsRows.forEach(row => {
@@ -787,6 +852,8 @@
                 sortMarketsByName(mainMarkets);
                 sortMarketsByName(statMarkets);
                 sortMarketsByName(playerMarkets);
+                statMarkets = augmentStatMarketsWithCalculatedUnders(statMarkets, 1.09);
+                sortMarketsByName(statMarkets);
                 statsMarketsCache = [...statMarkets];
                 selectedStatRowIds = getDefaultStatRowIds(statsMarketsCache);
                 
