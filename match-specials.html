@@ -264,6 +264,21 @@
             function calculateAndDisplaySpecials() {
                 const q_over_2_5 = getOdd("Total Goals", 2.5, "over"); const q_under_2_5 = getOdd("Total Goals", 2.5, "under"); let lam = 2.7;
                 if (q_over_2_5 && q_under_2_5) { const p_over_raw = 1.0 / q_over_2_5; const p_under_raw = 1.0 / q_under_2_5; const margin = p_over_raw + p_under_raw; if (margin > 0 && p_over_raw <= margin) { const p_over = p_over_raw / margin; lam = lambda_from_p_over(p_over); } else { logStatus(`Nevalidne kvote za Ukupno Golova 2.5: Više=${q_over_2_5}, Manje=${q_under_2_5}.`, true); } } else { logStatus("Nisu pronađene kvote za Ukupno Golova 2.5.", true); }
+                const disabledCalculatedMarkets = new Set([
+                    '10+ kornera i GG',
+                    '10+ suteva u okvir i 3+ golova',
+                    '11+ suteva u okvir i GG',
+                    '15+ kornera i 3+ golova',
+                    '15+ kornera i GG',
+                    '10+ kornera i 3+ golova',
+                    '9+ kornera i 3+ golova i 4+ kartona',
+                    '3+ golova i 4+ kartona',
+                    '3+ golova i 8+ kornera',
+                    '9+ suteva u okvir i GG',
+                    '12+ kornera i GG',
+                    '9+ kornera i 4+ kartona i GG',
+                    '8+ kornera i GG'
+                ]);
 
                  let specialsToCalculate = [
                     { nameTemplate: "{corners} kornera i GG", lineCorners: 9.5, components: [() => getOdd("Total Corners", 9.5, "over"), () => getOdd("Both Teams To Score", null, "yes")], reduceOdds: true },
@@ -299,6 +314,7 @@
                     if (specialDef.lineCards !== undefined) finalName = finalName.replace('{cards}', formatLineValue(specialDef.lineCards, 'over'));
                     if (specialDef.lineShots !== undefined) finalName = finalName.replace('{shots}', formatLineValue(specialDef.lineShots, 'over'));
                     finalName = finalName.replace(/\s+/g, ' ').trim();
+                    if (disabledCalculatedMarkets.has(finalName)) return;
 
                     let calculatedOdd = null;
                     try {
