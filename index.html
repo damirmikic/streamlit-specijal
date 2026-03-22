@@ -1005,6 +1005,24 @@
             csvRows.push(`MATCH_NAME:${removeDiacritics(selectedLeagueName)}`);
             csvRows.push(`LEAGUE_NAME:${removeDiacritics(editedEventName)}`);
 
+            const isFoulsOrOffsidesStatMarket = (marketName = '') => {
+                const normalized = normalizeStatText(marketName);
+                return normalized === 'ukupno faulova' || normalized === 'ukupno ofsajda';
+            };
+
+            const calculateUnderOddFromOverWithMargin = (overOdd, margin = 1.09) => {
+                const over = parseFloat(overOdd);
+                if (!isFinite(over) || over <= 1) return '';
+
+                const impliedOver = 1 / over;
+                const impliedUnder = margin - impliedOver;
+                if (!isFinite(impliedUnder) || impliedUnder <= 0) return '';
+
+                const under = 1 / impliedUnder;
+                if (!isFinite(under) || under <= 1) return '';
+                return roundOdds(under.toFixed(2));
+            };
+
             const findOppositeOdd = (marketName, line, wantedSide) => {
                 const found = statsMarketsCache.find(row => {
                     if (row.Market !== marketName) return false;
@@ -1042,6 +1060,10 @@
                     // Ako korisnik izabere "Over", automatski popuni "Under" za istu granicu iz dostupnih tržišta.
                     if (!grouped.underOdd) {
                         grouped.underOdd = findOppositeOdd(item.market, parsed.line, 'under');
+                    }
+                    // Za "ukupno faulova" i "ukupno ofsajda" izračunaj Under iz Over kvote na 109% margine ako feed nema Under.
+                    if (!grouped.underOdd && isFoulsOrOffsidesStatMarket(item.market)) {
+                        grouped.underOdd = calculateUnderOddFromOverWithMargin(item.odds, 1.09);
                     }
                 }
             });
