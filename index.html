@@ -286,20 +286,20 @@
 
     <script>
         const LEAGUE_URLS = {
-            "Premier League": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/england/premier_league/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-            "La Liga": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/spain/la_liga/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-            "Serie A": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/italy/serie_a/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-            "Bundesliga": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/germany/bundesliga/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-            "Ligue 1": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/france/ligue_1/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-            "Champions League": "https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/champions_league/all/all/matches.json?channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true",
-            "Europa League": "https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/europa_league/all/all/matches.json?channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true",
-            "Conference League": "https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/conference_league/all/all/matches.json?channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true",
-            "Serbia Superliga": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/serbia/super_liga/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-            "Portugal Primera": "https://eu-offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/portugal/primeira_liga/all/matches.json?lang=en_GB&market=GB&useCombined=true",
-            "World Cup Qualifying - Europe": "https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/world_cup_qualifying_-_europe/all/all/matches.json?channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true",
+            "Premier League": "https://eu-offering-api.kambicdn.com/offering/v2018/ubuk/listView/football/england/premier_league/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+            "La Liga": "https://eu-offering-api.kambicdn.com/offering/v2018/ubuk/listView/football/spain/la_liga/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+            "Serie A": "https://eu-offering-api.kambicdn.com/offering/v2018/ubuk/listView/football/italy/serie_a/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+            "Bundesliga": "https://eu-offering-api.kambicdn.com/offering/v2018/ubuk/listView/football/germany/bundesliga/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+            "Ligue 1": "https://eu-offering-api.kambicdn.com/offering/v2018/ubuk/listView/football/france/ligue_1/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+            "Champions League": "https://eu1.offering-api.kambicdn.com/offering/v2018/ubuk/listView/football/champions_league/all/all/matches.json?channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true",
+            "Europa League": "https://eu1.offering-api.kambicdn.com/offering/v2018/ubuk/listView/football/europa_league/all/all/matches.json?channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true",
+            "Conference League": "https://eu1.offering-api.kambicdn.com/offering/v2018/ubuk/listView/football/conference_league/all/all/matches.json?channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true",
+            "Serbia Superliga": "https://eu-offering-api.kambicdn.com/offering/v2018/ubuk/listView/football/serbia/super_liga/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+            "Portugal Primera": "https://eu-offering-api.kambicdn.com/offering/v2018/ubuk/listView/football/portugal/primeira_liga/all/matches.json?lang=en_GB&market=GB&useCombined=true",
+            "World Cup Qualifying - Europe": "https://eu1.offering-api.kambicdn.com/offering/v2018/ubuk/listView/football/world_cup_qualifying_-_europe/all/all/matches.json?channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true",
             "EFL Cup": "https://eu1.offering-api.kambicdn.com/offering/v2018/kambi/listView/football/england/efl_cup/all/matches.json?channel_id=7&channel_id=7&client_id=200&client_id=200&competitionId=undefined&lang=en_GB&lang=en_GB&market=GB&market=GB&useCombined=true&useCombinedLive=true",
-            "Scotland Premier": "https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/scotland/scottish_premiership/all/matches.json?channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true",
-            "Italy Supercoppa": "https://eu1.offering-api.kambicdn.com/offering/v2018/ilaniuswarl/listView/football/italy/supercoppa_italiana/all/matches.json?channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true",
+            "Scotland Premier": "https://eu1.offering-api.kambicdn.com/offering/v2018/ubuk/listView/football/scotland/scottish_premiership/all/matches.json?channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true",
+            "Italy Supercoppa": "https://eu1.offering-api.kambicdn.com/offering/v2018/ubuk/listView/football/italy/supercoppa_italiana/all/matches.json?channel_id=7&client_id=2&lang=en_GB&market=GB&useCombined=true",
             "AFCON": "https://eu1.offering-api.kambicdn.com/offering/v2018/kambi/listView/football/africa_cup_of_nations/all/all/matches.json?channel_id=7&channel_id=7&client_id=200&client_id=200&competitionId=undefined&lang=en_GB&lang=en_GB&market=GB&market=GB&useCombined=true&useCombinedLive=true",
             "Spain Copa del Rey": "https://eu1.offering-api.kambicdn.com/offering/v2018/kambi/listView/football/spain/copa_del_rey/all/matches.json?channel_id=7&channel_id=7&client_id=200&client_id=200&competitionId=undefined&lang=en_GB&lang=en_GB&market=GB&market=GB&useCombined=true&useCombinedLive=true",
             "England FA Cup": "https://eu1.offering-api.kambicdn.com/offering/v2018/kambi/listView/football/england/fa_cup/all/matches.json?channel_id=7&channel_id=7&client_id=200&client_id=200&competitionId=undefined&lang=en_GB&lang=en_GB&market=GB&market=GB&useCombined=true&useCombinedLive=true",
@@ -688,7 +688,7 @@
             const apiClient =
                 (selectedLeague === 'AFCON' || selectedLeague === 'EFL Cup')
                     ? 'kambi'
-                    : 'ilaniuswarl';
+                    : 'ubuk';
 
             const oddsUrl = `https://eu1.offering-api.kambicdn.com/offering/v2018/${apiClient}/betoffer/event/${eventId}.json?lang=en_GB&market=GB&client_id=2&channel_id=7&includeParticipants=true`;
 
