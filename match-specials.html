@@ -47,14 +47,36 @@
 
             <div id="specialsContent" class="hidden">
                 <!-- Lista generisanih specijala -->
-                 <div id="specialsList">
-                   
-                    <div id="calculatedSpecialsContainer" class="space-y-3"></div>
-                   
-                    <div id="calculatedButtonContainer" class="mt-4"></div>
+		                <div id="specialsList">
+		                    <div id="calculatedSpecialsContainer" class="space-y-3"></div>
 
-                    
-                 </div>
+	                    <div id="calculatedButtonContainer" class="mt-4"></div>
+
+	                    <div class="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+	                        <h3 class="text-lg font-semibold text-indigo-800">Ručni unos specijala</h3>
+	                        <p class="text-sm text-indigo-700 mt-1">Naziv marketa mora biti identičan feed marketu. Ako market nije u feed-u, dozvoljeni su samo odobreni nazivi.</p>
+	                        <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+	                            <div class="md:col-span-3">
+	                                <label for="manualMarketInput" class="block text-sm font-medium text-gray-700">Market</label>
+	                                <input id="manualMarketInput" type="text" list="manualMarketSuggestions" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="npr. Ukupno kartona">
+	                                <datalist id="manualMarketSuggestions"></datalist>
+	                            </div>
+	                            <div>
+	                                <label for="manualSelectionInput" class="block text-sm font-medium text-gray-700">Selekcija</label>
+	                                <input id="manualSelectionInput" type="text" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="npr. Više 4.5">
+	                            </div>
+	                            <div>
+	                                <label for="manualOddsInput" class="block text-sm font-medium text-gray-700">Kvota</label>
+	                                <input id="manualOddsInput" type="number" min="1.01" step="0.01" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="npr. 1.85">
+	                            </div>
+	                            <div class="flex items-end">
+	                                <button id="addManualSpecialButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
+	                                    Dodaj ručno
+	                                </button>
+	                            </div>
+	                        </div>
+	                    </div>
+	                 </div>
 
 
                  <!-- Sekcija za pregled i generisanje CSV-a -->
@@ -99,17 +121,36 @@
             const calculatedSpecialsContainer = document.getElementById('calculatedSpecialsContainer');
             const calculatedButtonContainer = document.getElementById('calculatedButtonContainer');
             const csvPreviewContent = document.getElementById('csvPreviewContent');
-            const generateCsvButton = document.getElementById('generateCsvButton');
-            // Buttons created dynamically now
-            let addCalculatedSpecialsButton = null;
-            const csvPreviewSectionContainer = document.getElementById('csvPreviewSectionContainer');
+	            const generateCsvButton = document.getElementById('generateCsvButton');
+	            const manualMarketInput = document.getElementById('manualMarketInput');
+	            const manualSelectionInput = document.getElementById('manualSelectionInput');
+	            const manualOddsInput = document.getElementById('manualOddsInput');
+	            const addManualSpecialButton = document.getElementById('addManualSpecialButton');
+	            const manualMarketSuggestions = document.getElementById('manualMarketSuggestions');
+	            // Buttons created dynamically now
+	            let addCalculatedSpecialsButton = null;
+	            const csvPreviewSectionContainer = document.getElementById('csvPreviewSectionContainer');
 
             // Stanje aplikacije
             let allMarkets = [];
             let fetchedData = null;
-            let specialsForPreview = [];
-            let originalMatchName = '';
-            let matchSpecialsContext = null;
+	            let specialsForPreview = [];
+	            let originalMatchName = '';
+	            let matchSpecialsContext = null;
+	            const canonicalFeedMarkets = new Map();
+
+	            const approvedManualMarketAliases = {
+	                'dosudjen penal': 'Dosudjen penal',
+	                'penalty kick awarded': 'Dosudjen penal',
+	                'penalty awarded': 'Dosudjen penal',
+	                'ukupno kartona na mecu': 'Ukupno kartona na mecu',
+	                'ukupno kartona': 'Ukupno kartona na mecu',
+	                'total cards': 'Ukupno kartona na mecu',
+	                'red card given': 'Crveni karton na mecu',
+	                'crveni karton na mecu': 'Crveni karton na mecu',
+	                'both teams to score': 'GG',
+	                'gg': 'GG'
+	            };
 
             // --- Pomoćne Funkcije ---
 
@@ -187,9 +228,51 @@
                 return updatedText;
             }
 
-            function getEffectiveSpecialName(baseName) {
-                return replaceTeamNamesInText(baseName, buildTeamNameMap());
-            }
+	            function getEffectiveSpecialName(baseName) {
+	                return replaceTeamNamesInText(baseName, buildTeamNameMap());
+	            }
+
+	            function normalizeMarketKey(value = '') {
+	                return removeDiacritics(String(value || ''))
+	                    .toLowerCase()
+	                    .trim()
+	                    .replace(/\s+/g, ' ');
+	            }
+
+	            function rebuildCanonicalFeedMarkets() {
+	                canonicalFeedMarkets.clear();
+	                allMarkets.forEach(market => {
+	                    const key = normalizeMarketKey(market?.marketName || '');
+	                    if (key && !canonicalFeedMarkets.has(key)) {
+	                        canonicalFeedMarkets.set(key, market.marketName.trim());
+	                    }
+	                });
+	            }
+
+	            function refreshManualMarketSuggestions() {
+	                if (!manualMarketSuggestions) return;
+	                manualMarketSuggestions.innerHTML = '';
+	                const suggestionSet = new Set([...canonicalFeedMarkets.values()]);
+	                Object.values(approvedManualMarketAliases).forEach(name => suggestionSet.add(name));
+	                [...suggestionSet].sort((a, b) => a.localeCompare(b, 'sr', { sensitivity: 'base' })).forEach(name => {
+	                    const option = document.createElement('option');
+	                    option.value = name;
+	                    manualMarketSuggestions.appendChild(option);
+	                });
+	            }
+
+	            function resolveManualMarketName(rawMarketName = '') {
+	                const normalizedInput = normalizeMarketKey(rawMarketName);
+	                if (!normalizedInput) return null;
+	                if (canonicalFeedMarkets.has(normalizedInput)) {
+	                    return { canonicalName: canonicalFeedMarkets.get(normalizedInput), source: 'feed' };
+	                }
+	                const approvedName = approvedManualMarketAliases[normalizedInput];
+	                if (approvedName) {
+	                    return { canonicalName: approvedName, source: 'approved_fallback' };
+	                }
+	                return null;
+	            }
 
             function updateMatchHeaderText() {
                 const effectiveMatchName = (editedMatchNameInput.value || '').trim() || originalMatchName || "Nepoznat meč";
@@ -233,13 +316,15 @@
                 originalMatchName = fetchedData.events[0]?.name || "Nepoznat meč";
                 editedMatchNameInput.value = (matchSpecialsContext?.editedMatchName || '').trim() || originalMatchName;
                 updateMatchHeaderText();
-                fetchedData.betOffers.forEach(offer => {
-                    offer.outcomes.forEach(outcome => {
-                        allMarkets.push({ betOfferId: offer.id, marketName: offer.criterion.label, line: (outcome.line !== undefined && outcome.line !== null) ? (outcome.line / 1000) : null, label: outcome.label, odds: (outcome.odds / 1000) });
-                    });
-                });
-                calculateAndDisplaySpecials();
-            } catch (error) { logError(`Greška pri obradi podataka: ${error.message}`); return; }
+	                fetchedData.betOffers.forEach(offer => {
+	                    offer.outcomes.forEach(outcome => {
+	                        allMarkets.push({ betOfferId: offer.id, marketName: offer.criterion.label, line: (outcome.line !== undefined && outcome.line !== null) ? (outcome.line / 1000) : null, label: outcome.label, odds: (outcome.odds / 1000) });
+	                    });
+	                });
+	                rebuildCanonicalFeedMarkets();
+	                refreshManualMarketSuggestions();
+	                calculateAndDisplaySpecials();
+	            } catch (error) { logError(`Greška pri obradi podataka: ${error.message}`); return; }
 
             function getOdd(marketNameIdentifier, line, labelIdentifier) {
                  const marketNameLower = marketNameIdentifier.toLowerCase(); const labelLower = labelIdentifier.toLowerCase();
@@ -455,10 +540,53 @@
                  if (addedCount > 0) { renderPreview(); showToast(`${addedCount} kalk. marketa dodato.`); }
                  else { showToast(`Nema novih kalk. marketa za dodavanje.`, "info"); }
             }
-            // Listeneri se dodaju dinamički kada se dugmad kreiraju
+	            // Listeneri se dodaju dinamički kada se dugmad kreiraju
 
-            // Uklanjanje iz pregleda
-            csvPreviewContent.addEventListener('click', e => {
+	            addManualSpecialButton.addEventListener('click', () => {
+	                const rawMarket = (manualMarketInput.value || '').trim();
+	                const selection = (manualSelectionInput.value || '').trim();
+	                const oddsRaw = (manualOddsInput.value || '').trim();
+
+	                if (!rawMarket || !selection || !oddsRaw) {
+	                    showToast('Unesite market, selekciju i kvotu.', 'error');
+	                    return;
+	                }
+
+	                const oddsNumeric = parseFloat(oddsRaw);
+	                if (isNaN(oddsNumeric) || oddsNumeric < 1.01) {
+	                    showToast(`Kvota "${oddsRaw}" nije validna (min 1.01).`, 'error');
+	                    return;
+	                }
+
+	                const resolvedMarket = resolveManualMarketName(rawMarket);
+	                if (!resolvedMarket) {
+	                    showToast('Market nije pronađen u feed-u niti u odobrenim ručnim marketima.', 'error');
+	                    return;
+	                }
+
+	                const canonicalMarket = resolvedMarket.canonicalName;
+	                const baseName = `${canonicalMarket} - ${selection}`;
+
+	                if (specialsForPreview.some(s => s.baseName === baseName)) {
+	                    showToast('Market je već dodat.', 'info');
+	                    return;
+	                }
+
+	                specialsForPreview.push({
+	                    baseName,
+	                    name: getEffectiveSpecialName(baseName),
+	                    odds: oddsNumeric.toFixed(2)
+	                });
+
+	                renderPreview();
+	                manualSelectionInput.value = '';
+	                manualOddsInput.value = '';
+	                const sourceNote = resolvedMarket.source === 'feed' ? '' : ' (odobreni fallback)';
+	                showToast(`Dodato: ${canonicalMarket} - ${selection}${sourceNote}`);
+	            });
+
+	            // Uklanjanje iz pregleda
+	            csvPreviewContent.addEventListener('click', e => {
                   if (e.target.classList.contains('remove-special-btn')) { const index = parseInt(e.target.dataset.index, 10); if (index >= 0 && index < specialsForPreview.length) { specialsForPreview.splice(index, 1); renderPreview(); } }
             });
 
