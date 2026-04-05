@@ -96,6 +96,11 @@
                              Generiši CSV za Meč Specijal
                          </button>
                      </div>
+
+                     <div class="mt-4">
+                         <h3 class="text-lg font-semibold text-indigo-800 mb-2">CSV Preview</h3>
+                         <pre id="csvGeneratedPreviewContent" class="bg-gray-900 text-green-200 text-xs p-3 rounded-md overflow-x-auto max-h-80 whitespace-pre-wrap">Preview će biti prikazan kada dodate specijal.</pre>
+                     </div>
                 </div>
             </div>
              
@@ -127,6 +132,7 @@
 	            const manualOddsInput = document.getElementById('manualOddsInput');
 	            const addManualSpecialButton = document.getElementById('addManualSpecialButton');
 	            const manualMarketSuggestions = document.getElementById('manualMarketSuggestions');
+	            const csvGeneratedPreviewContent = document.getElementById('csvGeneratedPreviewContent');
 	            // Buttons created dynamically now
 	            let addCalculatedSpecialsButton = null;
 	            const csvPreviewSectionContainer = document.getElementById('csvPreviewSectionContainer');
@@ -476,6 +482,9 @@
                  else { csvPreviewSectionContainer.classList.add('hidden'); generateCsvButton.disabled = true; }
                  csvPreviewContent.innerHTML = '';
                  if (specialsForPreview.length === 0) {
+                     if (csvGeneratedPreviewContent) {
+                        csvGeneratedPreviewContent.textContent = 'Preview će biti prikazan kada dodate specijal.';
+                     }
                      csvPreviewContent.innerHTML = '<p class="text-gray-500 italic text-center py-4">Nema dodatih specijala za pregled.</p>'; return;
                  }
                  specialsForPreview.forEach((special, index) => {
@@ -486,6 +495,95 @@
                         <button class="remove-special-btn text-red-500 hover:text-red-700 font-bold text-lg leading-none" data-index="${index}" title="Ukloni">&times;</button>`;
                      csvPreviewContent.appendChild(div);
                  });
+                 renderGeneratedCsvPreview();
+            }
+
+            function buildCsvRowsForExport() {
+                const header = "Datum,Vreme,Sifra,Domacin,Gost,1,X,2,GR,U,O,Yes,No";
+                const csvRows = [header];
+                const eventInfo = fetchedData.events[0];
+                if (!eventInfo) {
+                    return { csvRows, invalidSpecials: [], eventInfo: null };
+                }
+
+                const matchDate = new Date(eventInfo.start);
+                const datum = `${matchDate.getDate().toString().padStart(2, '0')}.${(matchDate.getMonth() + 1).toString().padStart(2, '0')}.${matchDate.getFullYear()}`;
+                const vreme = `${matchDate.getHours().toString().padStart(2, '0')}:${matchDate.getMinutes().toString().padStart(2, '0')}`;
+                const editedMatchName = (editedMatchNameInput.value || '').trim() || originalMatchName || eventInfo.name || 'Nepoznata Liga';
+
+                csvRows.push('MATCH_NAME:Xtip Specijal');
+                csvRows.push(`LEAGUE_NAME:${editedMatchName}`);
+
+                const groupedOverUnderRows = new Map();
+                const regularRows = [];
+                const invalidSpecials = [];
+
+                specialsForPreview.forEach(special => {
+                    const finalOdds = parseFloat(special.odds);
+                    if (isNaN(finalOdds) || finalOdds < 1.01) {
+                        invalidSpecials.push({ name: special.name, odds: special.odds });
+                        return;
+                    }
+
+                    const nameParts = String(special.name || '').split(' - ');
+                    if (nameParts.length >= 2) {
+                        const marketName = nameParts.slice(0, -1).join(' - ').trim();
+                        const selectionName = nameParts[nameParts.length - 1].trim();
+                        const parsedOu = parseOverUnderSelection(selectionName);
+
+                        if (parsedOu) {
+                            const groupKey = `${marketName}__${parsedOu.line}`;
+                            if (!groupedOverUnderRows.has(groupKey)) {
+                                groupedOverUnderRows.set(groupKey, {
+                                    market: marketName,
+                                    line: parsedOu.line,
+                                    underOdd: '',
+                                    overOdd: ''
+                                });
+                            }
+                            const grouped = groupedOverUnderRows.get(groupKey);
+                            if (parsedOu.side === 'under') grouped.underOdd = finalOdds.toFixed(2);
+                            if (parsedOu.side === 'over') grouped.overOdd = finalOdds.toFixed(2);
+                            return;
+                        }
+
+                        const normalizedSelection = removeDiacritics(selectionName).toLowerCase();
+                        if (normalizedSelection === 'da' || normalizedSelection === 'ne') {
+                            regularRows.push([datum, vreme, '', marketName, selectionName, finalOdds.toFixed(2), '', '', '', '', '', '', '']);
+                            return;
+                        }
+                    }
+
+                    regularRows.push([datum, vreme, '', special.name, 'DA', finalOdds.toFixed(2), '', '', '', '', '', '', '']);
+                });
+
+                groupedOverUnderRows.forEach(grouped => {
+                    const row = [datum, vreme, '', grouped.market, '', '', '', '', grouped.line, grouped.underOdd, grouped.overOdd, '', ''];
+                    csvRows.push(row.join(','));
+                });
+
+                regularRows.forEach(row => {
+                    csvRows.push(row.join(','));
+                });
+
+                return { csvRows, invalidSpecials, eventInfo };
+            }
+
+            function renderGeneratedCsvPreview() {
+                if (!csvGeneratedPreviewContent) return;
+                if (specialsForPreview.length === 0) {
+                    csvGeneratedPreviewContent.textContent = 'Preview će biti prikazan kada dodate specijal.';
+                    return;
+                }
+                const { csvRows, invalidSpecials } = buildCsvRowsForExport();
+                if (csvRows.length <= 3) {
+                    csvGeneratedPreviewContent.textContent = 'Nema validnih redova za CSV preview.';
+                    return;
+                }
+                const warningLine = invalidSpecials.length > 0
+                    ? `# Upozorenje: ${invalidSpecials.length} specijala ima nevalidnu kvotu i biće preskočeno.\n`
+                    : '';
+                csvGeneratedPreviewContent.textContent = `${warningLine}${csvRows.join('\n')}`;
             }
 
             // 7. Event Listeneri
@@ -600,6 +698,7 @@
                         if (field === 'name') {
                             specialsForPreview[index].baseName = e.target.value;
                         }
+                        renderGeneratedCsvPreview();
                     }
                  }
             });
@@ -607,64 +706,12 @@
             // Generisanje finalnog CSV-a
             generateCsvButton.addEventListener('click', () => {
                  if (specialsForPreview.length === 0) return;
-                 const header = "Datum,Vreme,Sifra,Domacin,Gost,1,X,2,GR,U,O,Yes,No"; let csvRows = [header];
-                 const eventInfo = fetchedData.events[0]; if (!eventInfo) { logError("Nema info o događaju.", true); return; }
-                 const matchDate = new Date(eventInfo.start);
-                 const datum = `${matchDate.getDate().toString().padStart(2, '0')}.${(matchDate.getMonth() + 1).toString().padStart(2, '0')}.${matchDate.getFullYear()}`;
-                 const vreme = `${matchDate.getHours().toString().padStart(2, '0')}:${matchDate.getMinutes().toString().padStart(2, '0')}`;
-                 const editedMatchName = (editedMatchNameInput.value || '').trim() || originalMatchName || eventInfo.name || 'Nepoznata Liga';
-                 csvRows.push('MATCH_NAME:Xtip Specijal'); csvRows.push(`LEAGUE_NAME:${editedMatchName}`);
-                 const groupedOverUnderRows = new Map();
-                 const regularRows = [];
-
-                 specialsForPreview.forEach(special => {
-                     const finalOdds = parseFloat(special.odds);
-                     if (isNaN(finalOdds) || finalOdds < 1.01) {
-                         console.warn(`Preskačem red za "${special.name}" zbog nevalidne kvote: ${special.odds}`); showToast(`Kvota za "${special.name}" (${special.odds}) nije validna (min 1.01) i biće preskočena.`, "error");
-                         return;
-                     }
-
-                     const nameParts = String(special.name || '').split(' - ');
-                     if (nameParts.length >= 2) {
-                         const marketName = nameParts.slice(0, -1).join(' - ').trim();
-                         const selectionName = nameParts[nameParts.length - 1].trim();
-                         const parsedOu = parseOverUnderSelection(selectionName);
-
-                         if (parsedOu) {
-                             const groupKey = `${marketName}__${parsedOu.line}`;
-                             if (!groupedOverUnderRows.has(groupKey)) {
-                                 groupedOverUnderRows.set(groupKey, {
-                                     market: marketName,
-                                     line: parsedOu.line,
-                                     underOdd: '',
-                                     overOdd: ''
-                                 });
-                             }
-                             const grouped = groupedOverUnderRows.get(groupKey);
-                             if (parsedOu.side === 'under') grouped.underOdd = finalOdds.toFixed(2);
-                             if (parsedOu.side === 'over') grouped.overOdd = finalOdds.toFixed(2);
-                             return;
-                         }
-
-                         const normalizedSelection = removeDiacritics(selectionName).toLowerCase();
-                         if (normalizedSelection === 'da' || normalizedSelection === 'ne') {
-                             regularRows.push([datum, vreme, '', marketName, selectionName, finalOdds.toFixed(2), '', '', '', '', '', '', '']);
-                             return;
-                         }
-                     }
-
-                     regularRows.push([datum, vreme, '', special.name, 'DA', finalOdds.toFixed(2), '', '', '', '', '', '', '']);
+                 const { csvRows, invalidSpecials, eventInfo } = buildCsvRowsForExport();
+                 if (!eventInfo) { logError("Nema info o događaju.", true); return; }
+                 invalidSpecials.forEach(special => {
+                    console.warn(`Preskačem red za "${special.name}" zbog nevalidne kvote: ${special.odds}`);
+                    showToast(`Kvota za "${special.name}" (${special.odds}) nije validna (min 1.01) i biće preskočena.`, "error");
                  });
-
-                 groupedOverUnderRows.forEach(grouped => {
-                    const row = [datum, vreme, '', grouped.market, '', '', '', '', grouped.line, grouped.underOdd, grouped.overOdd, '', ''];
-                    csvRows.push(row.join(','));
-                 });
-
-                 regularRows.forEach(row => {
-                    csvRows.push(row.join(','));
-                 });
-
                  if (csvRows.length <= 3) { showToast("Nema validnih specijala za izvoz.", "error"); return; }
                  const csvContent = csvRows.join('\n');
                  const matchName = removeDiacritics(eventInfo.name || 'nepoznat_mec').replace(/ /g, '_').replace(/vs/ig, '');
