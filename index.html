@@ -134,6 +134,22 @@
                         </div>
                     </div>
                 </div>
+                <div class="mt-4">
+                    <p class="text-sm font-medium text-gray-700 mb-2">Ili ručno dodaj igrača</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                        <div>
+                            <label for="manualTeamNameInput" class="block text-sm text-gray-600">Ime tima</label>
+                            <input id="manualTeamNameInput" type="text" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Unesi ime tima">
+                        </div>
+                        <div>
+                            <label for="manualPlayerNameInput" class="block text-sm text-gray-600">Ime igrača</label>
+                            <input id="manualPlayerNameInput" type="text" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Unesi ime igrača">
+                        </div>
+                        <button id="addManualPlayerButton" class="h-10 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold px-4 rounded-lg">
+                            Dodaj ručno
+                        </button>
+                    </div>
+                </div>
                  <div class="flex flex-col md:flex-row gap-4 mt-4">
                     <button id="previewPlayerCsvButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300" disabled>
                         Napravi Pregled (Preview)
@@ -339,6 +355,9 @@
         const teamSelect = document.getElementById('teamSelect');
         const playerSelect = document.getElementById('playerSelect');
         const addPlayerButton = document.getElementById('addPlayerButton');
+        const manualTeamNameInput = document.getElementById('manualTeamNameInput');
+        const manualPlayerNameInput = document.getElementById('manualPlayerNameInput');
+        const addManualPlayerButton = document.getElementById('addManualPlayerButton');
         const selectedPlayersList = document.getElementById('selectedPlayersList');
         const previewPlayerCsvButton = document.getElementById('previewPlayerCsvButton');
         const clearPlayersButton = document.getElementById('clearPlayersButton');
@@ -1175,6 +1194,31 @@
                 updateSelectedPlayersList();
             }
         }
+
+        function handleAddManualPlayer() {
+            const manualTeamName = manualTeamNameInput.value.trim();
+            const manualPlayerName = manualPlayerNameInput.value.trim();
+
+            if (!manualTeamName || !manualPlayerName) {
+                logStatus('Za ručni unos unesite i ime tima i ime igrača.', true);
+                return;
+            }
+
+            const alreadyAdded = selectedPlayersForCSV.some(p =>
+                p.name.toLowerCase() === manualPlayerName.toLowerCase() &&
+                p.teamName.toLowerCase() === manualTeamName.toLowerCase()
+            );
+
+            if (alreadyAdded) {
+                logStatus(`Igrač ${manualPlayerName} (${manualTeamName}) je već dodat.`, true);
+                return;
+            }
+
+            selectedPlayersForCSV.push({ name: manualPlayerName, teamName: manualTeamName });
+            updateSelectedPlayersList();
+            manualPlayerNameInput.value = '';
+            logStatus(`Ručno dodat igrač: ${manualPlayerName} (${manualTeamName}).`);
+        }
         
         function updateSelectedPlayersList() {
             selectedPlayersList.innerHTML = '';
@@ -1233,6 +1277,23 @@
             'dobija crveni karton'
         ];
 
+        function createEmptyMarketsTemplate(teamName) {
+            return {
+                'daje gol': '',
+                'daje 2+ gola': '',
+                'daje gol izvan 16m': '',
+                'daje gol glavom': '',
+                'asistencija': '',
+                'gol ili asistencija': '',
+                'ukupno šuteva 1+': '', 'ukupno šuteva 2+': '', 'ukupno šuteva 3+': '', 'ukupno šuteva 4+': '', 'ukupno šuteva 5+': '', 'ukupno šuteva 6+': '',
+                'šutevi u okvir gola 1+': '', 'šutevi u okvir gola 2+': '', 'šutevi u okvir gola 3+': '',
+                'ukupno načinjenih faulova 1+': '', 'ukupno načinjenih faulova 2+': '',
+                'dobija karton': '',
+                'dobija crveni karton': '',
+                [`daje gol i ${teamName} pobeđuje`]: ''
+            };
+        }
+
         function showCsvPreview() {
             if (selectedPlayersForCSV.length === 0) {
                 logStatus("Please add players to the list before creating a preview.", true);
@@ -1259,21 +1320,7 @@
             
             selectedPlayersForCSV.forEach(playerInfo => {
                 // Start with empty markets template
-                const emptyMarketsTemplate = {
-                    'daje gol': '',
-                    'daje 2+ gola': '',
-                    'daje gol izvan 16m': '',
-                    'daje gol glavom': '',
-                    'asistencija': '',
-                    'gol ili asistencija': '',
-                    'ukupno šuteva 1+': '', 'ukupno šuteva 2+': '', 'ukupno šuteva 3+': '', 'ukupno šuteva 4+': '', 'ukupno šuteva 5+': '', 'ukupno šuteva 6+': '',
-                    'šutevi u okvir gola 1+': '', 'šutevi u okvir gola 2+': '', 'šutevi u okvir gola 3+': '',
-                    'ukupno načinjenih faulova 1+': '', 'ukupno načinjenih faulova 2+': '',
-                    'dobija karton': '',
-                    'dobija crveni karton': '',
-                    [`daje gol i ${playerInfo.teamName} pobeđuje`]: ''
-                };
-                let markets = { ...emptyMarketsTemplate };
+                let markets = createEmptyMarketsTemplate(playerInfo.teamName);
 
                 if (!isJsonMode) {
                     // Try to fill with API odds if available
@@ -1616,25 +1663,8 @@
         function showJsonPlayerPreview(players) {
             previewData = []; // Resetuj podatke za pregled
 
-            // Definiši sve moguće markete za prazan šablon
-            const emptyMarketsTemplate = {
-                'daje gol': '',
-                'daje 2+ gola': '',
-                'daje gol izvan 16m': '',
-                'daje gol glavom': '',
-                'asistencija': '',
-                'gol ili asistencija': '',
-                'ukupno šuteva 1+': '', 'ukupno šuteva 2+': '', 'ukupno šuteva 3+': '', 'ukupno šuteva 4+': '', 'ukupno šuteva 5+': '', 'ukupno šuteva 6+': '',
-                'šutevi u okvir gola 1+': '', 'šutevi u okvir gola 2+': '', 'šutevi u okvir gola 3+': '',
-                'ukupno načinjenih faulova 1+': '', 'ukupno načinjenih faulova 2+': '',
-                'dobija karton': '',
-                'dobija crveni karton': ''
-            };
-
             players.forEach(player => {
-                let markets = { ...emptyMarketsTemplate };
-                // Dinamički dodaj i market "daje gol i tim pobeđuje"
-                markets[`daje gol i ${player.Squad} pobeđuje`] = '';
+                let markets = createEmptyMarketsTemplate(player.Squad);
 
                 previewData.push({
                     teamName: player.Squad,
@@ -1677,11 +1707,22 @@
             tabs.forEach(tab => tab.addEventListener('click', handleTabClick));
             statsLeagueNameInput.addEventListener('input', applyStatTeamNameOverrides);
 
-            teamSelect.addEventListener('change', (e) => populatePlayersForTeam(e.target.value));
+            teamSelect.addEventListener('change', (e) => {
+                populatePlayersForTeam(e.target.value);
+                if (!manualTeamNameInput.value.trim() && teamSelect.selectedIndex > 0) {
+                    manualTeamNameInput.value = teamSelect.options[teamSelect.selectedIndex].text;
+                }
+            });
             playerSelect.addEventListener('change', () => {
                 addPlayerButton.disabled = !playerSelect.value;
             });
             addPlayerButton.addEventListener('click', handleAddPlayer);
+            addManualPlayerButton.addEventListener('click', handleAddManualPlayer);
+            manualPlayerNameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    handleAddManualPlayer();
+                }
+            });
             previewPlayerCsvButton.addEventListener('click', showCsvPreview);
             generateFinalCsvButton.addEventListener('click', generateFinalPlayerPropsCSV);
             generateStatsCsvButton.addEventListener('click', generateStatsMarketsCSV);
