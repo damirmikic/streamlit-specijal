@@ -54,15 +54,14 @@
 
 	                    <div class="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
 	                        <h3 class="text-lg font-semibold text-indigo-800">Ručni unos specijala</h3>
-	                        <p class="text-sm text-indigo-700 mt-1">Naziv marketa mora biti identičan feed marketu. Ako market nije u feed-u, dozvoljeni su samo odobreni nazivi.</p>
+	                        <p class="text-sm text-indigo-700 mt-1">Možete ručno uneti svoju igru, sekciju i kvotu.</p>
 	                        <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-	                            <div class="md:col-span-3">
-	                                <label for="manualMarketInput" class="block text-sm font-medium text-gray-700">Market</label>
-	                                <input id="manualMarketInput" type="text" list="manualMarketSuggestions" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="npr. Ukupno kartona">
-	                                <datalist id="manualMarketSuggestions"></datalist>
+	                            <div>
+	                                <label for="manualMarketInput" class="block text-sm font-medium text-gray-700">Igra</label>
+	                                <input id="manualMarketInput" type="text" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="npr. Ukupno kartona">
 	                            </div>
 	                            <div>
-	                                <label for="manualSelectionInput" class="block text-sm font-medium text-gray-700">Selekcija</label>
+	                                <label for="manualSelectionInput" class="block text-sm font-medium text-gray-700">Sekcija</label>
 	                                <input id="manualSelectionInput" type="text" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="npr. Više 4.5">
 	                            </div>
 	                            <div>
@@ -131,7 +130,6 @@
 	            const manualSelectionInput = document.getElementById('manualSelectionInput');
 	            const manualOddsInput = document.getElementById('manualOddsInput');
 	            const addManualSpecialButton = document.getElementById('addManualSpecialButton');
-	            const manualMarketSuggestions = document.getElementById('manualMarketSuggestions');
 	            const csvGeneratedPreviewContent = document.getElementById('csvGeneratedPreviewContent');
 	            // Buttons created dynamically now
 	            let addCalculatedSpecialsButton = null;
@@ -143,20 +141,7 @@
 	            let specialsForPreview = [];
 	            let originalMatchName = '';
 	            let matchSpecialsContext = null;
-	            const canonicalFeedMarkets = new Map();
 
-	            const approvedManualMarketAliases = {
-	                'dosudjen penal': 'Dosudjen penal',
-	                'penalty kick awarded': 'Dosudjen penal',
-	                'penalty awarded': 'Dosudjen penal',
-	                'ukupno kartona na mecu': 'Ukupno kartona na mecu',
-	                'ukupno kartona': 'Ukupno kartona na mecu',
-	                'total cards': 'Ukupno kartona na mecu',
-	                'red card given': 'Crveni karton na mecu',
-	                'crveni karton na mecu': 'Crveni karton na mecu',
-	                'both teams to score': 'GG',
-	                'gg': 'GG'
-	            };
 
             // --- Pomoćne Funkcije ---
 
@@ -238,48 +223,6 @@
 	                return replaceTeamNamesInText(baseName, buildTeamNameMap());
 	            }
 
-	            function normalizeMarketKey(value = '') {
-	                return removeDiacritics(String(value || ''))
-	                    .toLowerCase()
-	                    .trim()
-	                    .replace(/\s+/g, ' ');
-	            }
-
-	            function rebuildCanonicalFeedMarkets() {
-	                canonicalFeedMarkets.clear();
-	                allMarkets.forEach(market => {
-	                    const key = normalizeMarketKey(market?.marketName || '');
-	                    if (key && !canonicalFeedMarkets.has(key)) {
-	                        canonicalFeedMarkets.set(key, market.marketName.trim());
-	                    }
-	                });
-	            }
-
-	            function refreshManualMarketSuggestions() {
-	                if (!manualMarketSuggestions) return;
-	                manualMarketSuggestions.innerHTML = '';
-	                const suggestionSet = new Set([...canonicalFeedMarkets.values()]);
-	                Object.values(approvedManualMarketAliases).forEach(name => suggestionSet.add(name));
-	                [...suggestionSet].sort((a, b) => a.localeCompare(b, 'sr', { sensitivity: 'base' })).forEach(name => {
-	                    const option = document.createElement('option');
-	                    option.value = name;
-	                    manualMarketSuggestions.appendChild(option);
-	                });
-	            }
-
-	            function resolveManualMarketName(rawMarketName = '') {
-	                const normalizedInput = normalizeMarketKey(rawMarketName);
-	                if (!normalizedInput) return null;
-	                if (canonicalFeedMarkets.has(normalizedInput)) {
-	                    return { canonicalName: canonicalFeedMarkets.get(normalizedInput), source: 'feed' };
-	                }
-	                const approvedName = approvedManualMarketAliases[normalizedInput];
-	                if (approvedName) {
-	                    return { canonicalName: approvedName, source: 'approved_fallback' };
-	                }
-	                return null;
-	            }
-
             function updateMatchHeaderText() {
                 const effectiveMatchName = (editedMatchNameInput.value || '').trim() || originalMatchName || "Nepoznat meč";
                 matchNameHeader.textContent = `Specijali za meč: ${effectiveMatchName}`;
@@ -327,8 +270,6 @@
 	                        allMarkets.push({ betOfferId: offer.id, marketName: offer.criterion.label, line: (outcome.line !== undefined && outcome.line !== null) ? (outcome.line / 1000) : null, label: outcome.label, odds: (outcome.odds / 1000) });
 	                    });
 	                });
-	                rebuildCanonicalFeedMarkets();
-	                refreshManualMarketSuggestions();
 	                calculateAndDisplaySpecials();
 	            } catch (error) { logError(`Greška pri obradi podataka: ${error.message}`); return; }
 
@@ -641,12 +582,12 @@
 	            // Listeneri se dodaju dinamički kada se dugmad kreiraju
 
 	            addManualSpecialButton.addEventListener('click', () => {
-	                const rawMarket = (manualMarketInput.value || '').trim();
-	                const selection = (manualSelectionInput.value || '').trim();
+	                const game = (manualMarketInput.value || '').trim();
+	                const section = (manualSelectionInput.value || '').trim();
 	                const oddsRaw = (manualOddsInput.value || '').trim();
 
-	                if (!rawMarket || !selection || !oddsRaw) {
-	                    showToast('Unesite market, selekciju i kvotu.', 'error');
+	                if (!game || !section || !oddsRaw) {
+	                    showToast('Unesite igru, sekciju i kvotu.', 'error');
 	                    return;
 	                }
 
@@ -656,17 +597,10 @@
 	                    return;
 	                }
 
-	                const resolvedMarket = resolveManualMarketName(rawMarket);
-	                if (!resolvedMarket) {
-	                    showToast('Market nije pronađen u feed-u niti u odobrenim ručnim marketima.', 'error');
-	                    return;
-	                }
-
-	                const canonicalMarket = resolvedMarket.canonicalName;
-	                const baseName = `${canonicalMarket} - ${selection}`;
+	                const baseName = `${game} - ${section}`;
 
 	                if (specialsForPreview.some(s => s.baseName === baseName)) {
-	                    showToast('Market je već dodat.', 'info');
+	                    showToast('Igra je već dodata.', 'info');
 	                    return;
 	                }
 
@@ -679,8 +613,7 @@
 	                renderPreview();
 	                manualSelectionInput.value = '';
 	                manualOddsInput.value = '';
-	                const sourceNote = resolvedMarket.source === 'feed' ? '' : ' (odobreni fallback)';
-	                showToast(`Dodato: ${canonicalMarket} - ${selection}${sourceNote}`);
+	                showToast(`Dodato: ${game} - ${section}`);
 	            });
 
 	            // Uklanjanje iz pregleda
