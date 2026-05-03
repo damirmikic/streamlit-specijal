@@ -511,6 +511,22 @@
                 }).forEach(rowId => defaults.add(rowId));
             }
 
+            if (homeNorm) {
+                getMostBalancedLineRowIds(statsRows, row => {
+                    const rowMarket = normalizeStatText(row.Market);
+                    return rowMarket.includes('ukupno suteva u okvir gola') &&
+                        rowMarket.includes(homeNorm);
+                }).forEach(rowId => defaults.add(rowId));
+            }
+
+            if (awayNorm) {
+                getMostBalancedLineRowIds(statsRows, row => {
+                    const rowMarket = normalizeStatText(row.Market);
+                    return rowMarket.includes('ukupno suteva u okvir gola') &&
+                        rowMarket.includes(awayNorm);
+                }).forEach(rowId => defaults.add(rowId));
+            }
+
             return defaults;
         }
 
@@ -841,6 +857,7 @@
         // 4. Populate a specific table with data
         function translateStatMarketName(name) {
             let n = name;
+            n = n.replace(/Total Shots on Target by (.+?) \(Settled using Opta data\)/gi, "ukupno suteva u okvir gola $1");
             n = n.replace(/Total Shots on Target \(Settled using Opta data\)/gi, "ukupno suteva u okvir gola");
             n = n.replace(/Total Shots by (.+?) \(Settled using Opta data\)/gi, "ukupno suteva $1");
             n = n.replace(/Total Shots \(Settled using Opta data\)/gi, "ukupno suteva");
