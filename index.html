@@ -872,7 +872,7 @@
 
         function parseEditedMatchTeams(editedMatchName) {
             if (!editedMatchName) return null;
-            const separatorsRegex = /\s*(?:vs\.?|v\.?|-|–|—)\s*/i;
+            const separatorsRegex = /\s+(?:vs\.?|v\.?)\s+|\s*[-–—]\s*/i;
             const parts = editedMatchName
                 .split(separatorsRegex)
                 .map(name => name.trim())
